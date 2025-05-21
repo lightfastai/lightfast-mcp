@@ -1,0 +1,17 @@
+{
+    "python.analysis.extraPaths": [
+        "./src"
+    ],
+    "[python]": {
+        "editor.defaultFormatter": "charliermarsh.ruff",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.fixAll": "explicit",
+            "source.organizeImports": "explicit"
+        }
+    },
+    "ruff.enable": true,
+    // If ruff is not found, you might need to uncomment and set the path:
+    // "ruff.path": ["/Users/jeevanpillay/Code/@usr/lib/lightfast/lightfast-mcp/.venv/bin/ruff"],
+    // Ensure your VS Code is using the Python interpreter from ./.venv for this project.
+} 
