@@ -1,18 +1,29 @@
 import asyncio
 import json
-import logging
 import time
 from typing import Any
 
 from mcp.server.fastmcp import Context, FastMCP
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-logger = logging.getLogger("MockMCPServer")  # Changed logger name
+# Import from your new logging utility
+from .utils.logging_utils import configure_logging, get_logger
+
+# Configure logging using your new utility
+# This will configure the root "FastMCP" logger and by extension child loggers obtained via get_logger
+# You might want to pass a LOG_LEVEL from an environment variable here if desired.
+configure_logging(level="INFO")  # Default to INFO, can be changed or made env-dependent
+
+# Get a specific logger for this server, nested under "FastMCP"
+# The name here will be prefixed with "FastMCP." by get_logger, e.g., "FastMCP.MockServer"
+logger = get_logger("MockServer")
+
+SERVER_NAME = "MockMCP"  # This is used by FastMCP, not directly for logger name anymore
+# SERVER_DESCRIPTION is no longer used in mock_server.py logic
 
 # Create the MCP server
 mcp = FastMCP(
-    "MockMCP",  # Changed server name
+    SERVER_NAME,
+    # description parameter is not used by FastMCP constructor in the mcp version we targetted earlier for fixes
 )
 
 
@@ -25,7 +36,8 @@ async def get_server_status(ctx: Context) -> dict[str, Any]:
     await asyncio.sleep(0.1)  # Simulate a very small delay
     return {
         "status": "running",
-        "server_name": mcp.name,
+        "server_name": mcp.name,  # FastMCP stores the name given at construction
+        # "description": SERVER_DESCRIPTION, # Description is no longer returned
         "timestamp": time.time(),
     }
 
@@ -68,8 +80,9 @@ async def execute_mock_action(
     """
     if parameters is None:
         parameters = {}
+    # Use json.dumps for parameters in the log for better readability if it's complex
     logger.info(
-        f"Received request to execute mock action: '{action_name}' with params: {json.dumps(parameters)} and delay: {delay_seconds}s."  # noqa: E501
+        f"Received request to execute mock action: '{action_name}' with params: {json.dumps(parameters)} and delay: {delay_seconds}s."
     )
     await asyncio.sleep(delay_seconds)
     result = {
@@ -85,7 +98,8 @@ async def execute_mock_action(
 
 def main():
     """Run the Mock MCP server"""
-    logger.info(f"Initializing Mock MCP Server: {mcp.name} for host communication.")
+    # Logging is configured once at the top of the module.
+    logger.info(f"Initializing Mock MCP Server: {SERVER_NAME} (logger: {logger.name}) for host communication.")
     mcp.run()  # Runs using the stdio transport by default when launched by a host
 
 
