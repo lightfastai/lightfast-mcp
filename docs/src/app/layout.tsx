@@ -2,15 +2,8 @@ import { RootProvider } from "fumadocs-ui/provider";
 import "./globals.css";
 import type { Metadata } from "next";
 
-import { GeistMono } from "geist/font/mono";
-import { GeistSans } from "geist/font/sans";
 import { cn } from "../libs/utils";
-
-export const fonts = cn(
-  GeistSans.variable,
-  GeistMono.variable,
-  "touch-manipulation font-sans antialiased"
-);
+import { fonts } from "../libs/fonts";
 
 export const metadata: Metadata = {
   title: "Lightfast MCP Documentation",
