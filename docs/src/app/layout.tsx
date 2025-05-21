@@ -1,6 +1,7 @@
 import { RootProvider } from "fumadocs-ui/provider";
 import "./globals.css";
 import type { Metadata } from "next";
+import { ThemeProvider } from "next-themes";
 
 import { cn } from "../libs/utils";
 import { fonts } from "../libs/fonts";
@@ -18,7 +19,9 @@ export default function RootLayout({ children }: RootLayoutProperties) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={cn(fonts, "text-foreground flex flex-col min-h-screen")}>
-        <RootProvider>{children}</RootProvider>
+        <ThemeProvider attribute="class">
+          <RootProvider>{children}</RootProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

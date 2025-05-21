@@ -25,16 +25,115 @@ Lightfast MCP helps you:
 At its core, Lightfast MCP follows this architecture:
 
 ```
-Claude/LLM → Lightfast MCP Server → Socket Connection → Lightfast Addon → Blender
+Claude/LLM → Lightfast Server → Lightfast Addon → Blender
 ```
 
 - **Claude/LLM**: The AI model that provides intelligence and understanding
-- **Lightfast MCP Server**: A Python server (`blender_mcp_server.py`) that implements the Model Context Protocol to communicate with the AI model
-- **Socket Connection**: A reliable TCP connection between the server and the addon
-- **Lightfast Addon**: A Blender addon (`lightfast_blender_addon.py`) that runs inside Blender to receive commands and expose functionality
+- **Lightfast Server**: A Python server that implements the connection protocol to communicate with AI models
+- **Lightfast Addon**: A Blender addon that runs inside Blender to receive commands and expose functionality
 - **Blender**: The creative application where you can see the AI's actions come to life
 
 This architecture allows AI models to understand the state of your Blender project, make intelligent decisions, and take actions through Python code execution.
+
+### Architectural Diagram
+
+<Mermaid
+  chart="
+graph LR
+    subgraph AI [AI Systems]
+        Claude[Claude/LLM]
+        Other[Other AI Models]
+    end
+    
+    subgraph Connectors [Connection System]
+        Server[Lightfast Server]
+        Protocol[Connection Protocol]
+    end
+    
+    subgraph Creative [Creative Applications]
+        Blender[Blender]
+        TD[TouchDesigner]
+        Adobe[Adobe Suite]
+        Other_Apps[Other Applications]
+    end
+    
+    subgraph Adapters [Application Adapters]
+        Addons[Lightfast Addons]
+    end
+    
+    Claude --> Protocol
+    Other --> Protocol
+    Protocol --> Server
+    Server --> Addons
+    Addons --> Blender
+    Addons --> TD
+    Addons --> Adobe
+    Addons --> Other_Apps
+    
+    style AI fill:#f9d5e5,stroke:#333,stroke-width:2px
+    style Connectors fill:#eeeeee,stroke:#333,stroke-width:2px
+    style Adapters fill:#d5f9e5,stroke:#333,stroke-width:2px
+    style Creative fill:#d5e5f9,stroke:#333,stroke-width:2px
+"
+/>
+
+## General Architecture
+
+The protocol follows a client-server architecture where a host application can connect to multiple servers:
+
+<Mermaid
+  chart="
+flowchart TB
+    subgraph Computer[Your Computer]
+        subgraph Host[Host with Client]
+            Claude[Claude/LLM]
+            IDEs[IDEs]
+            Tools[Creative Tools]
+        end
+        
+        subgraph ServerA[Lightfast Server A]
+            ProtocolA[Connection Protocol]
+        end
+        
+        subgraph ServerB[Lightfast Server B]
+            ProtocolB[Connection Protocol]
+        end
+        
+        subgraph ServerC[Lightfast Server C]
+            ProtocolC[Connection Protocol]
+        end
+
+        DataA[(Local Data Source A)]
+        DataB[(Local Data Source B)]
+    end
+    
+    subgraph Internet
+        Remote[(Remote Service C)]
+    end
+    
+    Host -- Socket Connection --> ServerA
+    Host -- Socket Connection --> ServerB
+    Host -- Socket Connection --> ServerC
+    
+    ServerA --- DataA
+    ServerB --- DataB
+    ServerC -- HTTP/APIs --> Remote
+    
+    style Computer fill:#333,color:#fff,stroke:#555,stroke-width:2px
+    style Host fill:#555,color:#fff,stroke:#666,stroke-width:1px
+    style ServerA fill:#444,color:#fff,stroke:#666,stroke-width:1px
+    style ServerB fill:#444,color:#fff,stroke:#666,stroke-width:1px
+    style ServerC fill:#444,color:#fff,stroke:#666,stroke-width:1px
+    style Internet fill:#666,color:#fff,stroke:#777,stroke-width:1px
+"
+/>
+
+This architecture enables:
+
+- **Multiple Connections**: A single AI system can connect to different creative applications via socket connections
+- **Local Data Sources**: Servers can access local files and resources
+- **Remote Services**: Connect to web APIs and internet services through HTTP
+- **Standardized Protocol**: All communication follows the same connection protocol over different transport layers
 
 ## Getting Started
 
