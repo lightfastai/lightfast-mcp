@@ -1,0 +1,43 @@
+{
+  "name": "lightfast-mcp-docs",
+  "version": "1.0.0",
+  "description": "Documentation for Lightfast MCP",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "postinstall": "fumadocs-mdx"
+  },
+  "keywords": [
+    "lightfast",
+    "mcp",
+    "blender",
+    "documentation"
+  ],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.5.2",
+  "dependencies": {
+    "@tailwindcss/postcss": "^4.1.7",
+    "@types/mdx": "^2.0.13",
+    "autoprefixer": "10.4.21",
+    "clsx": "^2.1.1",
+    "fumadocs-core": "^15.3.4",
+    "fumadocs-mdx": "^11.6.5",
+    "fumadocs-ui": "^15.3.4",
+    "geist": "^1.4.2",
+    "next": "15.3.2",
+    "postcss": "8.5.3",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "tailwind-merge": "^3.3.0",
+    "tailwindcss": "4.1.7"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.21",
+    "@types/react": "^19.1.4",
+    "@types/react-dom": "^19.1.5",
+    "typescript": "5.8.3"
+  }
+}
