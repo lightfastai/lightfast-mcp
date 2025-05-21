@@ -82,7 +82,8 @@ async def execute_mock_action(
         parameters = {}
     # Use json.dumps for parameters in the log for better readability if it's complex
     logger.info(
-        f"Received request to execute mock action: '{action_name}' with params: {json.dumps(parameters)} and delay: {delay_seconds}s."
+        f"Received request to execute mock action: '{action_name}' with params: "
+        f"{json.dumps(parameters)} and delay: {delay_seconds}s."
     )
     await asyncio.sleep(delay_seconds)
     result = {

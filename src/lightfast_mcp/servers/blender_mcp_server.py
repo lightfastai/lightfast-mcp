@@ -214,7 +214,7 @@ class BlenderConnection:
                         return response.get("result", {})
                     except json.JSONDecodeError as e:
                         logger.error(f"Invalid JSON in ping response: {e}")
-                        raise BlenderResponseError(f"Invalid ping response: {e}")
+                        raise BlenderResponseError(f"Invalid ping response: {e}") from e
                 finally:
                     # Restore the original timeout
                     self.sock.settimeout(old_timeout)
@@ -242,12 +242,12 @@ class BlenderConnection:
         except TimeoutError:
             logger.error("Socket timeout while waiting for response from Blender")
             self.disconnect()  # Invalidate socket on timeout
-            raise BlenderTimeoutError(f"Timeout waiting for Blender response for command '{command_type}'")
+            raise BlenderTimeoutError(f"Timeout waiting for Blender response for command '{command_type}'") from None
 
         except (ConnectionError, BrokenPipeError, ConnectionResetError) as e:
             logger.error(f"Socket connection error: {str(e)}")
             self.disconnect()
-            raise BlenderConnectionError(f"Connection to Blender lost: {str(e)}")
+            raise BlenderConnectionError(f"Connection to Blender lost: {str(e)}") from e
 
         except (BlenderTimeoutError, BlenderConnectionError, BlenderResponseError, BlenderCommandError):
             # Re-raise our specific errors
@@ -403,7 +403,8 @@ def get_blender_connection(host: str = "localhost", port: int = 9876) -> Blender
     while attempt < max_attempts:
         attempt += 1
         logger.info(
-            f"Attempting to establish new connection to Blender at {host}:{found_port} (attempt {attempt}/{max_attempts})."
+            f"Attempting to establish new connection to Blender at {host}:{found_port} "
+            f"(attempt {attempt}/{max_attempts})."
         )
         _blender_connection = BlenderConnection(host=host, port=found_port)
         try:

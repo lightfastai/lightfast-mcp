@@ -6,7 +6,7 @@ import socket
 import threading
 import time
 import traceback
-from contextlib import redirect_stdout
+from contextlib import redirect_stdout, suppress
 
 import bpy
 import mathutils
@@ -17,7 +17,7 @@ bl_info = {
     "author": "Lightfast",
     "version": (1, 0, 0),
     "blender": (3, 0, 0),
-    "location": "View3D > Sidebar > Lightfast MCP",
+    "location": "View3D > Sidebar > LightfastMCP",
     "description": "Connect Blender to an MCP client via sockets for core commands.",
     "category": "Interface",
 }
@@ -52,10 +52,8 @@ class BlenderMCPServer:
     def stop(self):
         self.running = False
         if self.socket:
-            try:
+            with suppress(Exception):
                 self.socket.close()
-            except:  # noqa E722
-                pass
             self.socket = None
         if self.server_thread:
             try:
@@ -116,11 +114,11 @@ class BlenderMCPServer:
                         buffer = b""  # Clear buffer after successful parse
 
                         # Process the command
-                        def execute_wrapper():
+                        def execute_wrapper(cmd=command):  # Binding the command to the closure
                             response = {"status": "error", "message": "Unknown error occurred"}
                             try:
-                                print(f"Processing command: {command.get('type')}")
-                                response = self.execute_command(command)
+                                print(f"Processing command: {cmd.get('type')}")
+                                response = self.execute_command(cmd)
                                 print(f"Command processed, response: {str(response)[:100]}...")
                             except Exception as e_exec_cmd:
                                 print(f"Error directly in execute_command call: {str(e_exec_cmd)}")
@@ -169,11 +167,11 @@ class BlenderMCPServer:
                                 buffer = decoded_buffer[json_end + 1 :].encode("utf-8")
 
                                 # Process the command
-                                def execute_wrapper():
+                                def execute_wrapper(cmd=command):  # Binding the command to the closure
                                     response = {"status": "error", "message": "Unknown error occurred"}
                                     try:
-                                        print(f"Processing command: {command.get('type')}")
-                                        response = self.execute_command(command)
+                                        print(f"Processing command: {cmd.get('type')}")
+                                        response = self.execute_command(cmd)
                                     except Exception as e_exec_cmd:
                                         print(f"Error directly in execute_command call: {str(e_exec_cmd)}")
                                         traceback.print_exc()
@@ -217,10 +215,8 @@ class BlenderMCPServer:
             print(f"Error in client handler: {str(e_handler)}")
             traceback.print_exc()
         finally:
-            try:
+            with suppress(Exception):
                 client.close()
-            except:
-                pass  # noqa E722
             print("Client handler stopped")
 
     def execute_command(self, command):
@@ -282,7 +278,7 @@ class BlenderMCPServer:
             return scene_info
         except Exception as e:
             traceback.print_exc()
-            raise Exception(f"Error in get_scene_info: {str(e)}")
+            raise Exception(f"Error in get_scene_info: {str(e)}") from e
 
     @staticmethod
     def _get_aabb(obj):
@@ -335,7 +331,7 @@ class BlenderMCPServer:
             return {"executed": True, "result": captured_output or "No output."}
         except Exception as e:
             traceback.print_exc()
-            raise Exception(f"Code execution error: {str(e)}\nTraceback:\n{traceback.format_exc()}")
+            raise Exception(f"Code execution error: {str(e)}\nTraceback:\n{traceback.format_exc()}") from e
 
 
 class BLENDERMCP_PT_Panel(bpy.types.Panel):
@@ -436,8 +432,6 @@ def unregister():
 
 
 if __name__ == "__main__":
-    try:
+    with suppress(Exception):
         unregister()
-    except Exception:
-        pass
     register()
