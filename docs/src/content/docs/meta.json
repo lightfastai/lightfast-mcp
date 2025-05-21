@@ -3,8 +3,7 @@
   "pages": [
     "index",
     "---Introduction---",
-    "introduction",
-    "installation",
+    "getting-started",
     "---Applications---",
     "blender",
     "---Development---",

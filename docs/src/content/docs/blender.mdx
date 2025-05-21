@@ -1,210 +1,111 @@
 ---
-title: Blender 
+title: Blender
 description: How to use Lightfast MCP with Blender
 ---
 
-# Blender Integration
+# Setting Up Lightfast MCP for Blender
 
-Lightfast MCP provides a powerful bridge between AI models and Blender, allowing you to automate tasks, generate content, and control Blender via AI.
+This guide will walk you through setting up Lightfast MCP to work with Blender, allowing you to control Blender using Claude.
 
-## Architecture Overview
+## Installation
 
-The Blender integration follows this architecture:
+### Step 1: Install Lightfast MCP
 
-```
-Claude/LLM → Lightfast MCP Server → Socket Connection → Lightfast Addon → Blender
-```
-
-- **Claude/LLM**: The AI model that provides intelligence and understanding
-- **Lightfast MCP Server**: A Python server (`blender_mcp_server.py`) that implements the Model Context Protocol
-- **Socket Connection**: A TCP connection between the server and addon on port 9876 (default)
-- **Lightfast Addon**: A Blender addon (`lightfast_blender_addon.py`) that runs inside Blender 
-- **Blender**: The 3D application where commands are executed
-
-## Setting Up Blender
-
-After following the [installation instructions](../installation), you need to:
-
-1. Start Blender
-2. Enable the Lightfast MCP addon in Preferences > Add-ons
-3. Open the Lightfast MCP panel in the sidebar (View > Sidebar or press N)
-4. Click "Start MCP Server" to start the Blender socket server
-5. The server should show "Server active on port 9876"
-
-## Starting the MCP Server
-
-Start the MCP Python server:
+First, clone the repository and install the package:
 
 ```bash
-# Direct command
-python -m lightfast_mcp.servers.blender_mcp_server
+# Clone the repository
+git clone https://github.com/lightfastai/lightfast-mcp.git
+cd lightfast-mcp
 
-# Or from Python code
-from lightfast_mcp.servers.blender_mcp_server import mcp
-mcp.run()
+# Install with uv (recommended)
+uv pip install -e .
+
+# Or with regular pip
+pip install -e .
 ```
 
-## Available Commands
+## Blender Addon Setup
 
-The Blender MCP integration provides two main commands:
+### Step 2: Install the Blender Addon
 
-### 1. Get State
+1. Open Blender
+2. Go to **Edit → Preferences → Add-ons**
+3. Click **Install** and navigate to the Lightfast MCP folder
+4. Select `lightfast_blender_addon.py` from the `addons` directory
+5. Enable the addon by checking the box next to "AI: Lightfast MCP"
 
-Retrieve information about the current Blender scene:
+![Blender addon installation](/images/blender_addon_install.svg)
 
-```python
-import asyncio
-from lightfast_mcp.servers.blender_mcp_server import get_state
+### Step 3: Access the Lightfast Panel
 
-async def get_blender_info():
-    scene_info = await get_state()
-    print(scene_info)
+1. In Blender, press **N** to open the sidebar
+2. Look for the **Lightfast MCP** tab
+3. Click **Start MCP Server** to activate the connection
 
-asyncio.run(get_blender_info())
+![Lightfast panel in Blender](/images/blender_panel.svg)
+
+## Claude Desktop Configuration
+
+### Step 4: Configure Claude Desktop
+
+To use Claude with Lightfast MCP, you need to configure Claude Desktop:
+
+1. Open or create the file at `~/Library/Application Support/Claude/claude_desktop_config.json` (on macOS) or the equivalent path on your operating system.
+
+2. Add the following configuration:
+
+```json
+{
+  "mcpServers": {
+    "lightfast-blender": {
+      "command": "/path/to/your/python",
+      "args": [
+        "-m",
+        "lightfast_mcp.servers.blender_mcp_server"
+      ]
+    }
+  }
+}
 ```
 
-This returns a JSON string with details about:
-- Current scene name
-- Number of objects
-- Selected objects
-- Active object
-- Render engine
-- Current file path
-- List of objects in the scene
+3. Replace `/path/to/your/python` with the path to your Python interpreter (typically the one in your virtual environment where Lightfast MCP is installed).
 
-### 2. Execute Command
+For example:
 
-Run Python code directly in Blender:
-
-```python
-import asyncio
-from lightfast_mcp.servers.blender_mcp_server import execute_command
-
-async def run_blender_code():
-    code = """
-    import bpy
-    
-    # Create a simple cube
-    bpy.ops.mesh.primitive_cube_add(size=2, location=(0, 0, 0))
-    cube = bpy.context.active_object
-    cube.name = 'AI_Cube'
-    
-    # Return some information
-    return f"Created cube named {cube.name}"
-    """
-    
-    result = await execute_command(code_to_execute=code)
-    print(result)
-
-asyncio.run(run_blender_code())
+```json
+{
+  "mcpServers": {
+    "lightfast-blender": {
+      "command": "/Users/username/Code/lightfast-mcp/.venv/bin/python",
+      "args": [
+        "-m",
+        "lightfast_mcp.servers.blender_mcp_server"
+      ]
+    }
+  }
+}
 ```
 
-## Connection Management
+4. Restart Claude Desktop and select the "lightfast-blender" MCP server from the Claude settings.
 
-The Blender MCP server automatically manages the connection:
+## Testing the Connection
 
-- It automatically attempts to connect to Blender on port 9876 (default)
-- If the connection fails, it scans nearby ports (9876-9886)
-- It handles reconnection if the connection is lost
-- It verifies the connection with a ping before operations
+### Step 5: Start Blender and Claude
 
-## Error Handling
+1. Open Blender and enable the Lightfast MCP server from the sidebar panel
+2. Start Claude Desktop and select the "lightfast-blender" MCP server
+3. Claude should now be able to control Blender through the MCP connection
 
-The server provides specific error types for different issues:
-
-- `BlenderConnectionError`: When it can't connect to Blender
-- `BlenderCommandError`: When a command fails in Blender
-- `BlenderTimeoutError`: When a command takes too long
-- `BlenderResponseError`: When the response from Blender is invalid
-- `BlenderMCPError`: General error type for other issues
-
-Example of proper error handling:
-
-```python
-import asyncio
-from lightfast_mcp.servers.blender_mcp_server import execute_command
-from lightfast_mcp.exceptions import BlenderConnectionError, BlenderCommandError
-
-async def safe_run_command():
-    try:
-        result = await execute_command(code_to_execute="import bpy; return len(bpy.data.objects)")
-        print(f"Number of objects: {result}")
-    except BlenderConnectionError:
-        print("Could not connect to Blender. Make sure it's running with the addon enabled.")
-    except BlenderCommandError as e:
-        print(f"Command failed: {e}")
-    except Exception as e:
-        print(f"Unexpected error: {e}")
-
-asyncio.run(safe_run_command())
-```
-
-## MCP Client Integration
-
-For AI applications that support the Model Context Protocol, connect directly:
-
-```python
-from mcp.client import Client
-
-async def connect_to_blender():
-    client = Client()
-    await client.connect("localhost:9877")  # MCP server port (not Blender's port)
-    
-    # Get state
-    state = await client.get_state()
-    
-    # Execute Blender code
-    result = await client.execute_command(
-        code_to_execute="import bpy; return 'Blender version: ' + bpy.app.version_string"
-    )
-    
-    return result
-```
-
-## Best Practices
-
-1. **Check connection before operations**:
-   ```python
-   from lightfast_mcp.servers.blender_mcp_server import check_blender_running
-   
-   if check_blender_running():
-       # Proceed with operations
-   else:
-       print("Blender is not running or the addon is not active")
-   ```
-
-2. **Use async/await properly**:
-   All server operations are asynchronous and should be used with `await`.
-
-3. **Handle resources properly**:
-   The server uses a connection pool that's automatically managed, but for long-running applications, explicitly close connections when done.
-
-4. **Break complex operations into smaller steps**:
-   For complex Blender operations, break them into smaller steps to avoid timeouts.
-
-5. **Send small amounts of data**:
-   Avoid sending very large meshes or textures through the socket connection.
+Try asking Claude to create a simple object in Blender, like: "Create a red cube in Blender"
 
 ## Troubleshooting
 
 If you encounter issues:
 
-1. **Blender addon not connecting**:
-   - Check the Blender console for error messages
-   - Verify the addon is enabled in Preferences > Add-ons
-   - Make sure no other application is using port 9876
+- Ensure Blender is running with the addon enabled
+- Check that the MCP server shows as "Server active" in the Blender panel
+- Verify that no firewall is blocking the connection on ports 9876 or 9877
+- Restart both Blender and Claude Desktop if necessary
 
-2. **MCP server can't find Blender**:
-   - Make sure Blender is running
-   - Check that the Lightfast MCP panel shows "Server active"
-   - Try restarting both Blender and the MCP server
-
-3. **Slow performance**:
-   - Break complex operations into smaller commands
-   - Avoid sending large amounts of data
-   - Use asynchronous operations effectively
-
-4. **Security warnings**:
-   - The connection is local only by default
-   - For remote connections, add firewall rules
-   - Be careful what code you allow to execute in Blender 
+For more detailed troubleshooting, check the console outputs in both Blender and Claude Desktop. 
