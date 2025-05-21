@@ -1,0 +1,69 @@
+---
+title: Introduction
+description: Get started with Lightfast MCP for creative applications
+---
+
+# Lightfast MCP
+
+## What is Lightfast MCP?
+
+Lightfast MCP connects your favorite creative applications (like Blender, TouchDesigner, Adobe Creative Suite, etc.) to AI models through the Model Context Protocol (MCP). This allows AI to directly interact with and control these applications, enabling prompt-assisted creation, manipulation, and automation.
+
+Think of Lightfast MCP as a bridge between AI language models and creative software. Just as MCP provides a standardized way to connect AI models to different data sources and tools, Lightfast MCP extends this capability specifically for creative applications.
+
+## Why Lightfast MCP?
+
+Lightfast MCP helps you:
+
+- **Connect AI to creative tools**: Directly integrate AI models with applications like Blender
+- **Automate creative workflows**: Let AI assist with repetitive tasks in your creative process
+- **Explore new creative possibilities**: Enable AI to help with ideation and execution in your creative projects
+- **Maintain a consistent workflow**: Use the same MCP protocol you might already be familiar with
+
+## Architecture
+
+At its core, Lightfast MCP follows this architecture:
+
+```
+Claude/LLM → Lightfast MCP Server → Socket Connection → Lightfast Addon → Blender
+```
+
+- **Claude/LLM**: The AI model that provides intelligence and understanding
+- **Lightfast MCP Server**: A Python server (`blender_mcp_server.py`) that implements the Model Context Protocol to communicate with the AI model
+- **Socket Connection**: A reliable TCP connection between the server and the addon
+- **Lightfast Addon**: A Blender addon (`lightfast_blender_addon.py`) that runs inside Blender to receive commands and expose functionality
+- **Blender**: The creative application where you can see the AI's actions come to life
+
+This architecture allows AI models to understand the state of your Blender project, make intelligent decisions, and take actions through Python code execution.
+
+## Getting Started
+
+To start using Lightfast MCP with Blender:
+
+1. Install the Python package
+2. Install the Blender addon
+3. Start the Lightfast MCP server
+4. Connect with Claude or another MCP-compatible AI
+
+Detailed setup instructions are available in the [Installation](/docs/installation) section.
+
+## Requirements
+
+- Python 3.12 or newer
+- uv package manager (installation instructions below)
+- Blender 3.0 or newer
+
+### Installing UV Package Manager
+
+**On Mac:**
+```bash
+brew install uv
+```
+
+**On Windows:**
+```bash
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+set Path=C:\Users\[username]\.local\bin;%Path%
+```
+
+For other platforms, see the [uv installation guide](https://docs.astral.sh/uv/getting-started/installation/). 
