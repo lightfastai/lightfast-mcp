@@ -21,6 +21,8 @@ dependencies = [
 dev = [
     "ruff",
     "taskipy",
+    "pytest",
+    "pytest-asyncio",
 ]
 
 [project.scripts]
@@ -64,3 +66,4 @@ format = "ruff format ."
 check_format = "ruff format --check ."
 fix = "ruff check . --fix && ruff format ."
 mock_server = "python -m lightfast_mcp.mock_server"
+test = "pytest"
