@@ -1,117 +1,111 @@
-# Development Environment Setup
+# Developer Guide for lightfast-mcp
 
-This guide outlines the steps to set up your development environment for the `lightfast-mcp` project using `uv` as the package and environment manager.
+This guide provides instructions for setting up and developing the `lightfast-mcp` project.
 
 ## Prerequisites
 
-*   **Git**: For cloning the repository.
-*   **A Python installation (Optional for `uv` but good to have for system tools)**: While `uv` can install Python versions for your project, having a system Python or a global Python managed by a tool like `pyenv` can be useful. If you use `pyenv`, ensure it's configured correctly in your shell (see "Shell Configuration Notes" below).
+- Python 3.13 or newer
+- `uv` package manager ([Installation Guide](https://docs.astral.sh/uv/getting-started/installation/))
 
-## 1. Install `uv`
+## Project Setup
 
-`uv` is an extremely fast Python package installer and resolver, written in Rust.
-
-If you don't have `uv` installed, you can install it using `pip` (from an existing Python environment) or other methods as described in the [official uv documentation](https://docs.astral.sh/uv/getting-started/installation/).
-
-```bash
-pip install uv
-```
-
-## 2. Clone the Repository
-
-Clone the project repository to your local machine:
-
-```bash
-git clone <repository_url>
-cd lightfast-mcp
-```
-*(Replace `<repository_url>` with the actual URL of your repository)*
-
-## 3. Set Up Python Version
-
-This project is configured to use Python 3.13.2.
-
-*   **Using `uv` to install Python (Recommended for consistency):**
-    If you don't have Python 3.13.2 available, `uv` can install it for you:
+1.  **Clone the Repository:**
     ```bash
-    uv python install 3.13.2
+    git clone https://github.com/lightfastai/lightfast-mcp.git
+    cd lightfast-mcp
     ```
-    This command downloads and installs the specified Python version, managed by `uv`.
 
-*   **Using `.python-version` with `pyenv` (If you prefer `pyenv` for global Python management):**
-    The project includes a `.python-version` file specifying `3.13.2`. If you use `pyenv` and have it correctly configured, `pyenv` will attempt to use this version when you enter the project directory.
-    If `pyenv` reports that version `3.13.2` is not installed, you can install it via:
+2.  **Create and Activate a Virtual Environment (using `uv`):
     ```bash
-    pyenv install 3.13.2
+    uv venv
+    source .venv/bin/activate  # On macOS/Linux
+    # .venv\Scripts\activate    # On Windows
     ```
-    **Note**: `uv` will manage the Python version *within* the virtual environment regardless of your global `pyenv` setup, once the virtual environment is created and activated.
 
-## 4. Create Virtual Environment
+3.  **Install Dependencies (including development tools):
+    ```bash
+    uv pip install -e ".[dev]"
+    ```
+    This installs the project in editable mode (`-e`) along with all runtime dependencies and development dependencies (like `ruff` and `taskipy`) specified in `pyproject.toml` under the `[dev]` group.
 
-Create a virtual environment for the project using `uv`. This environment will use Python 3.13.2.
+## Development Tasks with `taskipy`
 
+We use `taskipy` to manage common development tasks. These tasks are defined in the `[tool.taskipy.tasks]` section of `pyproject.toml`.
+
+To list available tasks, run:
 ```bash
-# Ensure you are in the project root directory
-uv venv --python 3.13.2
-```
-This will create a `.venv` directory in your project root, containing the Python interpreter and installed packages.
-
-## 5. Install Dependencies
-
-Install all project dependencies, including the project itself in editable mode, using `uv sync`. This command reads the `pyproject.toml` file.
-
-```bash
-uv sync
+task --list
 ```
 
-## 6. Activate Virtual Environment
+Common tasks include:
 
-Before running the project or development scripts, activate the virtual environment:
+*   **`task lint`**: Check for linting errors using Ruff.
+*   **`task format`**: Auto-format code using Ruff.
+*   **`task check_format`**: Check if code formatting is correct without modifying files.
+*   **`task fix`**: Apply all auto-fixable linting errors and then format the code.
+*   **`task mock_server`**: Run the mock MCP server located in `src/lightfast_mcp/mock_server.py`.
 
-```bash
-source .venv/bin/activate
-```
-Your shell prompt should change to indicate that the virtual environment is active (e.g., `(.venv) your-prompt$`).
+Ensure your virtual environment is activated before running `task` commands.
 
-## 7. Running the Application
+## Linting and Formatting with Ruff
 
-With the virtual environment activated, you can run the application script defined in `pyproject.toml`:
+This project uses [Ruff](https://docs.astral.sh/ruff/) for fast Python linting and formatting.
 
-```bash
-lightfast-mcp
-```
-(Or any other scripts/commands specific to the project).
+-   **Configuration**: Ruff is configured in the `[tool.ruff]` section of `pyproject.toml`.
+-   **Manual Checks**: You can run Ruff manually (with your virtual environment activated):
+    ```bash
+    ruff check .  # Check for linting errors
+    ruff format . # Auto-format files
+    ruff check . --fix # Apply auto-fixes
+    ```
 
-To verify the Python version within the activated environment:
-```bash
-python -V
-# Expected output: Python 3.13.2
-```
+## VS Code Integration
 
-## 8. Deactivating the Virtual Environment
+For an optimal development experience in VS Code:
 
-When you're done working, you can deactivate the virtual environment:
+1.  **Install Recommended Extensions**:
+    This project includes a `.vscode/extensions.json` file with recommended extensions. When you open the project, VS Code should prompt you to install them if you haven't already. Key extensions include:
+    *   `ms-python.python` (Python support by Microsoft)
+    *   `charliermarsh.ruff` (Ruff linter and formatter integration)
+    *   `tamasfe.even-better-toml` (TOML language support for `pyproject.toml`)
 
-```bash
-deactivate
-```
+2.  **Select the Python Interpreter**:
+    *   Open the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P`).
+    *   Search for and select "Python: Select Interpreter".
+    *   Choose the Python interpreter located in your project's virtual environment (e.g., `./.venv/bin/python`). This ensures VS Code uses the correct environment with all installed dependencies, including Ruff.
 
-## Shell Configuration Notes (Especially for `pyenv` Users on Zsh/Bash)
+3.  **Ruff Integration Settings**:
+    The `.vscode/settings.json` file is pre-configured to use Ruff for formatting and linting, including format-on-save and auto-fixing for Python files.
 
-If you use `pyenv` and experience issues where `pyenv` shims take precedence even after activating the `.venv` (e.g., `python -V` still shows a `pyenv` error or the wrong version), your `pyenv` initialization in your shell configuration file (e.g., `~/.zshrc` or `~/.bashrc`) might need adjustment.
+## Running the Mock MCP Server
 
-A common fix for Zsh (`~/.zshrc`) is to ensure `pyenv init -` is structured correctly:
+There are two main ways to run the mock server for testing:
 
-```zsh
-# Example for .zshrc
-export PYENV_ROOT="$HOME/.pyenv"
-[[ -d "$PYENV_ROOT/bin" ]] && export PATH="$PYENV_ROOT/bin:$PATH"
+1.  **Using `taskipy` (Recommended for Development)**:
+    (Ensure your virtual environment is activated)
+    ```bash
+    task mock_server
+    ```
 
-if command -v pyenv 1>/dev/null 2>&1; then
-  eval "$(pyenv init --path)" # Adds shims to PATH
-  eval "$(pyenv init -)"      # Initializes pyenv shell integration
-fi
-```
-**Important**: After modifying your shell configuration file, close and reopen your terminal or source the file (e.g., `source ~/.zshrc`) for changes to take effect.
+2.  **Directly via Python (if `taskipy` is not used or for specific debugging)**:
+    (Ensure your virtual environment is activated)
+    ```bash
+    python -m lightfast_mcp.mock_server
+    ```
 
-This setup ensures that `uv`-managed virtual environments can correctly override the global Python version when activated. 
+3.  **Via the installed script (after `uv pip install -e .`)**:
+    (Ensure your virtual environment is activated)
+    ```bash
+    lightfast-mock-server
+    ```
+    This is also how MCP Host applications like Claude Desktop will launch the server if configured to use this script name.
+
+## Contributing
+
+(Details about contributing, pull requests, code style if not covered by Ruff, etc. can be added here later.)
+
+## Troubleshooting
+
+-   **`command not found: task`**: Make sure your virtual environment is activated and you have run `uv pip install -e ".[dev]"`.
+-   **`command not found: ruff`**: Same as above.
+-   **Ruff not working in VS Code**: Ensure the Ruff extension is installed and you've selected the Python interpreter from your project's virtual environment. 
