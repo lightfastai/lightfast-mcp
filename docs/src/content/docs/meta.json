@@ -2,8 +2,14 @@
   "title": "Documentation",
   "pages": [
     "index",
-    "getting-started",
-    "application",
-    "usage"
+    "---Introduction---",
+    "introduction",
+    "installation",
+    "---Applications---",
+    "blender",
+    "---Development---",
+    "roadmap",
+    "contributing",
+    "[GitHub](https://github.com/lightfastai/lightfast-mcp)"
   ]
 }
