@@ -1,7 +1,6 @@
 import { RootProvider } from "fumadocs-ui/provider";
 import "./globals.css";
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
 
 import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
@@ -18,7 +17,11 @@ export const metadata: Metadata = {
   description: "Documentation for Lightfast MCP",
 };
 
-export default function Layout({ children }: { children: ReactNode }) {
+interface RootLayoutProperties {
+  readonly children: React.ReactNode;
+}
+
+export default function RootLayout({ children }: RootLayoutProperties) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body
