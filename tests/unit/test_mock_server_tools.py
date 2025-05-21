@@ -3,8 +3,8 @@ import asyncio
 import pytest
 
 # Import the module itself to access mcp.name if needed, and the tool functions
-from lightfast_mcp import mock_server
-from lightfast_mcp.mock_server import (
+from lightfast_mcp.servers import mock_server
+from lightfast_mcp.servers.mock_server import (
     execute_mock_action,
     fetch_mock_data,
     get_server_status,

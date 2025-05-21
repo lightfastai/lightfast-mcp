@@ -6,7 +6,7 @@ from typing import Any
 from mcp.server.fastmcp import Context, FastMCP
 
 # Import from your new logging utility
-from .utils.logging_utils import configure_logging, get_logger
+from ..utils.logging_utils import configure_logging, get_logger
 
 # Configure logging using your new utility
 # This will configure the root "FastMCP" logger and by extension child loggers obtained via get_logger
