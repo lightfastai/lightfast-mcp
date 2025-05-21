@@ -13,11 +13,11 @@ import mathutils
 from bpy.props import BoolProperty, IntProperty
 
 bl_info = {
-    "name": "LightFast Blender MCP Addon",
-    "author": "LightFast",
+    "name": "Lightfast Blender MCP Addon",
+    "author": "Lightfast",
     "version": (1, 0, 0),
     "blender": (3, 0, 0),
-    "location": "View3D > Sidebar > BlenderMCP",
+    "location": "View3D > Sidebar > Lightfast MCP",
     "description": "Connect Blender to an MCP client via sockets for core commands.",
     "category": "Interface",
 }
@@ -106,8 +106,49 @@ class BlenderMCPServer:
                     if not data:
                         print("Client disconnected")
                         break
+
+                    print(f"Received {len(data)} bytes of data")
                     buffer += data
-                    if b"\n" in buffer or len(buffer) > 65536:
+
+                    try:
+                        # First try to parse as a complete JSON
+                        command = json.loads(buffer.decode("utf-8"))
+                        buffer = b""  # Clear buffer after successful parse
+
+                        # Process the command
+                        def execute_wrapper():
+                            response = {"status": "error", "message": "Unknown error occurred"}
+                            try:
+                                print(f"Processing command: {command.get('type')}")
+                                response = self.execute_command(command)
+                                print(f"Command processed, response: {str(response)[:100]}...")
+                            except Exception as e_exec_cmd:
+                                print(f"Error directly in execute_command call: {str(e_exec_cmd)}")
+                                traceback.print_exc()
+                                response = {"status": "error", "message": str(e_exec_cmd)}
+                            finally:
+                                try:
+                                    response_json = json.dumps(response)
+                                    print(f"Sending response ({len(response_json)} bytes)")
+                                    client.sendall(response_json.encode("utf-8"))
+                                    print("Response sent successfully")
+                                except OSError as se_send:
+                                    print(f"Failed to send response - socket error: {se_send}")
+                                except Exception as e_send_final:
+                                    print(f"Failed to send final response: {e_send_final}")
+                            return None
+
+                        # For ping command, execute immediately and synchronously
+                        if command.get("type") == "ping":
+                            print("Handling ping command synchronously")
+                            execute_wrapper()
+                        else:
+                            # Use timer for more complex commands that might need Blender's context
+                            print(f"Scheduling {command.get('type')} command for execution")
+                            bpy.app.timers.register(execute_wrapper, first_interval=0.0)
+
+                    except json.JSONDecodeError:
+                        # If we couldn't parse the entire buffer as JSON, try to find a complete JSON object
                         try:
                             decoded_buffer = buffer.decode("utf-8")
                             json_end = -1
@@ -120,39 +161,48 @@ class BlenderMCPServer:
                                     if open_braces == 0:
                                         json_end = i
                                         break
+
                             if json_end != -1:
+                                # We found a complete JSON object
                                 command_str = decoded_buffer[: json_end + 1]
                                 command = json.loads(command_str)
                                 buffer = decoded_buffer[json_end + 1 :].encode("utf-8")
+
+                                # Process the command
+                                def execute_wrapper():
+                                    response = {"status": "error", "message": "Unknown error occurred"}
+                                    try:
+                                        print(f"Processing command: {command.get('type')}")
+                                        response = self.execute_command(command)
+                                    except Exception as e_exec_cmd:
+                                        print(f"Error directly in execute_command call: {str(e_exec_cmd)}")
+                                        traceback.print_exc()
+                                        response = {"status": "error", "message": str(e_exec_cmd)}
+                                    finally:
+                                        try:
+                                            response_json = json.dumps(response)
+                                            print(f"Sending response ({len(response_json)} bytes)")
+                                            client.sendall(response_json.encode("utf-8"))
+                                            print("Response sent successfully")
+                                        except OSError as se_send:
+                                            print(f"Failed to send response - socket error: {se_send}")
+                                        except Exception as e_send_final:
+                                            print(f"Failed to send final response: {e_send_final}")
+                                    return None
+
+                                # For ping command, execute immediately and synchronously
+                                if command.get("type") == "ping":
+                                    print("Handling ping command synchronously")
+                                    execute_wrapper()
+                                else:
+                                    # Use timer for more complex commands that might need Blender's context
+                                    print(f"Scheduling {command.get('type')} command for execution")
+                                    bpy.app.timers.register(execute_wrapper, first_interval=0.0)
                             else:
+                                # If we couldn't find a complete JSON object and the buffer is too large, discard it
                                 if len(buffer) > 65536:
                                     print("Buffer too large, discarding.")
                                     buffer = b""
-                                continue
-
-                            def execute_wrapper():
-                                response = {"status": "error", "message": "Unknown error occurred"}
-                                try:
-                                    response = self.execute_command(command)
-                                except Exception as e_exec_cmd:
-                                    print(f"Error directly in execute_command call: {str(e_exec_cmd)}")
-                                    traceback.print_exc()
-                                    response = {"status": "error", "message": str(e_exec_cmd)}
-                                finally:
-                                    try:
-                                        response_json = json.dumps(response)
-                                        client.sendall(response_json.encode("utf-8") + b"\n")
-                                    except OSError as se_send:
-                                        print(f"Failed to send response - socket error: {se_send}")
-                                    except Exception as e_send_final:
-                                        print(f"Failed to send final response: {e_send_final}")
-                                return None
-
-                            bpy.app.timers.register(execute_wrapper, first_interval=0.0)
-                        except json.JSONDecodeError:
-                            if len(buffer) > 65536:
-                                print("JSON Error & buffer too large, clearing.")
-                                buffer = b""
                         except UnicodeDecodeError as ude:
                             print(f"Unicode decode error: {ude}. Clearing buffer.")
                             buffer = b""
@@ -175,6 +225,7 @@ class BlenderMCPServer:
 
     def execute_command(self, command):
         try:
+            print(f"Executing command: {command.get('type')}")
             return self._execute_command_internal(command)
         except Exception as e:
             print(f"Error executing command: {str(e)}")
@@ -196,7 +247,10 @@ class BlenderMCPServer:
                 print(f"Executing handler for {cmd_type}")
                 result = handler(**params)
                 print(f"Handler execution complete for {cmd_type}")
-                return {"status": "success", "result": result}
+                # Make sure the response is properly formatted for network transmission
+                response = {"status": "success", "result": result}
+                print(f"Prepared response for {cmd_type}: {str(response)[:100]}...")
+                return response
             except Exception as e:
                 print(f"Error in handler for '{cmd_type}': {str(e)}")
                 traceback.print_exc()
@@ -206,7 +260,11 @@ class BlenderMCPServer:
             return {"status": "error", "message": f"Unknown command type: {cmd_type}"}
 
     def handle_ping(self, **kwargs):
-        return {"message": "pong", "timestamp": time.time()}
+        print("Handling ping command...")
+        # Use a simpler response for ping to minimize JSON parsing issues
+        response = {"message": "pong", "timestamp": time.time()}
+        print(f"Ping response prepared: {response}")
+        return response
 
     def get_scene_info(self):
         try:
@@ -281,11 +339,11 @@ class BlenderMCPServer:
 
 
 class BLENDERMCP_PT_Panel(bpy.types.Panel):
-    bl_label = "LightFast MCP"
+    bl_label = "Lightfast MCP"
     bl_idname = "LIGHTFASTMCP_PT_Panel"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
-    bl_category = "LightFast MCP"
+    bl_category = "Lightfast MCP"
 
     def draw(self, context):
         layout = self.layout
@@ -305,8 +363,8 @@ class BLENDERMCP_PT_Panel(bpy.types.Panel):
 
 class LIGHTFASTMCP_OT_StartServer(bpy.types.Operator):
     bl_idname = "lightfast_mcp.start_server"
-    bl_label = "Start LightFast MCP Server"
-    bl_description = "Start the socket server for LightFast MCP client connections"
+    bl_label = "Start Lightfast MCP Server"
+    bl_description = "Start the socket server for Lightfast MCP client connections"
 
     def execute(self, context):
         scene = context.scene
@@ -319,28 +377,28 @@ class LIGHTFASTMCP_OT_StartServer(bpy.types.Operator):
             server_instance.start()
             if server_instance.running:
                 scene.lightfast_mcp_server_running = True
-                self.report({"INFO"}, f"LightFast MCP server started on port {server_instance.port}")
+                self.report({"INFO"}, f"Lightfast MCP server started on port {server_instance.port}")
             else:
                 scene.lightfast_mcp_server_running = False
-                self.report({"ERROR"}, "Failed to start LightFast MCP server.")
+                self.report({"ERROR"}, "Failed to start Lightfast MCP server.")
         else:
-            self.report({"WARNING"}, "LightFast MCP server is already running.")
+            self.report({"WARNING"}, "Lightfast MCP server is already running.")
         return {"FINISHED"}
 
 
 class LIGHTFASTMCP_OT_StopServer(bpy.types.Operator):
     bl_idname = "lightfast_mcp.stop_server"
-    bl_label = "Stop LightFast MCP Server"
-    bl_description = "Stop the LightFast MCP socket server"
+    bl_label = "Stop Lightfast MCP Server"
+    bl_description = "Stop the Lightfast MCP socket server"
 
     def execute(self, context):
         scene = context.scene
         server_instance = getattr(bpy.types, "lightfast_mcp_server_instance", None)
         if server_instance is not None:
             server_instance.stop()
-            self.report({"INFO"}, "LightFast MCP server stopped.")
+            self.report({"INFO"}, "Lightfast MCP server stopped.")
         else:
-            self.report({"WARNING"}, "LightFast MCP server not found or not running.")
+            self.report({"WARNING"}, "Lightfast MCP server not found or not running.")
         scene.lightfast_mcp_server_running = False
         return {"FINISHED"}
 
@@ -359,7 +417,7 @@ def register():
     for cls in _classes:
         bpy.utils.register_class(cls)
     bpy.types.lightfast_mcp_server_instance = None
-    print("LightFast Blender MCP Addon Registered")
+    print("Lightfast Blender MCP Addon Registered")
 
 
 def unregister():
@@ -374,7 +432,7 @@ def unregister():
 
     del bpy.types.Scene.lightfast_mcp_port
     del bpy.types.Scene.lightfast_mcp_server_running
-    print("LightFast Blender MCP Addon Unregistered")
+    print("Lightfast Blender MCP Addon Unregistered")
 
 
 if __name__ == "__main__":

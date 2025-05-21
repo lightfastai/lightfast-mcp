@@ -1,6 +1,7 @@
 import asyncio
 import json
 import socket
+import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -61,16 +62,22 @@ class BlenderConnection:
             try:
                 self.sock.close()
                 logger.info("Disconnected from Blender.")
-            except OSError as e:  # Changed from Exception to socket.error for more specificity
+            except OSError as e:
                 logger.error(f"Socket error during disconnect from Blender: {str(e)}")
             finally:
                 self.sock = None
 
-    def receive_full_response(self, buffer_size=8192, timeout=15.0) -> bytes:
+    def receive_full_response(self, buffer_size=8192) -> bytes:
         """Receive the complete response, potentially in multiple chunks"""
         chunks = []
         if not self.sock:
             raise BlenderConnectionError("Cannot receive response: socket not connected.")
+
+        # Use a consistent timeout value, with extended time for ping checks
+        timeout = 15.0  # Default timeout
+        if getattr(self, "_is_ping_check", False):
+            timeout = 30.0  # Longer timeout for initial ping check
+            logger.info(f"Using extended timeout ({timeout}s) for initial ping verification")
 
         self.sock.settimeout(timeout)
 
@@ -85,114 +92,174 @@ class BlenderConnection:
                             "Connection closed by Blender after sending partial data. Processing received data."
                         )
                         break
+
                     chunks.append(chunk)
+
                     try:
                         # Try to parse to see if we have a complete JSON object
                         data_so_far = b"".join(chunks)
-                        json.loads(data_so_far.decode("utf-8"))
-                        logger.debug(f"Received complete JSON response ({len(data_so_far)} bytes)")
-                        return data_so_far  # Return as soon as a full JSON is detected
+                        # Try to find valid JSON in the received data
+                        # This handles both newline-terminated and non-newline-terminated responses
+                        data_str = data_so_far.decode("utf-8")
+
+                        # Find the end of the JSON object by tracking { and }
+                        json_end = -1
+                        open_braces = 0
+                        for i, char in enumerate(data_str):
+                            if char == "{":
+                                open_braces += 1
+                            elif char == "}":
+                                open_braces -= 1
+                                if open_braces == 0:
+                                    json_end = i
+                                    break
+
+                        if json_end != -1:
+                            # We found a complete JSON object
+                            json_str = data_str[: json_end + 1]
+                            # Validate the JSON
+                            json.loads(json_str)
+                            logger.info(f"Received complete JSON response ({len(json_str)} bytes)")
+                            return json_str.encode("utf-8")
+
+                        # If we couldn't find a complete JSON with brace matching, try a simple parse
+                        # just in case the response is very simple (handles cases like {"foo": "bar"})
+                        json.loads(data_str)
+                        logger.info(f"Received complete JSON response ({len(data_str)} bytes)")
+                        return data_so_far
                     except json.JSONDecodeError:
                         # Not a complete JSON object yet, continue receiving
                         logger.debug("Partial JSON received, continuing for more data...")
                         continue
                 except TimeoutError:
                     logger.warning("Socket timeout during chunked receive.")
-                    if not chunks:
-                        raise BlenderTimeoutError("Timeout waiting for data from Blender (no data received).")
-                    else:  # Timeout with partial data
-                        logger.info("Socket timeout with partial data. Attempting to process what was received.")
-                        break  # Break to process partial data
-                except OSError as e:  # Catch socket-level errors during recv
+                    # If we hit a timeout, break the loop and try to use what we have
+                    break
+                except (ConnectionError, BrokenPipeError, ConnectionResetError) as e:
+                    logger.error(f"Socket connection error during receive: {str(e)}")
+                    raise BlenderConnectionError(f"Socket connection error during receive: {str(e)}") from e
+                except OSError as e:  # Catch other socket-level errors during recv
                     raise BlenderConnectionError(f"Socket error during receive: {str(e)}") from e
-
-            # This point is reached if loop broke (e.g. connection closed by peer after partial data, or timeout with partial data)
-            if not chunks:
-                # This case should ideally be covered by raises within the loop (e.g. timeout with no data)
-                # Or if connection closed cleanly before any data was sent by peer after our request.
-                raise BlenderResponseError("No data chunks received from Blender.")
-
-            final_data = b"".join(chunks)
-            try:
-                # Final validation of the (potentially partial) data
-                json.loads(final_data.decode("utf-8"))
-                logger.debug(f"Validated final data ({len(final_data)} bytes) after receive loop completion.")
-                return final_data
-            except json.JSONDecodeError as e:
-                logger.error(
-                    f"Malformed or incomplete JSON response from Blender ({len(final_data)} bytes): {final_data[:200]}..."
-                )
-                raise BlenderResponseError(
-                    f"Malformed JSON response from Blender: {e.msg}. Partial data: {final_data[:200]}"
-                ) from e
-
-        except BlenderMCPError:  # Re-raise our own errors
+        except BlenderMCPError:
+            # Re-raise our own errors
             raise
-        except Exception as e:  # Catch-all for truly unexpected issues in this method
+        except Exception as e:
             logger.error(f"Unexpected error in receive_full_response: {type(e).__name__}: {str(e)}")
             raise BlenderMCPError(f"Unexpected issue in receive_full_response: {str(e)}") from e
 
+        # If we get here, we either timed out or broke out of the loop
+        # Try to use what we have
+        if chunks:
+            final_data = b"".join(chunks)
+            logger.info(f"Attempting to process partial data after receive completion ({len(final_data)} bytes)")
+            try:
+                # Try to parse what we have
+                json.loads(final_data.decode("utf-8"))
+                return final_data
+            except json.JSONDecodeError as e:
+                logger.error(f"Malformed or incomplete JSON response from Blender ({len(final_data)} bytes)")
+                raise BlenderResponseError(
+                    f"Malformed JSON response from Blender: {e.msg}. Partial data: {final_data[:200]}"
+                ) from e
+        else:
+            raise BlenderResponseError("No data chunks received from Blender.")
+
     def send_command(self, command_type: str, params: dict[str, Any] = None) -> dict[str, Any]:
         """Send a command to Blender and return the response"""
-        if not self.sock:  # Try to connect if not already connected or if connect() failed before
+        if not self.sock:  # Try to connect if not already connected
             try:
                 self.connect()
-            except BlenderConnectionError as e:  # Catch if connect() fails
+            except BlenderConnectionError as e:
                 raise BlenderConnectionError(f"Cannot send command, connection attempt failed: {e}") from e
 
         if not self.sock:  # If still not connected after attempt
             raise BlenderConnectionError("Not connected to Blender. Ensure Blender is running and the addon is active.")
+
+        # Mark if this is a ping command for initial verification
+        self._is_ping_check = command_type == "ping" and not hasattr(self, "_ping_sent")
+        if self._is_ping_check:
+            self._ping_sent = True
 
         command = {"type": command_type, "params": params or {}}
         try:
             logger.info(f"Sending command to Blender: {command_type} with params: {params}")
             self.sock.sendall(json.dumps(command).encode("utf-8"))
 
-            response_data = self.receive_full_response()  # Can raise BlenderTimeout, BlenderConnection, BlenderResponse
+            # For ping commands, use a more aggressive timeout approach
+            if command_type == "ping":
+                # Shorter timeout for ping
+                ping_timeout = 5.0
+                logger.info(f"Using shorter timeout ({ping_timeout}s) for ping command")
 
-            try:
-                response = json.loads(response_data.decode("utf-8"))
-            except json.JSONDecodeError as e:
-                logger.error(f"Failed to decode JSON response from Blender: {e}. Raw data: {response_data[:200]}...")
-                raise BlenderResponseError(f"Invalid JSON structure in response from Blender: {e.msg}") from e
+                # Set a shorter timeout for just this operation
+                old_timeout = self.sock.gettimeout()
+                self.sock.settimeout(ping_timeout)
 
-            logger.info(f"Response from Blender parsed. Status: {response.get('status', 'unknown')}")
+                try:
+                    # Just read a small amount of data synchronously for ping
+                    raw_data = self.sock.recv(8192)
+                    if not raw_data:
+                        raise BlenderConnectionError("Connection closed by Blender during ping")
 
-            if response.get("status") == "error":
-                error_message = response.get("message", "Unknown error from Blender")
-                logger.error(f"Blender addon reported an error: {error_message}")
-                raise BlenderCommandError(error_message)
+                    try:
+                        # Parse the ping response directly
+                        response = json.loads(raw_data.decode("utf-8"))
+                        logger.info(f"Received ping response: {response}")
 
-            return response.get("result", {})
+                        if response.get("status") == "error":
+                            error_message = response.get("message", "Unknown error from Blender")
+                            logger.error(f"Blender addon reported an error: {error_message}")
+                            raise BlenderCommandError(error_message)
 
-        except BlenderTimeoutError as e:
-            logger.error(f"Timeout communicating with Blender for command '{command_type}': {e}")
+                        return response.get("result", {})
+                    except json.JSONDecodeError as e:
+                        logger.error(f"Invalid JSON in ping response: {e}")
+                        raise BlenderResponseError(f"Invalid ping response: {e}")
+                finally:
+                    # Restore the original timeout
+                    self.sock.settimeout(old_timeout)
+            else:
+                # For normal commands, use the standard receive method
+                response_data = self.receive_full_response()
+
+                try:
+                    response = json.loads(response_data.decode("utf-8"))
+                except json.JSONDecodeError as e:
+                    logger.error(
+                        f"Failed to decode JSON response from Blender: {e}. Raw data: {response_data[:200]}..."
+                    )
+                    raise BlenderResponseError(f"Invalid JSON structure in response from Blender: {e.msg}") from e
+
+                logger.info(f"Response from Blender parsed. Status: {response.get('status', 'unknown')}")
+
+                if response.get("status") == "error":
+                    error_message = response.get("message", "Unknown error from Blender")
+                    logger.error(f"Blender addon reported an error: {error_message}")
+                    raise BlenderCommandError(error_message)
+
+                return response.get("result", {})
+
+        except TimeoutError:
+            logger.error("Socket timeout while waiting for response from Blender")
             self.disconnect()  # Invalidate socket on timeout
-            raise  # Re-raise
+            raise BlenderTimeoutError(f"Timeout waiting for Blender response for command '{command_type}'")
 
-        except BlenderResponseError as e:
-            logger.error(f"Response error from Blender for command '{command_type}': {e}")
-            # self.disconnect()? A bad response doesn't always mean the connection is dead.
+        except (ConnectionError, BrokenPipeError, ConnectionResetError) as e:
+            logger.error(f"Socket connection error: {str(e)}")
+            self.disconnect()
+            raise BlenderConnectionError(f"Connection to Blender lost: {str(e)}")
+
+        except (BlenderTimeoutError, BlenderConnectionError, BlenderResponseError, BlenderCommandError):
+            # Re-raise our specific errors
+            self.disconnect()  # Disconnect on any Blender-specific error
             raise
 
-        except BlenderConnectionError as e:  # From receive_full_response or initial connect check
-            logger.error(f"Connection error with Blender for command '{command_type}': {e}")
-            self.disconnect()  # Definitely disconnect if connection is the issue
-            raise
-
-        except BlenderCommandError:  # Raised above if status is "error"
-            # Already logged. Just re-raise.
-            raise
-
-        except OSError as e:  # For errors during sendall itself, or other unexpected socket issues
+        except OSError as e:
             logger.error(f"Socket error during send_command '{command_type}': {str(e)}")
             self.disconnect()
             raise BlenderConnectionError(f"Socket error sending command to Blender: {str(e)}") from e
 
-        except Exception as e:  # Catch-all for other unexpected issues
-            if isinstance(e, BlenderMCPError):  # Should have been caught by specific handlers
-                raise
-
+        except Exception as e:
             logger.error(f"Unexpected error in send_command '{command_type}': {type(e).__name__}: {str(e)}")
             self.disconnect()  # Safer to disconnect on unknown errors
             raise BlenderMCPError(f"Unexpected error sending/receiving for command '{command_type}': {str(e)}") from e
@@ -202,44 +269,166 @@ class BlenderConnection:
 _blender_connection: BlenderConnection = None
 
 
+def check_blender_running(host="localhost", port=9876, timeout=2.0) -> bool:
+    """
+    Quick check if Blender is running with the addon active.
+    Returns True if socket connection is possible, False otherwise.
+    """
+    try:
+        logger.info(f"Checking if Blender is running on {host}:{port}...")
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(timeout)
+        sock.connect((host, port))
+        logger.info(f"Successfully connected to Blender on {host}:{port}")
+        sock.close()
+        return True
+    except (TimeoutError, ConnectionRefusedError, OSError) as e:
+        logger.warning(f"Could not connect to Blender: {type(e).__name__}: {str(e)}")
+        return False
+    except Exception as e:
+        logger.warning(f"Unexpected error checking if Blender is running: {type(e).__name__}: {str(e)}")
+        return False
+
+
+def find_blender_port(host="localhost", start_port=9876, end_port=9886, timeout=0.5):
+    """
+    Try to find which port Blender is listening on by scanning a range of ports.
+    Returns the port number if found, None otherwise.
+    """
+    logger.info(f"Scanning for Blender on ports {start_port} to {end_port}...")
+    for port in range(start_port, end_port + 1):
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(timeout)
+            result = sock.connect_ex((host, port))
+
+            if result == 0:  # Port is open
+                logger.info(f"Found open port at {port}")
+                sock.close()
+
+                # Try sending a simple ping to verify it's a Blender server
+                try:
+                    logger.info(f"Testing if port {port} is a Blender server...")
+                    test_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    test_sock.settimeout(2.0)  # Short timeout for ping test
+                    test_sock.connect((host, port))
+
+                    # Send a ping command
+                    ping_cmd = json.dumps({"type": "ping", "params": {}}).encode("utf-8")
+                    test_sock.sendall(ping_cmd)
+
+                    # Try to get a response
+                    response_data = test_sock.recv(8192)
+                    test_sock.close()
+
+                    if response_data:
+                        try:
+                            response = json.loads(response_data.decode("utf-8"))
+                            # Check if it looks like a Blender response
+                            if response.get("status") == "success":
+                                logger.info(f"Verified Blender running on port {port}")
+                                return port
+                        except json.JSONDecodeError:
+                            logger.debug(f"Port {port} did not return valid JSON")
+                            continue
+                except Exception as e:
+                    logger.debug(f"Port {port} is open but not a Blender server: {e}")
+                    continue
+            else:
+                sock.close()
+        except Exception as e:
+            logger.debug(f"Error checking port {port}: {e}")
+            continue
+
+    logger.warning(f"No Blender server found on ports {start_port}-{end_port}")
+    return None
+
+
 def get_blender_connection(host: str = "localhost", port: int = 9876) -> BlenderConnection:
     """Get or create a persistent Blender connection."""
     global _blender_connection
+
+    # Check if we have an existing connection
     if _blender_connection is not None and _blender_connection.sock is not None:  # Check sock too
         try:
-            # Simple ping to check connection validity. send_command can raise BlenderMCPError subtypes.
+            # Send a simple command directly rather than a complex ping
+            logger.debug("Testing existing connection...")
+            # Use a faster timeout for the socket test
+            _blender_connection.sock.settimeout(2.0)
+            # Just try to send something and see if it works
+            _blender_connection.sock.sendall(b"test")
+
+            # If we get here without an exception, the socket is likely still connected
+            # Reset the socket timeout to normal
+            _blender_connection.sock.settimeout(None)
+
+            # Simple ping to verify the connection is still valid
             logger.debug("Pinging Blender to check existing connection...")
-            _blender_connection.send_command("ping")  # "ping" should be a low-impact command on addon side
+            _blender_connection.send_command("ping")
             logger.info("Reusing existing Blender connection.")
             return _blender_connection
-        except BlenderMCPError as e:  # Catch our specific errors from send_command
+        except (OSError, BlenderMCPError) as e:
+            logger.warning(f"Existing connection check failed: {type(e).__name__}: {str(e)}. Attempting to reconnect.")
+            _blender_connection.disconnect()
+            _blender_connection = None
+        except Exception as e:
             logger.warning(
-                f"Existing Blender connection check (ping) failed: {type(e).__name__}: {str(e)}. Attempting to reconnect."
+                f"Unexpected error during connection check: {type(e).__name__}: {str(e)}. Invalidating connection."
             )
             _blender_connection.disconnect()
             _blender_connection = None
-        # Catch other unexpected errors during ping, treat as connection failure
-        except Exception as e:
-            logger.warning(f"Unexpected error during ping: {type(e).__name__}: {str(e)}. Invalidating connection.")
-            _blender_connection.disconnect()
+
+    # First try the specified port
+    if check_blender_running(host=host, port=port):
+        found_port = port
+    else:
+        # If that fails, try to scan for the correct port
+        found_port = find_blender_port(host=host)
+        if found_port:
+            logger.info(f"Found Blender running on alternative port: {found_port}")
+        else:
+            # If no port was found, just try the default one
+            logger.warning("Could not find Blender running on any port")
+            found_port = port  # Fall back to the original port for consistency
+
+    # Don't bother trying multiple times if the port scanning already failed
+    if found_port != port and not check_blender_running(host=host, port=found_port):
+        logger.error(f"Port {found_port} is not responding to connection attempts.")
+        raise BlenderConnectionError(f"Cannot connect to Blender on {host}:{found_port}")
+
+    # Try to create a new connection (fewer attempts if we had to scan for a port)
+    max_attempts = 2  # Reduced from 3 to make failure faster when Blender is definitely not available
+    attempt = 0
+
+    while attempt < max_attempts:
+        attempt += 1
+        logger.info(
+            f"Attempting to establish new connection to Blender at {host}:{found_port} (attempt {attempt}/{max_attempts})."
+        )
+        _blender_connection = BlenderConnection(host=host, port=found_port)
+        try:
+            _blender_connection.connect()  # Can raise BlenderConnectionError or BlenderTimeoutError
+
+            # Verify with a ping after connect
+            logger.debug("Verifying new connection with a ping...")
+            _blender_connection.send_command("ping")
+            logger.info(
+                f"Successfully established and verified new Blender connection (attempt {attempt}/{max_attempts})."
+            )
+            return _blender_connection
+        except BlenderMCPError as e:  # Catch errors from connect() or the verification ping
+            logger.warning(f"Connection attempt {attempt}/{max_attempts} failed: {type(e).__name__}: {str(e)}")
+            if _blender_connection:  # Ensure disconnect if object exists but failed
+                _blender_connection.disconnect()
             _blender_connection = None
 
-    logger.info(f"Attempting to establish new connection to Blender at {host}:{port}.")
-    _blender_connection = BlenderConnection(host=host, port=port)
-    try:
-        _blender_connection.connect()  # Can raise BlenderConnectionError or BlenderTimeoutError
-        # Verify with a ping after connect
-        logger.debug("Verifying new connection with a ping...")
-        _blender_connection.send_command("ping")
-        logger.info("Successfully established and verified new Blender connection.")
-    except BlenderMCPError as e:  # Catch errors from connect() or the verification ping
-        logger.error(f"Failed to establish or verify new Blender connection: {type(e).__name__}: {str(e)}")
-        if _blender_connection:  # Ensure disconnect if object exists but failed
-            _blender_connection.disconnect()
-        _blender_connection = None
-        raise  # Re-raise the specific BlenderMCPError (e.g. BlenderConnectionError)
+            # Short delay before retrying
+            if attempt < max_attempts:
+                time.sleep(1)
 
-    return _blender_connection
+    # If we get here, all attempts failed
+    logger.error(f"Failed to establish Blender connection after {max_attempts} attempts.")
+    raise BlenderConnectionError(f"Failed to establish Blender connection after {max_attempts} attempts.")
 
 
 @asynccontextmanager
@@ -247,15 +436,32 @@ async def server_lifespan(server: FastMCP) -> AsyncIterator[dict[str, Any]]:
     """Manage server startup and shutdown lifecycle."""
     try:
         logger.info("Blender MCP Server starting up...")
-        # Attempt to establish connection on startup to verify Blender is accessible
-        get_blender_connection()  # This will raise BlenderConnectionError etc. if fails
-        logger.info("Initial connection to Blender successful and verified during startup.")
+
+        # First do a quick check if Blender is likely running with the addon active
+        if not check_blender_running():
+            logger.warning("Cannot connect to Blender. Please ensure Blender is running and the addon is active.")
+            logger.warning("1. Open Blender")
+            logger.warning("2. Install the addon (Edit > Preferences > Add-ons > Install)")
+            logger.warning("3. Enable the Lightfast MCP addon")
+            logger.warning("4. Start the MCP Server from the Lightfast MCP panel")
+            logger.warning("Proceeding with server startup despite Blender connection failure.")
+            # Continue startup despite failure - the server may be able to connect later
+            # when Blender is started
+        else:
+            # Attempt to establish connection on startup to verify Blender is accessible
+            try:
+                get_blender_connection()  # This will raise BlenderConnectionError etc. if fails
+                logger.info("Initial connection to Blender successful and verified during startup.")
+            except BlenderTimeoutError as e:
+                logger.warning(f"Connection to Blender timed out. Blender may be busy: {e}")
+                logger.warning("Proceeding with server startup, but verification failed. Client operations may fail.")
+                # Continue startup despite timeout - the server may still be able to connect later
+            except BlenderMCPError as e:
+                logger.warning(f"Could not connect to Blender during startup: {type(e).__name__}: {str(e)}")
+                logger.warning("Proceeding with server startup despite Blender connection failure.")
+                # Continue startup despite failure - the server may be able to connect later
+
         yield {}  # Context for lifespan, not used by tools directly
-    except BlenderMCPError as e:  # Catch our specific errors from get_blender_connection
-        logger.error(
-            f"Blender MCP Server failed to start: Could not connect/verify Blender. Error: {type(e).__name__}: {str(e)}"
-        )
-        raise  # Re-raise to prevent server from starting incorrectly
     except Exception as e:  # Catch any other unexpected errors
         logger.error(f"Unexpected error during Blender MCP server startup: {type(e).__name__}: {str(e)}")
         raise BlenderMCPError(f"Fatal server startup error: {str(e)}") from e
@@ -288,6 +494,15 @@ async def get_state(ctx: Context) -> str:
         # Run synchronous get_blender_connection and send_command in executor
         blender_conn = await loop.run_in_executor(None, get_blender_connection)
         result = await loop.run_in_executor(None, blender_conn.send_command, "get_scene_info")
+
+        # Add diagnostic information about the connection
+        result["_connection_info"] = {
+            "connected": True,
+            "host": blender_conn.host,
+            "port": blender_conn.port,
+            "connection_time": time.time(),
+        }
+
         return json.dumps(result, indent=2)
     except BlenderMCPError as e:  # Catch specific Blender errors first
         logger.error(f"BlenderMCPError in get_state: {type(e).__name__}: {str(e)}")
