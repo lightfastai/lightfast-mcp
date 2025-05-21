@@ -24,12 +24,7 @@ interface RootLayoutProperties {
 export default function RootLayout({ children }: RootLayoutProperties) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body
-        className={cn(
-          fonts,
-          "bg-background text-foreground flex flex-col min-h-screen"
-        )}
-      >
+      <body className={cn(fonts, "text-foreground flex flex-col min-h-screen")}>
         <RootProvider>{children}</RootProvider>
       </body>
     </html>
