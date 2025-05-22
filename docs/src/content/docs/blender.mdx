@@ -9,7 +9,7 @@ This guide will walk you through setting up Lightfast MCP to work with Blender, 
 
 ## Installation
 
-### Step 1: Install Lightfast MCP
+### Install Lightfast MCP
 
 First, clone the repository and install the package:
 
@@ -27,27 +27,27 @@ pip install -e .
 
 ## Blender Addon Setup
 
-### Step 2: Install the Blender Addon
+### Install the Blender Addon
 
 1. Open Blender
-2. Go to **Edit → Preferences → Add-ons**
-3. Click **Install** and navigate to the Lightfast MCP folder
-4. Select `lightfast_blender_addon.py` from the `addons` directory
-5. Enable the addon by checking the box next to "AI: Lightfast MCP"
+2. Go to **Edit → Preferences → Add-ons** (shortcut: CMD + ,)
+3. Click **Install from Disk...** and navigate to the Lightfast MCP folder
+4. Navigate to the `addons` directory and select `lightfast_blender_addon.py`
+5. Enable the addon by checking the box next to "Lightfast Blender MCP Addon"
 
-![Blender addon installation](/images/blender_addon_install.svg)
+![Blender addon installation](/images/blender-addon-install.png)
 
-### Step 3: Access the Lightfast Panel
+### Access the Lightfast Panel
 
 1. In Blender, press **N** to open the sidebar
 2. Look for the **Lightfast MCP** tab
 3. Click **Start MCP Server** to activate the connection
 
-![Lightfast panel in Blender](/images/blender_panel.svg)
+![Lightfast panel in Blender](/images/blender-panel.png)
 
 ## Claude Desktop Configuration
 
-### Step 4: Configure Claude Desktop
+### Configure Claude Desktop
 
 To use Claude with Lightfast MCP, you need to configure Claude Desktop:
 
@@ -91,7 +91,7 @@ For example:
 
 ## Testing the Connection
 
-### Step 5: Start Blender and Claude
+### Start Blender and Claude
 
 1. Open Blender and enable the Lightfast MCP server from the sidebar panel
 2. Start Claude Desktop and select the "lightfast-blender" MCP server
