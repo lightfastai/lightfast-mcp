@@ -42,7 +42,7 @@ command_id_counter = 0
 
 # System prompt for Photoshop MCP
 DEFAULT_SYSTEM_PROMPT = """
-You are a helpful assistant with the ability to control Photoshop. 
+You are a helpful assistant with the ability to control Photoshop.
 You can create and modify images, manage layers, and help users with image editing tasks.
 When asked to create or modify images, analyze what the user is asking for and use the available tools.
 
@@ -142,7 +142,7 @@ const batchPlay = photoshop.action.batchPlay;
 
 // Get or create document
 let doc = app.activeDocument || app.documents.add({
-    width: 800, height: 600, resolution: 72, 
+    width: 800, height: 600, resolution: 72,
     mode: 'RGBColorMode', fill: 'white'
 });
 
@@ -218,27 +218,32 @@ async def _process_incoming_messages_for_client(websocket: websockets.WebSocketS
                     logger.info(f"Message from {client_info} contains command_id: {command_id}")
                     if command_id in responses:
                         logger.info(
-                            f"Command_id {command_id} (from {client_info}) found in server responses dict. Resolving future."
+                            f"Command_id {command_id} (from {client_info}) found in server "
+                            f"responses dict. Resolving future."
                         )
                         future = responses[command_id]
                         if not future.done():
                             future.set_result(data.get("result", {}))
                         else:
                             logger.warning(
-                                f"Future for command_id {command_id} (from {client_info}) was already done. Not resolving again."
+                                f"Future for command_id {command_id} (from {client_info}) was "
+                                f"already done. Not resolving again."
                             )
 
                         # Clean up the response entry, critical to prevent re-processing or memory leaks
                         if (
                             command_id in responses
-                        ):  # Re-check as future might have been cleared by another thread/task on resolve (though unlikely here)
+                        ):  # Re-check as future might have been cleared by another thread/task on
+                            # resolve (though unlikely here)
                             del responses[command_id]
                         logger.info(
                             f"Processed and removed response entry for command ID {command_id} from {client_info}"
                         )
                     else:
                         logger.warning(
-                            f"Command_id {command_id} (from {client_info}) received, but NOT found in server responses dict. Current responses keys: {list(responses.keys())}. This might be a late response for a timed-out command."
+                            f"Command_id {command_id} (from {client_info}) received, but NOT found in server "
+                            f"responses dict. Current responses keys: {list(responses.keys())}. "
+                            f"This might be a late response for a timed-out command."
                         )
                 else:
                     logger.info(f"Received unsolicited message (no command_id) from Photoshop ({client_info}): {data}")
@@ -267,14 +272,11 @@ async def handle_photoshop_client(websocket: websockets.WebSocketServerProtocol)
 
     if websocket in connected_clients:
         logger.warning(
-            f"Client {client_info} is already in connected_clients. This should not happen. Ignoring new connection attempt or closing old one might be needed."
+            f"Client {client_info} is already in connected_clients. This should not happen. "
+            f"Ignoring new connection attempt or closing old one might be needed."
         )
-        # Potentially close the new websocket or find and close the old one.
-        # For now, we'll proceed, but this indicates a potential issue if multiple handlers are created for the same client object.
-        # However, websockets.serve typically creates a new handler for each new connection.
-        # So, if this is the same client *reconnecting*, the old websocket object might be stale.
-        # Let's ensure the set only contains active connections.
-        # A robust way is to clean stale entries from connected_clients periodically or on disconnect.
+        # For now, we'll proceed, but this indicates a potential issue if multiple handlers are
+        # created for the same client object.
         pass  # Continuing, will add to set again if not present or replace if object is same.
 
     logger.info(f"Photoshop client connected from {client_info}")
@@ -300,7 +302,8 @@ async def handle_photoshop_client(websocket: websockets.WebSocketServerProtocol)
 
     except PhotoshopTimeoutError as pte:
         logger.error(
-            f"Timeout during initial ping for {client_info}: {pte}. The client might not be responding or the message handler failed."
+            f"Timeout during initial ping for {client_info}: {pte}. The client might not be "
+            f"responding or the message handler failed."
         )
         # The connection will likely be closed by send_to_photoshop's exception handling or client-side closure.
     except websockets.exceptions.ConnectionClosed:
@@ -354,7 +357,7 @@ async def send_to_photoshop(command_type: str, params: dict[str, Any] = None) ->
     }
 
     command_json = json.dumps(command)
-    logger.info(f"Sending command to Photoshop: {command_type} (ID: {command_id})")
+    logger.info(f"Sending command to Photoshop.{command_type} (ID: {command_id})")
 
     # Send to all connected clients (usually just one)
     # In a more robust implementation, you might want to target specific clients
@@ -382,7 +385,7 @@ async def send_to_photoshop(command_type: str, params: dict[str, Any] = None) ->
                 del responses[command_id]
             raise PhotoshopTimeoutError(
                 f"Timeout waiting for Photoshop response for command '{command_type}' (ID: {command_id})"
-            )
+            ) from None
 
     except (
         websockets.exceptions.ConnectionClosed,
@@ -390,7 +393,8 @@ async def send_to_photoshop(command_type: str, params: dict[str, Any] = None) ->
         ConnectionResetError,
     ) as e:  # Added more connection errors
         logger.error(
-            f"Connection error while sending/awaiting command {command_id} ({command_type}): {type(e).__name__} - {str(e)}"
+            f"Connection error while sending/awaiting command {command_id} ({command_type}): "
+            f"{type(e).__name__} - {str(e)}"
         )
         if command_id in responses:
             if not responses[command_id].done():
@@ -400,14 +404,14 @@ async def send_to_photoshop(command_type: str, params: dict[str, Any] = None) ->
                     )
                 )
             del responses[command_id]
-        raise PhotoshopConnectionError(f"Connection to Photoshop lost: {str(e)}")
+        raise PhotoshopConnectionError(f"Connection to Photoshop lost: {str(e)}") from e
 
     except Exception as e:
         logger.error(f"Unexpected error sending command: {str(e)}")
         # Clean up
         if command_id in responses:
             del responses[command_id]
-        raise PhotoshopMCPError(f"Error sending command to Photoshop: {str(e)}")
+        raise PhotoshopMCPError(f"Error sending command to Photoshop: {str(e)}") from e
 
 
 async def check_photoshop_connected() -> bool:
@@ -455,7 +459,7 @@ async def start_websocket_server():
         return server
     except Exception as e:
         logger.error(f"Failed to start WebSocket server: {str(e)}")
-        raise PhotoshopMCPError(f"Failed to start WebSocket server: {str(e)}")
+        raise PhotoshopMCPError(f"Failed to start WebSocket server: {str(e)}") from e
 
 
 @asynccontextmanager
