@@ -159,7 +159,8 @@ class BlenderConnection:
             except json.JSONDecodeError as e:
                 logger.error(f"Malformed or incomplete JSON response from Blender ({len(final_data)} bytes)")
                 raise BlenderResponseError(
-                    f"Malformed JSON response from Blender: {e.msg}. Partial data: {final_data[:200].decode('utf-8', 'replace')}"
+                    f"Malformed JSON response from Blender: {e.msg}. "
+                    f"Partial data: {final_data[:200].decode('utf-8', 'replace')}"
                 ) from e
         else:
             raise BlenderResponseError("No data chunks received from Blender.")
@@ -226,7 +227,8 @@ class BlenderConnection:
                     response = json.loads(response_data.decode("utf-8"))
                 except json.JSONDecodeError as e:
                     logger.error(
-                        f"Failed to decode JSON response from Blender: {e}. Raw data: {response_data[:200].decode('utf-8', 'replace')}..."
+                        f"Failed to decode JSON response from Blender: {e}. "
+                        f"Raw data: {response_data[:200].decode('utf-8', 'replace')}..."
                     )
                     raise BlenderResponseError(f"Invalid JSON structure in response from Blender: {e.msg}") from e
 
