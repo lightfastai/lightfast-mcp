@@ -20,7 +20,13 @@ export default function RootLayout({ children }: RootLayoutProperties) {
     <html lang="en" suppressHydrationWarning>
       <body className={cn(fonts, "text-foreground flex flex-col min-h-screen")}>
         <ThemeProvider attribute="class">
-          <RootProvider>{children}</RootProvider>
+          <RootProvider
+            search={{
+              enabled: true,
+            }}
+          >
+            {children}
+          </RootProvider>
         </ThemeProvider>
       </body>
     </html>
