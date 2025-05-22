@@ -55,7 +55,7 @@ jobs:
         pip install nox
 
     - name: Run tests for Python ${{ matrix.python-version }}
-      run: python -m nox --session "test-$(echo ${{ matrix.python-version }} | tr -d '.')"
+      run: python -m nox --session "test-${{ matrix.python-version }}"
 
   build:
     runs-on: ubuntu-latest
