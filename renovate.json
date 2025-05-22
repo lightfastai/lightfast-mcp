@@ -1,0 +1,48 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "schedule": ["every weekend"],
+  "packageRules": [
+    {
+      "matchCategories": ["python"],
+      "enabled": true
+    },
+    {
+      "matchDepTypes": [
+        "dev-dependencies"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "automerge": true
+    },
+    {
+      "matchPackagePatterns": [
+        "^ruff"
+      ],
+      "groupName": "ruff packages"
+    },
+    {
+      "matchPackagePatterns": [
+        "^pytest"
+      ],
+      "groupName": "pytest packages"
+    }
+  ],
+  "poetry": {
+    "enabled": false
+  },
+  "pep621": {
+    "enabled": true
+  },
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 2,
+  "labels": [
+    "dependencies"
+  ],
+  "commitMessagePrefix": "⬆️ ",
+  "dependencyDashboard": true
+}
