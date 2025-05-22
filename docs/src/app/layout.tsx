@@ -19,7 +19,7 @@ export default function RootLayout({ children }: RootLayoutProperties) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={cn(fonts, "text-foreground flex flex-col min-h-screen")}>
-        <ThemeProvider attribute="class">
+        <ThemeProvider attribute="class" defaultTheme="dark">
           <RootProvider
             search={{
               enabled: true,

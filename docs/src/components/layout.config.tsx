@@ -4,12 +4,12 @@ import { Icons } from "./icons";
 
 export const baseOptions: BaseLayoutProps = {
   nav: {
-    title: (
-      <div className="flex items-center justify-center gap-2">
-        <Icons.logo className="w-4 h-4" />{" "}
-        <span className="text-sm font-medium">Lightfast</span>
-      </div>
-    ),
+    title: <Icons.logo className="text-white w-28" />,
+    url: "https://lightfast.ai",
+  },
+  themeSwitch: {
+    enabled: false,
+    mode: "light-dark-system",
   },
 };
 
