@@ -118,7 +118,7 @@ batchPlay(
                 _obj: "solidColorLayer",
                 color: {
                     _obj: "RGBColor",
-                    red: r, grain: g, blue: b
+                    red: r, green: g, blue: b
                 }
             },
             bounds: {
@@ -181,7 +181,7 @@ batchPlay(
                 _obj: "solidColorLayer",
                 color: {
                     _obj: "RGBColor",
-                    red: r, grain: g, blue: b
+                    red: r, green: g, blue: b
                 }
             },
             bounds: {
@@ -413,9 +413,10 @@ async def execute_jsx(ctx: Context, jsx_code: str) -> str:
     """
     Execute JSX code in Photoshop.
     This allows running arbitrary JavaScript code in the Photoshop environment.
+    DEPRECATED: Use execute_photoshop_code instead for UXP panels.
     """
     try:
-        logger.info("Executing execute_jsx command.")
+        logger.info(f"Executing execute_jsx command (deprecated): {jsx_code[:100]}...")
 
         # Check if Photoshop is connected
         if not await check_photoshop_connected():
@@ -426,7 +427,8 @@ async def execute_jsx(ctx: Context, jsx_code: str) -> str:
             }
             return json.dumps(error_result)
 
-        # Send the command to Photoshop
+        # Send the command to Photoshop using the old command type for backward compatibility if needed
+        # but ideally, this tool should also use 'execute_photoshop_code_cmd' if the UXP side can handle it
         result = await send_to_photoshop("execute_jsx", {"code": jsx_code})
 
         return json.dumps(result)
@@ -436,6 +438,40 @@ async def execute_jsx(ctx: Context, jsx_code: str) -> str:
         return json.dumps(error_result)
     except Exception as e:
         logger.error(f"Unexpected error in execute_jsx: {type(e).__name__}: {str(e)}")
+        error_result = {"status": "error", "message": f"Unexpected: {str(e)}", "error_type": type(e).__name__}
+        return json.dumps(error_result)
+
+
+@mcp.tool()
+async def execute_photoshop_code(ctx: Context, uxp_javascript_code: str) -> str:
+    """
+    Execute UXP JavaScript code in the connected Photoshop panel.
+    This allows running arbitrary UXP-compatible JavaScript in Photoshop's UXP context.
+    The script will have access to 'photoshop', 'app', 'batchPlay' and 'addToLog' from the panel's scope.
+    """
+    try:
+        logger.info(f"Executing execute_photoshop_code command: {uxp_javascript_code[:200]}...")
+
+        if not await check_photoshop_connected():
+            error_result = {
+                "status": "error",
+                "message": "No Photoshop clients connected to execute code.",
+                "error_type": "PhotoshopConnectionError",
+            }
+            return json.dumps(error_result)
+
+        # Send the command to Photoshop to execute the UXP JavaScript code
+        result = await send_to_photoshop("execute_photoshop_code_cmd", {"script": uxp_javascript_code})
+
+        # The result from send_to_photoshop should be the direct JSON response from the UXP panel
+        return json.dumps(result)
+
+    except PhotoshopMCPError as e:
+        logger.error(f"Error executing Photoshop UXP code: {str(e)}")
+        error_result = {"status": "error", "message": str(e), "error_type": type(e).__name__}
+        return json.dumps(error_result)
+    except Exception as e:
+        logger.error(f"Unexpected error in execute_photoshop_code: {type(e).__name__}: {str(e)}")
         error_result = {"status": "error", "message": f"Unexpected: {str(e)}", "error_type": type(e).__name__}
         return json.dumps(error_result)
 

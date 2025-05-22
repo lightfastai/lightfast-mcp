@@ -61,8 +61,27 @@ function connectToServer() {
             try {
                 const message = JSON.parse(event.data);
                 handleServerMessage(message);
+
+                // Check if this message is a command to execute code from the server
+                if (message.command_id && (message.type === 'execute_photoshop_code_cmd' || message.type === 'execute_jsx')) {
+                    const scriptToExecute = message.params?.script || message.params?.code;
+                    const commandId = message.command_id;
+                    const commandType = message.type;
+
+                    if (scriptToExecute) {
+                        addToLog(`Received ${commandType} command (ID: ${commandId}) from server. Executing script...`);
+                        executeScriptFromMCP(scriptToExecute, commandId);
+                    } else {
+                        addToLog(`Received ${commandType} command (ID: ${commandId}) but no script was provided.`, 'error');
+                        sendScriptResultToMCP(commandId, null, 'No script provided in command');
+                    }
+                }
             } catch (err) {
-                addToLog(`Error parsing message: ${err.message}`, 'error');
+                addToLog(`Error parsing message or initial handling: ${err.message}`, 'error');
+                if (message && message.command_id) {
+                    // If we know the command_id, try to send an error back
+                    sendScriptResultToMCP(message.command_id, null, `Error parsing message: ${err.message}`);
+                }
             }
         });
         
@@ -142,15 +161,16 @@ function sendCommand(type, params) {
 function handleServerMessage(message) {
     addToLog(`Received message from server: ${JSON.stringify(message).substring(0, 100)}...`);
     
-    if (message.status === 'error') {
+    if (message.status === 'error' && !message.command_id) { // Only log general server errors, not command responses
         addToLog(`Server error: ${message.message}`, 'error');
     } else {
-        // Handle success responses
-        if (message.result) {
-            // Process result if needed
+        // Handle success responses for commands *initiated by this client*
+        if (message.result && message.command_id) { 
+            // This is a response to a command like 'ping' or 'get_document_info' sent from the client
             if (message.result.message === 'pong') {
                 addToLog('Server ping successful', 'success');
             }
+            // Other client-initiated command responses could be handled here too
         }
     }
 }
@@ -518,6 +538,62 @@ function addToLog(message, type) {
     // Limit the number of log entries
     while (logElem.children.length > 100) {
         logElem.removeChild(logElem.firstChild);
+    }
+}
+
+// New function to execute script received from MCP and send back the result
+async function executeScriptFromMCP(scriptContent, commandId) {
+    try {
+        // Make Photoshop API and logging available to the script
+        // Note: 'photoshop', 'app', 'batchPlay' are already available via require('photoshop')
+        // if the script uses it. We make them directly available for convenience, and also `addToLog`.
+        const scriptFunction = new Function('photoshop', 'app', 'batchPlay', 'addToLog', 'require', scriptContent);
+        
+        // Get Photoshop objects to pass to the script
+        const ps = require('photoshop');
+        const currentApp = ps.app;
+        const currentBatchPlay = ps.action.batchPlay;
+        
+        addToLog(`Executing script (ID: ${commandId}):\n${scriptContent.substring(0, 200)}${scriptContent.length > 200 ? '...' : ''}`, 'info');
+        
+        const result = await scriptFunction(ps, currentApp, currentBatchPlay, addToLog, require);
+        
+        addToLog(`Script (ID: ${commandId}) executed successfully. Result: ${JSON.stringify(result)}`, 'success');
+        sendScriptResultToMCP(commandId, result, null);
+    } catch (e) {
+        const errorMessage = `Error executing script (ID: ${commandId}): ${e.message}\nStack: ${e.stack}`;
+        addToLog(errorMessage, 'error');
+        console.error(e);
+        sendScriptResultToMCP(commandId, null, errorMessage);
+    }
+}
+
+// New function to send the script execution result back to the MCP server
+function sendScriptResultToMCP(commandId, data, error) {
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+        addToLog(`Cannot send script result (ID: ${commandId}): WebSocket not open.`, 'error');
+        return;
+    }
+
+    const response = {
+        command_id: commandId,
+        result: {},
+    };
+
+    if (error) {
+        response.result.status = 'error';
+        response.result.message = error;
+    } else {
+        response.result.status = 'success';
+        response.result.data = data; // The actual return value from the script
+    }
+
+    try {
+        const responseJson = JSON.stringify(response);
+        socket.send(responseJson);
+        addToLog(`Sent script execution result (ID: ${commandId}) to server.`, 'info');
+    } catch (err) {
+        addToLog(`Error sending script execution result (ID: ${commandId}): ${err.message}`, 'error');
     }
 }
 
