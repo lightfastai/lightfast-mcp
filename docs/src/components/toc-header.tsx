@@ -7,7 +7,7 @@ export function TOCHeader() {
       Join us on{" "}
       <Link
         href="https://discord.gg/YqPDfcar2C"
-        className="underline flex items-center gap-1 inline-flex"
+        className="underline items-center gap-1 inline-flex text-blue-400"
         target="_blank"
         rel="noopener noreferrer"
       >
