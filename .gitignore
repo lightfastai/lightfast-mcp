@@ -173,5 +173,8 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
+# Nox
+.nox/
+
 # MacOS
 .DS_Store

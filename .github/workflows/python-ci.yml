@@ -11,50 +11,68 @@ permissions:
   contents: read # Default, needed for checkout
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12" # Use a single version for linting
+
+    - name: Install nox
+      run: |
+        python -m pip install --upgrade pip
+        pip install nox
+
+    - name: Lint with Ruff
+      run: nox -s lint
+
+    - name: Type check
+      run: nox -s typecheck
+
   test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        # Test against the Python version your project uses
-        # uv will use the version specified in your project (e.g., .python-version or pyproject.toml)
-        # If not pinned, you can specify like python-version: ['3.13']
-        python-version: ["3.13"] # Specify your target Python version for uv to use
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Set up uv
-      uses: astral-sh/setup-uv@v6
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
       with:
-        # Optional: specify uv version, otherwise latest is used
-        # uv-version: '0.1.30'
         python-version: ${{ matrix.python-version }}
 
-    - name: Create virtual environment
-      run: uv venv .venv --python ${{ matrix.python-version }}
-
-    - name: Install dependencies
-      shell: bash
+    - name: Install nox
       run: |
-        source .venv/bin/activate
-        echo "VIRTUAL_ENV_PATH=$(pwd)/.venv/bin" >> $GITHUB_ENV
-        uv pip install -e ".[dev]"
+        python -m pip install --upgrade pip
+        pip install nox
 
-    - name: Lint with Ruff
-      shell: bash
-      run: |
-        source .venv/bin/activate
-        task lint
+    - name: Run tests for Python ${{ matrix.python-version }}
+      run: nox --session "test-${{ matrix.python-version }}"
 
-    - name: Check formatting with Ruff
-      shell: bash
-      run: |
-        source .venv/bin/activate
-        task check_format
+  build:
+    runs-on: ubuntu-latest
+    needs: [test]
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-    - name: Run tests with pytest
-      shell: bash
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12" # Use a single version for building
+
+    - name: Install nox
       run: |
-        source .venv/bin/activate
-        task test 
+        python -m pip install --upgrade pip
+        pip install nox
+
+    - name: Build package
+      run: nox -s build 

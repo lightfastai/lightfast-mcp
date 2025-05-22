@@ -4,7 +4,7 @@ This guide provides instructions for setting up and developing the `lightfast-mc
 
 ## Prerequisites
 
-- Python 3.13 or newer
+- Python 3.10 or newer
 - `uv` package manager ([Installation Guide](https://docs.astral.sh/uv/getting-started/installation/))
 
 ## Project Setup
@@ -99,6 +99,51 @@ There are two main ways to run the mock server for testing:
     lightfast-mock-server
     ```
     This is also how MCP Host applications like Claude Desktop will launch the server if configured to use this script name.
+
+## Development Tasks with `nox`
+
+We also use [`nox`](https://nox.thea.codes/) for automated testing in multiple Python environments. Nox helps ensure our code works across different environments and provides a consistent way to run tests, linting, and other development tasks.
+
+### Installing nox
+
+If you haven't installed nox yet:
+
+```bash
+pip install nox
+```
+
+It's also included in the dev dependencies when you run `uv pip install -e ".[dev]"`.
+
+### Available nox sessions
+
+To list all available sessions:
+
+```bash
+nox --list
+```
+
+Common sessions include:
+
+* **`nox -s lint`**: Run linting with Ruff.
+* **`nox -s typecheck`**: Run type checking with mypy.
+* **`nox -s test`**: Run tests with pytest.
+* **`nox -s format`**: Format code with Ruff.
+* **`nox -s build`**: Build the package.
+* **`nox -s dev`**: Set up a development environment.
+
+### Benefits of using nox
+
+- **Environment isolation**: Each session runs in its own virtual environment.
+- **CI/CD integration**: The same nox sessions can be run in CI/CD pipelines.
+- **Reproducibility**: Nox ensures consistent testing environments.
+- **Multiple Python versions**: Can test against multiple Python versions (Python 3.10 through 3.13 currently).
+
+### Nox vs. taskipy
+
+- **taskipy** is simpler and runs commands in your current environment. It's great for quick development tasks.
+- **nox** creates isolated environments and is better for thorough testing, especially in CI/CD pipelines.
+
+Use whichever tool best fits your current development needs.
 
 ## Contributing
 
