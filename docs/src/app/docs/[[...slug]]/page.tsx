@@ -21,9 +21,16 @@ function TitleBar() {
         <Link
           href="https://github.com/lightfastai/lightfast-mcp"
           target="_blank"
-          className="text-sm font-medium flex items-center gap-2"
+          className="text-sm font-medium text-white flex items-center gap-2"
         >
           <Icons.gitHub className="w-4 h-4" />
+        </Link>
+        <Link
+          href="https://x.com/lightfastai"
+          target="_blank"
+          className="text-sm font-medium text-white flex items-center gap-2"
+        >
+          <Icons.twitter className="w-4 h-4" />
         </Link>
       </div>
     </div>

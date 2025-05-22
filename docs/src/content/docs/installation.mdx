@@ -1,0 +1,72 @@
+---
+title: Installation
+description: Install Lightfast MCP and its dependencies
+---
+
+# Installation
+
+This guide will help you install Lightfast MCP and set up its dependencies.
+
+## Requirements
+
+Before you begin, make sure you have:
+
+- Python 3.12 or newer
+- uv package manager (installation instructions below)
+- Blender 3.0 or newer (if using with Blender)
+
+## Installing UV Package Manager
+
+The uv package manager is used to handle Python dependencies efficiently.
+
+**On Mac:**
+```bash
+brew install uv
+```
+
+**On Windows:**
+```bash
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+set Path=C:\Users\[username]\.local\bin;%Path%
+```
+
+For other platforms, see the [uv installation guide](https://docs.astral.sh/uv/getting-started/installation/).
+
+## Installing Lightfast MCP
+
+Once you have the requirements in place, you can install Lightfast MCP:
+
+```bash
+# Create and activate a virtual environment (optional but recommended)
+uv venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install Lightfast MCP
+pip install lightfast-mcp
+```
+
+## Setting Up Application Integrations
+
+Lightfast MCP works with various creative applications. Follow the specific setup instructions for your application:
+
+### Blender Setup
+
+To use Lightfast MCP with Blender:
+
+1. Install the Blender addon
+2. Start the Lightfast MCP server
+3. Connect with Claude or another MCP-compatible AI
+
+Detailed setup instructions are available in the [Blender](/docs/blender) section.
+
+### Other Applications
+
+Support for additional applications is coming soon:
+
+- TouchDesigner
+- Adobe Creative Suite
+- More to be announced
+
+## Next Steps
+
+Once you have Lightfast MCP installed, head over to the [Getting Started](/docs/getting-started) guide to learn how to use it. 

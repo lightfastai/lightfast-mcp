@@ -22,147 +22,80 @@ Lightfast MCP helps you:
 
 ## Architecture
 
-At its core, Lightfast MCP follows this architecture:
-
-```
-Claude/LLM → Lightfast Server → Lightfast Addon → Blender
-```
-
-- **Claude/LLM**: The AI model that provides intelligence and understanding
-- **Lightfast Server**: A Python server that implements the connection protocol to communicate with AI models
-- **Lightfast Addon**: A Blender addon that runs inside Blender to receive commands and expose functionality
-- **Blender**: The creative application where you can see the AI's actions come to life
-
-This architecture allows AI models to understand the state of your Blender project, make intelligent decisions, and take actions through Python code execution.
-
-### Architectural Diagram
-
-<Mermaid
-  chart="
-graph LR
-    subgraph AI [AI Systems]
-        Claude[Claude/LLM]
-        Other[Other AI Models]
-    end
-    
-    subgraph Connectors [Connection System]
-        Server[Lightfast Server]
-        Protocol[Connection Protocol]
-    end
-    
-    subgraph Creative [Creative Applications]
-        Blender[Blender]
-        TD[TouchDesigner]
-        Adobe[Adobe Suite]
-        Other_Apps[Other Applications]
-    end
-    
-    subgraph Adapters [Application Adapters]
-        Addons[Lightfast Addons]
-    end
-    
-    Claude --> Protocol
-    Other --> Protocol
-    Protocol --> Server
-    Server --> Addons
-    Addons --> Blender
-    Addons --> TD
-    Addons --> Adobe
-    Addons --> Other_Apps
-    
-    style AI fill:#f9d5e5,stroke:#333,stroke-width:2px
-    style Connectors fill:#eeeeee,stroke:#333,stroke-width:2px
-    style Adapters fill:#d5f9e5,stroke:#333,stroke-width:2px
-    style Creative fill:#d5e5f9,stroke:#333,stroke-width:2px
-"
-/>
-
-## General Architecture
-
-The protocol follows a client-server architecture where a host application can connect to multiple servers:
+The protocol follows a client-server architecture where AI systems can connect to and control multiple creative applications:
 
 <Mermaid
   chart="
 flowchart TB
     subgraph Computer[Your Computer]
-        subgraph Host[Host with Client]
+        subgraph HostClient[Host Client]
             Claude[Claude/LLM]
             IDEs[IDEs]
             Tools[Creative Tools]
         end
         
-        subgraph ServerA[Lightfast Server A]
-            ProtocolA[Connection Protocol]
+        subgraph MCPServers[Lightfast MCP Servers]
+            BlenderServer[blender_mcp_server.py]
+            TDServer[touchdesigner_mcp_server.py]
+            AdobeServer[adobe_mcp_server.py]
         end
-        
-        subgraph ServerB[Lightfast Server B]
-            ProtocolB[Connection Protocol]
-        end
-        
-        subgraph ServerC[Lightfast Server C]
-            ProtocolC[Connection Protocol]
-        end
-
-        DataA[(Local Data Source A)]
-        DataB[(Local Data Source B)]
     end
     
-    subgraph Internet
-        Remote[(Remote Service C)]
+    subgraph Applications[Creative Applications]
+        subgraph Blender
+            BlenderAddon[Lightfast Blender Addon]
+        end
+        
+        subgraph TouchDesigner
+            TDPlugin[Lightfast TD Plugin]
+        end
+        
+        subgraph AdobeApps[Adobe Applications]
+            AdobePlugin[Lightfast Adobe Plugin]
+        end
     end
     
-    Host -- Socket Connection --> ServerA
-    Host -- Socket Connection --> ServerB
-    Host -- Socket Connection --> ServerC
+    subgraph Remote[Remote Services]
+        WebAPIs[(Web APIs)]
+        AIServices[(AI Services)]
+    end
     
-    ServerA --- DataA
-    ServerB --- DataB
-    ServerC -- HTTP/APIs --> Remote
+    HostClient --> MCPServers
+    
+    BlenderServer -- Socket Connection --> BlenderAddon
+    TDServer -- Socket Connection --> TDPlugin
+    AdobeServer -- Socket Connection --> AdobePlugin
+    
+    MCPServers -- HTTP/APIs --> Remote
     
     style Computer fill:#333,color:#fff,stroke:#555,stroke-width:2px
-    style Host fill:#555,color:#fff,stroke:#666,stroke-width:1px
-    style ServerA fill:#444,color:#fff,stroke:#666,stroke-width:1px
-    style ServerB fill:#444,color:#fff,stroke:#666,stroke-width:1px
-    style ServerC fill:#444,color:#fff,stroke:#666,stroke-width:1px
-    style Internet fill:#666,color:#fff,stroke:#777,stroke-width:1px
+    style HostClient fill:#555,color:#fff,stroke:#666,stroke-width:1px
+    style MCPServers fill:#444,color:#fff,stroke:#666,stroke-width:1px
+    style Applications fill:#2a5d7c,color:#fff,stroke:#4a7d9c,stroke-width:1px
+    style Remote fill:#666,color:#fff,stroke:#777,stroke-width:1px
 "
 />
 
 This architecture enables:
 
-- **Multiple Connections**: A single AI system can connect to different creative applications via socket connections
-- **Local Data Sources**: Servers can access local files and resources
-- **Remote Services**: Connect to web APIs and internet services through HTTP
-- **Standardized Protocol**: All communication follows the same connection protocol over different transport layers
+- **Client to MCP Server**: AI models and tools connect directly to Lightfast MCP Servers
+- **MCP Server to Applications**: Each server connects via socket to application-specific addons/plugins
+- **Cross-Application Control**: Control multiple creative applications from a single AI system
+- **Remote Services Access**: MCP Servers can connect to external services through HTTP APIs
+- **Intelligent Interaction**: AI models can understand application state, make decisions, and take actions through code execution
 
-## Getting Started
+## Next Steps
 
-To start using Lightfast MCP with Blender:
+Now that you understand what Lightfast MCP is and how it works, here's how to get started:
 
-1. Install the Python package
-2. Install the Blender addon
-3. Start the Lightfast MCP server
-4. Connect with Claude or another MCP-compatible AI
+1. **Install Lightfast MCP**: Follow the [Installation Guide](/docs/installation) to set up the software and dependencies
 
-Detailed setup instructions are available in the [Blender](/docs/blender) section.
+2. **Configure your applications**:
+   - [Blender Setup](/docs/blender)
+   - TouchDesigner (coming soon)
+   - Adobe Suite (coming soon)
 
-## Requirements
-
-- Python 3.12 or newer
-- uv package manager (installation instructions below)
-- Blender 3.0 or newer
-
-### Installing UV Package Manager
-
-**On Mac:**
-```bash
-brew install uv
-```
-
-**On Windows:**
-```bash
-powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
-set Path=C:\Users\[username]\.local\bin;%Path%
-```
-
-For other platforms, see the [uv installation guide](https://docs.astral.sh/uv/getting-started/installation/). 
+3. **Start creating**: Once you've set up Lightfast MCP with your preferred application, you can:
+   - Explore the examples in the documentation
+   - Join our community to share your creations
+   - Contribute to the project by adding support for more applications 
