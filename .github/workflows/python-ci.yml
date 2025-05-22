@@ -36,17 +36,15 @@ jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        # Test against the Python version your project uses
-        # uv will use the version specified in your project (e.g., .python-version or pyproject.toml)
-        # If not pinned, you can specify like python-version: ['3.13']
-        python-version: ["3.10", "3.11", "3.12", "3.13"] # Specify your target Python version for uv to use
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Set up Python
+    - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
@@ -56,8 +54,8 @@ jobs:
         python -m pip install --upgrade pip
         pip install nox
 
-    - name: Run tests
-      run: nox -s test
+    - name: Run tests for Python ${{ matrix.python-version }}
+      run: python -m nox --session "test-$(echo ${{ matrix.python-version }} | tr -d '.')"
 
   build:
     runs-on: ubuntu-latest
