@@ -13,8 +13,8 @@ let socket = null;
 // Initialize the extension
 function init() {
     // Register event listeners
-    document.getElementById('startServer').addEventListener('click', connectToServer);
-    document.getElementById('stopServer').addEventListener('click', disconnectFromServer);
+    document.getElementById('connectButton').addEventListener('click', connectToServer);
+    document.getElementById('disconnectButton').addEventListener('click', disconnectFromServer);
     document.getElementById('port').addEventListener('change', updatePort);
     
     // Register shape creation buttons
@@ -52,15 +52,42 @@ function connectToServer() {
             updateButtonState(true);
             updateStatus();
             
-            // Send a ping to verify connection
-            sendCommand('ping', {});
+            // The server will now send a ping upon connection, UXP will respond to that.
+            // No need to send a client-initiated ping here anymore.
+            // sendCommand('ping', {}); 
         });
         
         // Listen for messages
-        socket.addEventListener('message', (event) => {
+        socket.addEventListener('message', async (event) => {
             try {
                 const message = JSON.parse(event.data);
-                handleServerMessage(message);
+                // Log all messages first
+                if (message.type === 'execute_photoshop_code_cmd' || message.type === 'execute_jsx') {
+                     addToLog(`Received message from server (type: ${message.type}, ID: ${message.command_id}): {params: ${JSON.stringify(message.params).substring(0,100)}...}`);
+                } else {
+                    // Pass other messages to the general handler, but it won't process command responses itself
+                    handleServerMessage(message); 
+                }
+
+                // Handle server-initiated ping
+                if (message.command_id && message.type === 'ping') {
+                    addToLog(`Received ping from server (ID: ${message.command_id}). Sending pong...`);
+                    sendScriptResultToMCP(message.command_id, { message: "pong" }, null);
+                    return; 
+                }
+
+                // Handle server-initiated get_document_info command
+                if (message.command_id && message.type === 'get_document_info') {
+                    addToLog(`Received get_document_info command from server (ID: ${message.command_id}). Gathering details...`);
+                    try {
+                        const docDetails = await getDocumentDetailsForMCP();
+                        sendScriptResultToMCP(message.command_id, docDetails, null);
+                    } catch (e) {
+                        addToLog(`Error getting document details for MCP: ${e.message}`, 'error');
+                        sendScriptResultToMCP(message.command_id, null, `Error getting document details: ${e.message}`);
+                    }
+                    return;
+                }
 
                 // Check if this message is a command to execute code from the server
                 if (message.command_id && (message.type === 'execute_photoshop_code_cmd' || message.type === 'execute_jsx')) {
@@ -69,19 +96,24 @@ function connectToServer() {
                     const commandType = message.type;
 
                     if (scriptToExecute) {
-                        addToLog(`Received ${commandType} command (ID: ${commandId}) from server. Executing script...`);
-                        executeScriptFromMCP(scriptToExecute, commandId);
+                        addToLog(`Processing ${commandType} command (ID: ${commandId}) from server. Executing script...`);
+                        executeScriptFromMCP(scriptToExecute, commandId); // This is already async
                     } else {
                         addToLog(`Received ${commandType} command (ID: ${commandId}) but no script was provided.`, 'error');
                         sendScriptResultToMCP(commandId, null, 'No script provided in command');
                     }
+                    // No return here, executeScriptFromMCP handles sending the response
                 }
             } catch (err) {
                 addToLog(`Error parsing message or initial handling: ${err.message}`, 'error');
-                if (message && message.command_id) {
-                    // If we know the command_id, try to send an error back
-                    sendScriptResultToMCP(message.command_id, null, `Error parsing message: ${err.message}`);
-                }
+                try {
+                    if (event.data) {
+                        const originalMessage = JSON.parse(event.data); 
+                        if (originalMessage && originalMessage.command_id) {
+                            sendScriptResultToMCP(originalMessage.command_id, null, `Fatal error processing message: ${err.message}`);
+                        }
+                    }
+                } catch (e) { /* Ignore secondary error during error reporting */ }
             }
         });
         
@@ -508,8 +540,8 @@ function updateStatus() {
 
 // Update the state of the start/stop buttons
 function updateButtonState(isConnected) {
-    document.getElementById('startServer').disabled = isConnected;
-    document.getElementById('stopServer').disabled = !isConnected;
+    document.getElementById('connectButton').disabled = isConnected;
+    document.getElementById('disconnectButton').disabled = !isConnected;
     document.getElementById('port').disabled = isConnected;
 }
 
@@ -595,6 +627,56 @@ function sendScriptResultToMCP(commandId, data, error) {
     } catch (err) {
         addToLog(`Error sending script execution result (ID: ${commandId}): ${err.message}`, 'error');
     }
+}
+
+// Function to get document details (this was previously client-only, now adapted for MCP)
+async function getDocumentDetailsForMCP() {
+    const photoshop = require('photoshop');
+    const app = photoshop.app;
+    const batchPlay = photoshop.action.batchPlay; 
+
+    if (!app.activeDocument) {
+        return {
+            status: 'error',
+            message: 'No active document in Photoshop.',
+            hasActiveDocument: false
+        };
+    }
+
+    const doc = app.activeDocument;
+    let layerCount = 0;
+    try {
+        // A simple batchPlay to get layer count, as doc.layers might not be fully populated or efficient for just count
+        const result = await batchPlay([
+            {
+                _obj: "get",
+                _target: [
+                    { _property: "numberOfLayers" },
+                    { _ref: "document", _id: doc.id }
+                ],
+                _options: { dialogOptions: "dontDisplay" }
+            }
+        ], { synchronousExecution: false });
+        layerCount = result[0]?.numberOfLayers || doc.layers.length; // Fallback to doc.layers.length if batchPlay fails
+    } catch (e) {
+        addToLog(`Could not get layer count via batchPlay, falling back: ${e.message}`, 'warning');
+        layerCount = doc.layers.length; // Fallback
+    }
+    
+    return {
+        status: 'success',
+        message: 'Document details retrieved.',
+        hasActiveDocument: true,
+        title: doc.title,
+        width: doc.width,
+        height: doc.height,
+        resolution: doc.resolution,
+        mode: doc.mode,
+        layerCount: layerCount,
+        id: doc.id, // Document ID
+        cloudDocument: doc.cloudDocument,
+        saved: doc.saved
+    };
 }
 
 // Initialize when the document is ready
