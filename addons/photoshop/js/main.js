@@ -6,14 +6,15 @@
 // Plugin state
 let isServerRunning = false;
 let isClientConnected = false;
-let serverPort = 8765;
+let wsPort = 8765;
+let wsHost = "localhost";
 let socket = null;
 
 // Initialize the extension
 function init() {
     // Register event listeners
-    document.getElementById('startServer').addEventListener('click', startServer);
-    document.getElementById('stopServer').addEventListener('click', stopServer);
+    document.getElementById('startServer').addEventListener('click', connectToServer);
+    document.getElementById('stopServer').addEventListener('click', disconnectFromServer);
     document.getElementById('port').addEventListener('change', updatePort);
     
     // Update status periodically
@@ -26,102 +27,133 @@ function init() {
     addToLog('Plugin initialized successfully');
 }
 
-// Start the server
-function startServer() {
-    const port = serverPort;
+// Connect to the Python WebSocket server
+function connectToServer() {
+    if (isClientConnected) {
+        addToLog('Already connected to server', 'error');
+        return;
+    }
     
-    addToLog(`Attempting to start server on port ${port}...`);
+    const wsUrl = `ws://${wsHost}:${wsPort}`;
+    addToLog(`Attempting to connect to server at ${wsUrl}...`);
     
     try {
-        // In UXP, we can't directly create a server
-        // Instead, we'll simulate the server for UI demonstration
-        isServerRunning = true;
-        addToLog(`Server simulated on port ${port}`, 'success');
-        addToLog('Note: UXP cannot create actual socket servers.', 'error');
-        addToLog('This is a UI simulation only.', 'error');
+        // Create WebSocket connection
+        socket = new WebSocket(wsUrl);
         
-        // We could call back to our MCP server instead to notify it to connect to Photoshop
-        
-        updateButtonState(true);
-        updateStatus();
-        
-        // Simulate client connection after a delay
-        setTimeout(() => {
+        // Connection opened
+        socket.addEventListener('open', (event) => {
             isClientConnected = true;
-            addToLog('Client connected (simulated)', 'success');
+            addToLog(`Connected to server at ${wsUrl}`, 'success');
+            updateButtonState(true);
             updateStatus();
             
-            // Simulate some command activity
-            setTimeout(() => {
-                addToLog('Received command: ping');
-                addToLog('Sent response: pong');
-            }, 2000);
-            
-            setTimeout(() => {
-                addToLog('Received command: get_document_info');
-                getDocumentInfo().then(info => {
-                    addToLog(`Sent document info: ${info.name || 'No document open'}`);
-                });
-            }, 4000);
-        }, 3000);
+            // Send a ping to verify connection
+            sendCommand('ping', {});
+        });
+        
+        // Listen for messages
+        socket.addEventListener('message', (event) => {
+            try {
+                const message = JSON.parse(event.data);
+                handleServerMessage(message);
+            } catch (err) {
+                addToLog(`Error parsing message: ${err.message}`, 'error');
+            }
+        });
+        
+        // Listen for connection close
+        socket.addEventListener('close', (event) => {
+            isClientConnected = false;
+            addToLog(`Disconnected from server: ${event.reason || 'Connection closed'}`, event.wasClean ? 'info' : 'error');
+            updateButtonState(false);
+            updateStatus();
+            socket = null;
+        });
+        
+        // Connection error
+        socket.addEventListener('error', (event) => {
+            addToLog('Connection error', 'error');
+            if (socket) {
+                socket.close();
+            }
+            isClientConnected = false;
+            updateButtonState(false);
+            updateStatus();
+            socket = null;
+        });
+        
     } catch (err) {
-        addToLog(`Failed to start server: ${err.message}`, 'error');
-        isServerRunning = false;
+        addToLog(`Failed to connect: ${err.message}`, 'error');
+        isClientConnected = false;
         updateButtonState(false);
         updateStatus();
     }
 }
 
-// Stop the server
-function stopServer() {
-    addToLog('Stopping server...');
+// Disconnect from the Python WebSocket server
+function disconnectFromServer() {
+    if (!isClientConnected || !socket) {
+        addToLog('Not connected to server', 'error');
+        return;
+    }
     
     try {
-        // Clean up simulated server
-        isServerRunning = false;
-        isClientConnected = false;
-        
-        addToLog('Server stopped', 'success');
-        updateButtonState(false);
-        updateStatus();
+        socket.close();
+        addToLog('Disconnected from server', 'success');
     } catch (err) {
-        addToLog(`Error stopping server: ${err.message}`, 'error');
+        addToLog(`Error disconnecting: ${err.message}`, 'error');
+    }
+    
+    isClientConnected = false;
+    updateButtonState(false);
+    updateStatus();
+    socket = null;
+}
+
+// Send a command to the Python WebSocket server
+function sendCommand(type, params) {
+    if (!isClientConnected || !socket) {
+        addToLog('Cannot send command: Not connected to server', 'error');
+        return false;
+    }
+    
+    try {
+        const command = {
+            type: type,
+            params: params || {}
+        };
+        
+        const commandJson = JSON.stringify(command);
+        socket.send(commandJson);
+        addToLog(`Sent command: ${type}`);
+        return true;
+    } catch (err) {
+        addToLog(`Error sending command: ${err.message}`, 'error');
+        return false;
     }
 }
 
-// Get document information using Photoshop APIs
-async function getDocumentInfo() {
-    try {
-        // Check if app and require are available (they may not be in UXP)
-        if (typeof require !== 'function') {
-            return { error: 'UXP API not available' };
-        }
-        
-        // Try to access Photoshop API
-        try {
-            const photoshop = require('photoshop');
-            const app = photoshop.app;
-            
-            // Check if a document is open
-            if (!app.documents || app.documents.length === 0) {
-                return { error: 'No document open' };
+// Handle incoming messages from the server
+function handleServerMessage(message) {
+    addToLog(`Received message from server: ${JSON.stringify(message).substring(0, 100)}...`);
+    
+    if (message.status === 'error') {
+        addToLog(`Server error: ${message.message}`, 'error');
+    } else {
+        // Handle success responses
+        if (message.result) {
+            // Process result if needed
+            if (message.result.message === 'pong') {
+                addToLog('Server ping successful', 'success');
             }
-            
-            const doc = app.activeDocument;
-            
-            // Get basic document info
-            return {
-                name: doc.name,
-                width: doc.width,
-                height: doc.height,
-                path: doc.path || ''
-            };
-        } catch (e) {
-            return { error: 'Failed to access Photoshop API' };
         }
-    } catch (err) {
-        return { error: err.message };
     }
+}
+
+// Get document information using the Python WebSocket server
+async function getDocumentInfo() {
+    return sendCommand('get_document_info');
 }
 
 // Update the port setting
@@ -132,17 +164,17 @@ function updatePort() {
     // Validate port number
     if (isNaN(port) || port < 1024 || port > 65535) {
         addToLog('Invalid port number. Must be between 1024 and 65535', 'error');
-        portInput.value = serverPort; // Reset to current value
+        portInput.value = wsPort; // Reset to current value
         return;
     }
     
-    if (isServerRunning) {
-        addToLog('Cannot change port while server is running', 'error');
-        portInput.value = serverPort; // Reset to current value
+    if (isClientConnected) {
+        addToLog('Cannot change port while connected', 'error');
+        portInput.value = wsPort; // Reset to current value
         return;
     }
     
-    serverPort = port;
+    wsPort = port;
     addToLog(`Port updated to ${port}`);
 }
 
@@ -151,10 +183,10 @@ function updateStatus() {
     // Update server status indicator
     const serverStatusElem = document.getElementById('serverStatus');
     
-    if (isServerRunning) {
-        serverStatusElem.innerHTML = `<div class="indicator on"></div>Active on port ${serverPort}`;
+    if (isClientConnected) {
+        serverStatusElem.innerHTML = `<div class="indicator on"></div>Connected to ${wsHost}:${wsPort}`;
     } else {
-        serverStatusElem.innerHTML = '<div class="indicator off"></div>Inactive';
+        serverStatusElem.innerHTML = '<div class="indicator off"></div>Disconnected';
     }
     
     // Update client status indicator
@@ -168,10 +200,10 @@ function updateStatus() {
 }
 
 // Update the state of the start/stop buttons
-function updateButtonState(isRunning) {
-    document.getElementById('startServer').disabled = isRunning;
-    document.getElementById('stopServer').disabled = !isRunning;
-    document.getElementById('port').disabled = isRunning;
+function updateButtonState(isConnected) {
+    document.getElementById('startServer').disabled = isConnected;
+    document.getElementById('stopServer').disabled = !isConnected;
+    document.getElementById('port').disabled = isConnected;
 }
 
 // Add message to the log
