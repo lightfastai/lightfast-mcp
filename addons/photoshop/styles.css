@@ -1,0 +1,133 @@
+body {
+    margin: 0;
+    padding: 10px;
+    overflow: hidden;
+    height: 100vh;
+    color: #e8e8e8;
+    background-color: #323232;
+    font-family: 'Adobe Clean', 'Segoe UI', Arial, sans-serif;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+h1 {
+    font-size: 18px;
+    margin-bottom: 15px;
+    color: #e0e0e0;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 14px;
+}
+
+input {
+    width: 95%;
+    padding: 5px;
+    background-color: #454545;
+    border: 1px solid #555;
+    color: #f0f0f0;
+    border-radius: 3px;
+}
+
+.form-buttons {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+button {
+    background-color: #1473e6;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-right: 10px;
+}
+
+button:hover {
+    background-color: #0d66d0;
+}
+
+button:disabled {
+    background-color: #6d6d6d;
+    cursor: not-allowed;
+}
+
+button.stop {
+    background-color: #e34850;
+}
+
+button.stop:hover {
+    background-color: #c9313a;
+}
+
+.status {
+    margin-top: 15px;
+    padding: 10px;
+    border-radius: 3px;
+    background-color: #454545;
+}
+
+.status-item {
+    margin-bottom: 5px;
+    font-size: 13px;
+}
+
+.status-item span {
+    font-weight: bold;
+    color: #e0e0e0;
+}
+
+.log {
+    flex-grow: 1;
+    margin-top: 15px;
+    border: 1px solid #555;
+    border-radius: 3px;
+    padding: 10px;
+    font-family: monospace;
+    font-size: 12px;
+    overflow-y: auto;
+    min-height: 100px;
+    background-color: #2a2a2a;
+}
+
+.log-entry {
+    margin-bottom: 5px;
+    color: #ccc;
+}
+
+.log-entry.error {
+    color: #f07171;
+}
+
+.log-entry.success {
+    color: #a9dc76;
+}
+
+.indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 5px;
+}
+
+.indicator.on {
+    background-color: #4cd964;
+}
+
+.indicator.off {
+    background-color: #ff3b30;
+} 

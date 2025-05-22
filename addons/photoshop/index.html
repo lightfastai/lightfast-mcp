@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Lightfast MCP Plugin</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="js/main.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Lightfast MCP Plugin</h1>
+        
+        <div class="form-group">
+            <label for="port">Server Port:</label>
+            <input type="number" id="port" value="8765" min="1024" max="65535">
+        </div>
+        
+        <div class="form-buttons">
+            <button id="startServer" class="start">Start Server</button>
+            <button id="stopServer" class="stop" disabled>Stop Server</button>
+        </div>
+        
+        <div class="status">
+            <div class="status-item">
+                Server Status: <span id="serverStatus"><div class="indicator off"></div>Inactive</span>
+            </div>
+            <div class="status-item">
+                Client Connected: <span id="clientStatus"><div class="indicator off"></div>No</span>
+            </div>
+        </div>
+        
+        <div class="log" id="log">
+            <div class="log-entry">Lightfast MCP Plugin initialized.</div>
+        </div>
+    </div>
+</body>
+</html> 
