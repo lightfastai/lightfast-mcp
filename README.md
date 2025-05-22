@@ -19,7 +19,7 @@ For more information about the Model Context Protocol, including core concepts, 
 
 ## Installation
 
-- Python 3.12 or newer
+- Python 3.10 or newer
 - uv package manager
 
 **If you're on Mac, please install uv as**
@@ -36,6 +36,10 @@ set Path=C:\Users\nntra\.local\bin;%Path%
 ```
 
 Otherwise installation instructions are on their website: [Install uv](https://docs.astral.sh/uv/getting-started/installation/)
+
+## Development
+
+For development setup and workflow information, please see our [Developer Guide](DEV.md).
 
 ## Documentation
 

@@ -1,0 +1,113 @@
+---
+title: Photoshop
+description: How to use Lightfast MCP with Photoshop
+---
+
+# Setting Up Lightfast MCP for Photoshop
+
+This guide will walk you through setting up Lightfast MCP to work with Photoshop, allowing you to control Photoshop using Claude.
+
+## Installation
+
+### Install Lightfast MCP
+
+First, clone the repository and install the package:
+
+```bash
+# Clone the repository
+git clone https://github.com/lightfastai/lightfast-mcp.git
+cd lightfast-mcp
+
+# Install with uv (recommended)
+uv pip install -e .
+
+# Or with regular pip
+pip install -e .
+```
+
+## Photoshop Plugin Setup
+
+### Install the Photoshop UXP Plugin
+
+1. Open Adobe Creative Cloud Desktop
+2. Ensure you have Photoshop 2021 or newer installed
+3. In Photoshop, go to **Plugins → Development → Load UXP Plugin...**
+4. Navigate to the Lightfast MCP folder
+5. Navigate to the `addons/photoshop` directory and select it
+6. The Lightfast MCP Plugin should now appear in the Plugins panel
+
+![Photoshop plugin installation](/images/photoshop-plugin-install.png)
+
+### Access the Lightfast Plugin
+
+1. In Photoshop, go to **Plugins → Lightfast MCP**
+2. The plugin panel will open with connection controls
+3. Enter the port number (default: 8765) and click **Connect to Server** to activate the connection
+
+![Lightfast panel in Photoshop](/images/photoshop-panel.png)
+
+## Claude Desktop Configuration
+
+### Configure Claude Desktop
+
+To use Claude with Lightfast MCP, you need to configure Claude Desktop:
+
+1. Open or create the file at `~/Library/Application Support/Claude/claude_desktop_config.json` (on macOS) or the equivalent path on your operating system.
+
+2. Add the following configuration:
+
+```json
+{
+  "mcpServers": {
+    "lightfast-photoshop": {
+      "command": "/path/to/your/python",
+      "args": [
+        "-m",
+        "lightfast_mcp.servers.photoshop_mcp_server"
+      ]
+    }
+  }
+}
+```
+
+3. Replace `/path/to/your/python` with the path to your Python interpreter (typically the one in your virtual environment where Lightfast MCP is installed).
+
+For example:
+
+```json
+{
+  "mcpServers": {
+    "lightfast-photoshop": {
+      "command": "/Users/username/Code/lightfast-mcp/.venv/bin/python",
+      "args": [
+        "-m",
+        "lightfast_mcp.servers.photoshop_mcp_server"
+      ]
+    }
+  }
+}
+```
+
+4. Restart Claude Desktop and select the "lightfast-photoshop" MCP server from the Claude settings.
+
+## Testing the Connection
+
+### Start Photoshop and Claude
+
+1. Open Photoshop and connect to the Lightfast MCP server using the plugin panel
+2. Start Claude Desktop and select the "lightfast-photoshop" MCP server
+3. Claude should now be able to control Photoshop through the MCP connection
+
+Try asking Claude to perform a simple operation in Photoshop, like: "Create a new document in Photoshop"
+
+## Troubleshooting
+
+If you encounter issues:
+
+- Ensure Photoshop is running with the plugin loaded
+- Check that the plugin shows "Connected" status in the plugin panel
+- Verify that no firewall is blocking the connection on port 8765
+- Restart both Photoshop and Claude Desktop if necessary
+- Check the log section in the plugin panel for detailed error messages
+
+For more detailed troubleshooting, check the console outputs in both Photoshop and Claude Desktop. 

@@ -18,43 +18,30 @@ jobs:
         # Test against the Python version your project uses
         # uv will use the version specified in your project (e.g., .python-version or pyproject.toml)
         # If not pinned, you can specify like python-version: ['3.13']
-        python-version: ["3.13"] # Specify your target Python version for uv to use
+        python-version: ["3.10", "3.11", "3.12", "3.13"] # Specify your target Python version for uv to use
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Set up uv
-      uses: astral-sh/setup-uv@v6
+    - name: Set up Python
+      uses: actions/setup-python@v5
       with:
-        # Optional: specify uv version, otherwise latest is used
-        # uv-version: '0.1.30'
         python-version: ${{ matrix.python-version }}
 
-    - name: Create virtual environment
-      run: uv venv .venv --python ${{ matrix.python-version }}
-
-    - name: Install dependencies
-      shell: bash
+    - name: Install nox
       run: |
-        source .venv/bin/activate
-        echo "VIRTUAL_ENV_PATH=$(pwd)/.venv/bin" >> $GITHUB_ENV
-        uv pip install -e ".[dev]"
+        python -m pip install --upgrade pip
+        pip install nox
 
     - name: Lint with Ruff
-      shell: bash
-      run: |
-        source .venv/bin/activate
-        task lint
+      run: nox -s lint
 
-    - name: Check formatting with Ruff
-      shell: bash
-      run: |
-        source .venv/bin/activate
-        task check_format
+    - name: Type check
+      run: nox -s typecheck
 
-    - name: Run tests with pytest
-      shell: bash
-      run: |
-        source .venv/bin/activate
-        task test 
+    - name: Run tests
+      run: nox -s test
+
+    - name: Build package
+      run: nox -s build 

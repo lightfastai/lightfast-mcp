@@ -3,7 +3,7 @@ name = "lightfast-mcp"
 version = "0.0.1"
 description = "Lightfast integration through the Model Context Protocol"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 authors = [
     {name = "Jeevan Pillay", email = "jp@lightfast.ai"}
 ]
@@ -25,6 +25,9 @@ dev = [
     "taskipy",
     "pytest",
     "pytest-asyncio",
+    "nox",
+    "mypy",
+    "build",
 ]
 
 [project.scripts]
@@ -45,7 +48,7 @@ packages = ["lightfast_mcp", "lightfast_mcp.servers", "lightfast_mcp.utils"]
 
 [tool.ruff]
 line-length = 120
-target-version = "py313"
+target-version = "py310"
 
 [tool.ruff.lint]
 select = [
