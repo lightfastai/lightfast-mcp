@@ -67,7 +67,7 @@ async def fetch_mock_data(ctx: Context, data_id: str, delay_seconds: float = 1.0
 async def execute_mock_action(
     ctx: Context,
     action_name: str,
-    parameters: dict[str, Any] = None,
+    parameters: dict[str, Any] | None = None,
     delay_seconds: float = 0.5,
 ) -> dict[str, Any]:
     """

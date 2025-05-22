@@ -29,7 +29,7 @@ logger = get_logger("BlenderMCPClient")
 class BlenderConnection:
     host: str
     port: int
-    sock: socket.socket = None
+    sock: socket.socket | None = None
 
     def connect(self) -> bool:
         """Connect to the Blender addon socket server"""
@@ -69,7 +69,7 @@ class BlenderConnection:
 
     def receive_full_response(self, buffer_size=8192) -> bytes:
         """Receive the complete response, potentially in multiple chunks"""
-        chunks = []
+        chunks: list[bytes] = []
         if not self.sock:
             raise BlenderConnectionError("Cannot receive response: socket not connected.")
 
@@ -159,12 +159,12 @@ class BlenderConnection:
             except json.JSONDecodeError as e:
                 logger.error(f"Malformed or incomplete JSON response from Blender ({len(final_data)} bytes)")
                 raise BlenderResponseError(
-                    f"Malformed JSON response from Blender: {e.msg}. Partial data: {final_data[:200]}"
+                    f"Malformed JSON response from Blender: {e.msg}. Partial data: {final_data[:200].decode('utf-8', 'replace')}"
                 ) from e
         else:
             raise BlenderResponseError("No data chunks received from Blender.")
 
-    def send_command(self, command_type: str, params: dict[str, Any] = None) -> dict[str, Any]:
+    def send_command(self, command_type: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         """Send a command to Blender and return the response"""
         if not self.sock:  # Try to connect if not already connected
             try:
@@ -226,7 +226,7 @@ class BlenderConnection:
                     response = json.loads(response_data.decode("utf-8"))
                 except json.JSONDecodeError as e:
                     logger.error(
-                        f"Failed to decode JSON response from Blender: {e}. Raw data: {response_data[:200]}..."
+                        f"Failed to decode JSON response from Blender: {e}. Raw data: {response_data[:200].decode('utf-8', 'replace')}..."
                     )
                     raise BlenderResponseError(f"Invalid JSON structure in response from Blender: {e.msg}") from e
 
@@ -266,7 +266,7 @@ class BlenderConnection:
 
 
 # Global connection
-_blender_connection: BlenderConnection = None
+_blender_connection: BlenderConnection | None = None
 
 
 def check_blender_running(host="localhost", port=9876, timeout=2.0) -> bool:
@@ -369,13 +369,15 @@ def get_blender_connection(host: str = "localhost", port: int = 9876) -> Blender
             return _blender_connection
         except (OSError, BlenderMCPError) as e:
             logger.warning(f"Existing connection check failed: {type(e).__name__}: {str(e)}. Attempting to reconnect.")
-            _blender_connection.disconnect()
+            if _blender_connection is not None:
+                _blender_connection.disconnect()
             _blender_connection = None
         except Exception as e:
             logger.warning(
                 f"Unexpected error during connection check: {type(e).__name__}: {str(e)}. Invalidating connection."
             )
-            _blender_connection.disconnect()
+            if _blender_connection is not None:
+                _blender_connection.disconnect()
             _blender_connection = None
 
     # First try the specified port
@@ -400,28 +402,33 @@ def get_blender_connection(host: str = "localhost", port: int = 9876) -> Blender
     max_attempts = 2  # Reduced from 3 to make failure faster when Blender is definitely not available
     attempt = 0
 
+    # Initialize a new connection
+    new_connection: BlenderConnection | None = None
+
     while attempt < max_attempts:
         attempt += 1
         logger.info(
             f"Attempting to establish new connection to Blender at {host}:{found_port} "
             f"(attempt {attempt}/{max_attempts})."
         )
-        _blender_connection = BlenderConnection(host=host, port=found_port)
+        new_connection = BlenderConnection(host=host, port=found_port)
         try:
-            _blender_connection.connect()  # Can raise BlenderConnectionError or BlenderTimeoutError
+            new_connection.connect()  # Can raise BlenderConnectionError or BlenderTimeoutError
 
             # Verify with a ping after connect
             logger.debug("Verifying new connection with a ping...")
-            _blender_connection.send_command("ping")
+            new_connection.send_command("ping")
             logger.info(
                 f"Successfully established and verified new Blender connection (attempt {attempt}/{max_attempts})."
             )
-            return _blender_connection
+            # Update the global connection
+            _blender_connection = new_connection
+            return new_connection
         except BlenderMCPError as e:  # Catch errors from connect() or the verification ping
             logger.warning(f"Connection attempt {attempt}/{max_attempts} failed: {type(e).__name__}: {str(e)}")
-            if _blender_connection:  # Ensure disconnect if object exists but failed
-                _blender_connection.disconnect()
-            _blender_connection = None
+            if new_connection:  # Ensure disconnect if object exists but failed
+                new_connection.disconnect()
+            new_connection = None
 
             # Short delay before retrying
             if attempt < max_attempts:
@@ -468,7 +475,7 @@ async def server_lifespan(server: FastMCP) -> AsyncIterator[dict[str, Any]]:
         raise BlenderMCPError(f"Fatal server startup error: {str(e)}") from e
     finally:
         global _blender_connection
-        if _blender_connection:
+        if _blender_connection is not None:
             logger.info("Blender MCP Server shutting down. Disconnecting from Blender.")
             _blender_connection.disconnect()
             _blender_connection = None
