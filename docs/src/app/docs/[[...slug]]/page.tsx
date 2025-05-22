@@ -7,6 +7,7 @@ import {
   DocsTitle,
 } from "fumadocs-ui/page";
 import { notFound } from "next/navigation";
+import { TOCHeader } from "@/components/toc-header";
 
 export default async function Page(props: {
   params: Promise<{ slug?: string[] }>;
@@ -22,7 +23,10 @@ export default async function Page(props: {
       <DocsPage
         toc={page.data.toc}
         full={page.data.full}
-        tableOfContent={{ style: "clerk" }}
+        tableOfContent={{
+          style: "clerk",
+          header: <TOCHeader />,
+        }}
       >
         <DocsTitle>{page.data.title}</DocsTitle>
         <DocsDescription>{page.data.description}</DocsDescription>
