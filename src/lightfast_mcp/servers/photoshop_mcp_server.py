@@ -411,17 +411,36 @@ async def send_to_photoshop(command_type: str, params: dict[str, Any] = None) ->
 
 
 async def check_photoshop_connected() -> bool:
-    """Check if any Photoshop clients are connected."""
-    # Clean up any closed connections from the set
-    # This is a good place for periodic cleanup, though ideally disconnects are handled immediately.
-    # Create a copy for safe iteration if modifying the set
-    stale_clients = {client for client in connected_clients if client.closed}
-    for stale_client in stale_clients:
-        logger.info(
-            f"Removing stale/closed client {stale_client.remote_address} from connected_clients in check_photoshop_connected."
-        )
-        connected_clients.remove(stale_client)
-    return len(connected_clients) > 0
+    """Temporarily simplified check: Check if any Photoshop clients are in the set and log their types."""
+    if not connected_clients:
+        logger.info("check_photoshop_connected (simplified): No clients in connected_clients set.")
+        return False
+
+    logger.info(
+        f"check_photoshop_connected (simplified): connected_clients set contains {len(connected_clients)} item(s)."
+    )
+    for i, client_obj in enumerate(connected_clients):
+        logger.info(f"  Item {i} type: {type(client_obj)}, repr: {client_obj!r}")
+        # Attempt to check attributes that a connection object should have, for diagnostic purposes
+        try:
+            logger.info(f"    Item {i} remote_address: {getattr(client_obj, 'remote_address', 'N/A')}")
+            logger.info(f"    Item {i} state: {getattr(client_obj, 'state', 'N/A')}")
+            closed_future = getattr(client_obj, "closed", None)
+            if closed_future is not None:
+                logger.info(f"    Item {i} closed future done: {closed_future.done()}")
+            else:
+                logger.info(f"    Item {i} has no 'closed' attribute.")
+        except Exception as e:
+            logger.error(f"    Error accessing attributes for item {i}: {e}")
+
+    # For this temporary test, consider connected if the set is not empty.
+    # This bypasses the problematic isinstance/state checks for now.
+    if len(connected_clients) > 0:
+        logger.info("check_photoshop_connected (simplified): Returning True as connected_clients is not empty.")
+        return True
+    else:
+        logger.info("check_photoshop_connected (simplified): Returning False as connected_clients is empty.")
+        return False
 
 
 async def start_websocket_server():
@@ -429,8 +448,10 @@ async def start_websocket_server():
     logger.info(f"Starting WebSocket server on {WS_HOST}:{WS_PORT}")
 
     try:
+        # The serve() function itself returns a Server object, not ServerConnection.
+        # ServerConnection objects are passed to the handler (handle_photoshop_client).
         server = await websockets.serve(handle_photoshop_client, WS_HOST, WS_PORT)
-        logger.info(f"WebSocket server is running on ws://{WS_HOST}:{WS_PORT}")
+        logger.info(f"WebSocket server is running on ws://{WS_HOST}:{WS_PORT} - Server object: {server!r}")
         return server
     except Exception as e:
         logger.error(f"Failed to start WebSocket server: {str(e)}")
