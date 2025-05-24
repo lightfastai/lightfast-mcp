@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-AI-integrated Blender client that connects AI models to FastMCP Blender server.
-Supports Claude API, OpenAI API, and other providers.
+Simple AI-integrated Blender client using official SDKs.
+Connects AI models (Claude/OpenAI) with Blender MCP server.
 """
 
 import asyncio
@@ -9,20 +9,27 @@ import json
 import os
 from typing import Any
 
-import httpx
+import anthropic
+import openai
 from fastmcp import Client
 
 
 class AIBlenderClient:
-    """Client that bridges AI models with Blender MCP server"""
+    """Simple client that bridges AI models with Blender MCP server"""
 
     def __init__(
-        self, mcp_server_url: str = "http://localhost:8000/mcp", ai_provider: str = "claude", api_key: str | None = None
+        self,
+        mcp_server_url: str = "http://localhost:8000/mcp",
+        ai_provider: str = "claude",
+        api_key: str | None = None,
     ):
         self.mcp_server_url = mcp_server_url
         self.ai_provider = ai_provider.lower()
         self.api_key = api_key or self._get_api_key()
         self.mcp_client = None
+
+        # Initialize AI client
+        self._setup_ai_client()
 
     def _get_api_key(self) -> str:
         """Get API key from environment variables"""
@@ -38,21 +45,27 @@ class AIBlenderClient:
             raise ValueError(f"Unsupported AI provider: {self.ai_provider}")
         return key
 
-    async def connect_to_blender(self):
+    def _setup_ai_client(self):
+        """Setup AI client using official SDKs"""
+        if self.ai_provider == "claude":
+            self.ai_client = anthropic.AsyncAnthropic(api_key=self.api_key)
+        elif self.ai_provider == "openai":
+            self.ai_client = openai.AsyncOpenAI(api_key=self.api_key)
+
+    async def connect_to_blender(self) -> bool:
         """Connect to the Blender MCP server"""
         try:
             self.mcp_client = Client(self.mcp_server_url)
             await self.mcp_client.__aenter__()
             print("✅ Connected to Blender MCP server")
 
-            # Test connection by listing tools
             tools = await self.mcp_client.list_tools()
             print(f"📝 Available tools: {[tool.name for tool in tools]}")
             return True
 
         except Exception as e:
             print(f"❌ Failed to connect to Blender MCP server: {e}")
-            print("   Make sure the HTTP server is running: python run_blender_http.py")
+            print("   Make sure the HTTP server is running: ./scripts/test_blender.sh http")
             return False
 
     async def disconnect_from_blender(self):
@@ -61,18 +74,24 @@ class AIBlenderClient:
             await self.mcp_client.__aexit__(None, None, None)
             self.mcp_client = None
 
-    async def get_blender_tools_description(self) -> str:
-        """Get formatted description of available Blender tools for AI"""
+    async def get_blender_context(self) -> dict[str, Any]:
+        """Get current Blender context for AI"""
         if not self.mcp_client:
-            raise RuntimeError("Not connected to Blender MCP server")
+            return {}
 
-        tools = await self.mcp_client.list_tools()
+        try:
+            # Get tools description
+            tools = await self.mcp_client.list_tools()
+            tools_desc = "\n".join([f"- {tool.name}: {tool.description}" for tool in tools])
 
-        descriptions = []
-        for tool in tools:
-            descriptions.append(f"- {tool.name}: {tool.description}")
+            # Get scene state
+            result = await self.mcp_client.call_tool("get_state")
+            scene_state = json.loads(result[0].text) if result else {}
 
-        return "Available Blender tools:\n" + "\n".join(descriptions)
+            return {"tools_description": f"Available Blender tools:\n{tools_desc}", "scene_state": scene_state}
+        except Exception as e:
+            print(f"⚠️  Warning: Could not get Blender context: {e}")
+            return {}
 
     async def execute_blender_tool(self, tool_name: str, arguments: dict[str, Any] = None) -> dict[str, Any]:
         """Execute a tool on the Blender MCP server"""
@@ -81,88 +100,49 @@ class AIBlenderClient:
 
         try:
             result = await self.mcp_client.call_tool(tool_name, arguments or {})
-            # Parse the result
             if result and len(result) > 0:
                 return json.loads(result[0].text)
             return {"error": "No result returned"}
-
         except Exception as e:
             return {"error": f"Tool execution failed: {str(e)}"}
 
-    async def chat_with_ai(self, message: str, include_blender_context: bool = True) -> str:
-        """Send message to AI with optional Blender context"""
+    async def chat_with_ai(self, message: str, include_context: bool = True) -> str:
+        """Chat with AI using official SDKs"""
 
-        # Build the prompt
-        full_prompt = message
+        # Build prompt with Blender context
+        if include_context:
+            context = await self.get_blender_context()
+            if context:
+                system_prompt = f"""You are an AI assistant that can control Blender through tools.
 
-        if include_blender_context and self.mcp_client:
-            try:
-                tools_desc = await self.get_blender_tools_description()
-                scene_state = await self.execute_blender_tool("get_state")
+{context.get("tools_description", "")}
 
-                context = f"""
-{tools_desc}
+Current scene state:
+{json.dumps(context.get("scene_state", {}), indent=2)}
 
-Current Blender scene state:
-{json.dumps(scene_state, indent=2)}
-
-User request: {message}
-
-You can use the available Blender tools by responding with JSON in this format:
+When you want to use a Blender tool, respond with JSON in this format:
 {{"action": "blender_tool", "tool": "tool_name", "arguments": {{"param": "value"}}}}
+Otherwise, respond normally."""
 
-Or respond normally if no Blender action is needed.
-"""
-                full_prompt = context
-
-            except Exception as e:
-                print(f"⚠️  Warning: Could not get Blender context: {e}")
-
-        # Call the appropriate AI API
-        if self.ai_provider == "claude":
-            return await self._call_claude_api(full_prompt)
-        elif self.ai_provider == "openai":
-            return await self._call_openai_api(full_prompt)
+                full_message = f"{system_prompt}\n\nUser: {message}"
+            else:
+                full_message = message
         else:
-            raise ValueError(f"Unsupported AI provider: {self.ai_provider}")
+            full_message = message
 
-    async def _call_claude_api(self, prompt: str) -> str:
-        """Call Claude API"""
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                "https://api.anthropic.com/v1/messages",
-                headers={
-                    "Authorization": f"Bearer {self.api_key}",
-                    "Content-Type": "application/json",
-                    "anthropic-version": "2023-06-01",
-                },
-                json={
-                    "model": "claude-3-5-sonnet-20241022",
-                    "max_tokens": 4000,
-                    "messages": [{"role": "user", "content": prompt}],
-                },
+        if self.ai_provider == "claude":
+            response = await self.ai_client.messages.create(
+                model="claude-3-5-sonnet-20241022",
+                max_tokens=4000,
+                messages=[{"role": "user", "content": full_message}],
             )
+            return response.content[0].text
 
-            if response.status_code != 200:
-                raise Exception(f"Claude API error: {response.status_code} - {response.text}")
-
-            result = response.json()
-            return result["content"][0]["text"]
-
-    async def _call_openai_api(self, prompt: str) -> str:
-        """Call OpenAI API"""
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                "https://api.openai.com/v1/chat/completions",
-                headers={"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"},
-                json={"model": "gpt-4o", "messages": [{"role": "user", "content": prompt}], "max_tokens": 4000},
+        elif self.ai_provider == "openai":
+            response = await self.ai_client.chat.completions.create(
+                model="gpt-4o", messages=[{"role": "user", "content": full_message}], max_tokens=4000
             )
-
-            if response.status_code != 200:
-                raise Exception(f"OpenAI API error: {response.status_code} - {response.text}")
-
-            result = response.json()
-            return result["choices"][0]["message"]["content"]
+            return response.choices[0].message.content
 
     async def process_ai_response(self, ai_response: str) -> str:
         """Process AI response and execute Blender tools if requested"""
@@ -187,9 +167,13 @@ Or respond normally if no Blender action is needed.
 
 
 async def main():
-    """Example usage"""
-    # You can set AI_PROVIDER environment variable to "claude" or "openai"
+    """AI Blender client main function"""
+    print("🤖 AI Blender Client")
+    print("=" * 30)
+
+    # Get provider from environment or default to Claude
     ai_provider = os.getenv("AI_PROVIDER", "claude")
+    print(f"Using provider: {ai_provider}")
 
     client = AIBlenderClient(ai_provider=ai_provider)
 

@@ -20,11 +20,8 @@ classifiers = [
 dependencies = [
     "fastmcp>=2.0.0",
     "rich",
-    "requests",
-    "httpx",
     "anthropic",
     "openai",
-    "litellm",
 ]
 
 [project.optional-dependencies]

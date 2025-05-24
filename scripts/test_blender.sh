@@ -25,8 +25,6 @@ print_usage() {
     echo "  run           - Run server directly (STDIO)"
     echo "  http          - Run server as HTTP service for AI APIs"
     echo "  ai            - Start AI-integrated client (requires API keys)"
-    echo "  ai-improved   - Start IMPROVED AI client with proper SDKs"
-    echo "  compare       - Compare different AI SDK approaches"
     echo "  client        - Run custom test client"
     echo "  check         - Check if Blender addon is running"
     echo ""
@@ -106,38 +104,11 @@ run_ai_client() {
         echo "# Then edit .env with your actual API keys"
         return 1
     fi
+    echo -e "${GREEN}Using official SDKs (anthropic/openai)${NC}"
     uv run python ai_blender_client.py
 }
 
-run_ai_client_improved() {
-    echo -e "${BLUE}🧠 Starting IMPROVED AI client (with proper SDKs)...${NC}"
-    if [ ! -f .env ]; then
-        echo -e "${YELLOW}⚠️  No .env file found. Please create one with your API keys:${NC}"
-        echo "cp env_template.txt .env"
-        echo "# Then edit .env with your actual API keys"
-        return 1
-    fi
-    echo -e "${GREEN}Using official SDKs: anthropic, openai, litellm${NC}"
-    uv run python ai_blender_client_improved.py
-}
 
-compare_ai_approaches() {
-    echo -e "${BLUE}🔬 Comparing different AI SDK approaches...${NC}"
-    uv run python -c "
-import asyncio
-import sys
-import os
-sys.path.append('.')
-try:
-    from ai_blender_client_improved import compare_approaches
-    asyncio.run(compare_approaches())
-except ImportError as e:
-    print('❌ Import error:', e)
-    print('Make sure dependencies are installed: uv add anthropic openai litellm')
-except Exception as e:
-    print('❌ Error:', e)
-"
-}
 
 case "${1:-}" in
     "test")
@@ -157,12 +128,6 @@ case "${1:-}" in
         ;;
     "ai")
         run_ai_client
-        ;;
-    "ai-improved")
-        run_ai_client_improved
-        ;;
-    "compare")
-        compare_ai_approaches
         ;;
     "client")
         run_tests
