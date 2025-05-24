@@ -30,7 +30,9 @@ class ConfigLoader:
 
         logger.info(f"Config directory: {self.config_dir}")
 
-    def load_servers_config(self, config_file: str | Path | None = None) -> list[ServerConfig]:
+    def load_servers_config(
+        self, config_file: str | Path | None = None
+    ) -> list[ServerConfig]:
         """Load server configurations from a file."""
         if config_file is None:
             # Look for default config files
@@ -84,7 +86,9 @@ class ConfigLoader:
     def _load_yaml_config(self, config_path: Path) -> list[ServerConfig]:
         """Load configuration from YAML file."""
         if not YAML_AVAILABLE:
-            raise ImportError("PyYAML is required to load YAML configuration files. Install with: pip install pyyaml")
+            raise ImportError(
+                "PyYAML is required to load YAML configuration files. Install with: pip install pyyaml"
+            )
 
         with open(config_path, encoding="utf-8") as f:
             data = yaml.safe_load(f)
@@ -164,7 +168,9 @@ class ConfigLoader:
             required_apps=required_apps,
         )
 
-    def save_servers_config(self, server_configs: list[ServerConfig], config_file: str | Path | None = None) -> bool:
+    def save_servers_config(
+        self, server_configs: list[ServerConfig], config_file: str | Path | None = None
+    ) -> bool:
         """Save server configurations to a file."""
         if config_file is None:
             config_file = self.config_dir / "servers.yaml"
@@ -175,7 +181,11 @@ class ConfigLoader:
 
         try:
             # Convert server configs to dictionary format
-            data = {"servers": [self._server_config_to_dict(config) for config in server_configs]}
+            data = {
+                "servers": [
+                    self._server_config_to_dict(config) for config in server_configs
+                ]
+            }
 
             # Save based on file extension
             if config_file.suffix.lower() in [".yaml", ".yml"]:
@@ -183,10 +193,14 @@ class ConfigLoader:
             elif config_file.suffix.lower() == ".json":
                 self._save_json_config(config_file, data)
             else:
-                logger.error(f"Unsupported config file format for saving: {config_file.suffix}")
+                logger.error(
+                    f"Unsupported config file format for saving: {config_file.suffix}"
+                )
                 return False
 
-            logger.info(f"Saved {len(server_configs)} server configurations to: {config_file}")
+            logger.info(
+                f"Saved {len(server_configs)} server configurations to: {config_file}"
+            )
             return True
 
         except Exception as e:
@@ -212,7 +226,9 @@ class ConfigLoader:
     def _save_yaml_config(self, config_file: Path, data: dict[str, Any]):
         """Save configuration to YAML file."""
         if not YAML_AVAILABLE:
-            raise ImportError("PyYAML is required to save YAML configuration files. Install with: pip install pyyaml")
+            raise ImportError(
+                "PyYAML is required to save YAML configuration files. Install with: pip install pyyaml"
+            )
 
         with open(config_file, "w", encoding="utf-8") as f:
             yaml.dump(data, f, default_flow_style=False, indent=2)

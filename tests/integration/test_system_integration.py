@@ -97,7 +97,9 @@ class TestSystemIntegration:
                 mock_create.side_effect = create_server_side_effect
 
                 # Start multiple servers
-                results = manager.start_multiple_servers(sample_multi_server_configs, background=True)
+                results = manager.start_multiple_servers(
+                    sample_multi_server_configs, background=True
+                )
 
                 # Verify results
                 assert isinstance(results, dict)
@@ -105,7 +107,9 @@ class TestSystemIntegration:
 
                 # Check that servers are tracked
                 running_servers = manager.get_running_servers()
-                assert len(running_servers) >= 0  # May be 0 if mocked servers don't persist
+                assert (
+                    len(running_servers) >= 0
+                )  # May be 0 if mocked servers don't persist
 
                 # Cleanup
                 manager.shutdown_all()
@@ -331,7 +335,9 @@ class TestRealWorldScenarios:
             # Validate all configs
             for config in configs:
                 server_type = config.config.get("type")
-                is_valid, message = manager.registry.validate_server_config(server_type, config)
+                is_valid, message = manager.registry.validate_server_config(
+                    server_type, config
+                )
                 assert is_valid is True
 
     @pytest.mark.asyncio

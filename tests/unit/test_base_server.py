@@ -153,8 +153,12 @@ class TestBaseServer:
         server = ConcreteTestServer(sample_server_config)
 
         # Mock the _on_startup method to avoid actual startup logic
-        with patch.object(server, "_on_startup", new_callable=AsyncMock) as mock_startup:
-            with patch.object(server, "_on_shutdown", new_callable=AsyncMock) as mock_shutdown:
+        with patch.object(
+            server, "_on_startup", new_callable=AsyncMock
+        ) as mock_startup:
+            with patch.object(
+                server, "_on_shutdown", new_callable=AsyncMock
+            ) as mock_shutdown:
                 # Test the lifespan context manager
                 async with server._server_lifespan(server.mcp):
                     assert server.info.is_running is True
@@ -171,7 +175,9 @@ class TestBaseServer:
         server = ConcreteTestServer(sample_server_config)
 
         # Mock shutdown method
-        with patch.object(server, "_on_shutdown", new_callable=AsyncMock) as mock_shutdown:
+        with patch.object(
+            server, "_on_shutdown", new_callable=AsyncMock
+        ) as mock_shutdown:
             # Manually set server as running
             server.info.is_running = True
 
@@ -220,7 +226,10 @@ class TestBaseServer:
         """Test string representation of server."""
         server = ConcreteTestServer(sample_server_config)
         assert str(server) == f"ConcreteTestServer({sample_server_config.name})"
-        assert repr(server) == f"ConcreteTestServer(name='{sample_server_config.name}', type='test')"
+        assert (
+            repr(server)
+            == f"ConcreteTestServer(name='{sample_server_config.name}', type='test')"
+        )
 
 
 class TestBaseServerErrorHandling:
@@ -246,7 +255,11 @@ class TestBaseServerErrorHandling:
         server = ConcreteTestServer(sample_server_config)
 
         # Mock _perform_health_check to raise exception
-        with patch.object(server, "_perform_health_check", side_effect=Exception("Health check failed")):
+        with patch.object(
+            server,
+            "_perform_health_check",
+            side_effect=Exception("Health check failed"),
+        ):
             result = await server.health_check()
 
             assert result is False

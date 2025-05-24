@@ -55,11 +55,16 @@ async def get_server_status(ctx: Context) -> dict[str, Any]:
         "description": description,
         "timestamp": time.time(),
         "tools_available": tools_count,
-        "uptime_seconds": time.time() - getattr(_current_server, "_start_time", time.time()) if _current_server else 0,
+        "uptime_seconds": time.time()
+        - getattr(_current_server, "_start_time", time.time())
+        if _current_server
+        else 0,
     }
 
 
-async def fetch_mock_data(ctx: Context, data_id: str, delay_seconds: float = None) -> dict[str, Any]:
+async def fetch_mock_data(
+    ctx: Context, data_id: str, delay_seconds: float = None
+) -> dict[str, Any]:
     """
     Fetches mock data associated with a given ID after a specified delay.
 
@@ -74,7 +79,9 @@ async def fetch_mock_data(ctx: Context, data_id: str, delay_seconds: float = Non
     if delay_seconds is None:
         delay_seconds = default_delay
 
-    logger.info(f"Received request to fetch mock data for id: '{data_id}' with delay: {delay_seconds}s.")
+    logger.info(
+        f"Received request to fetch mock data for id: '{data_id}' with delay: {delay_seconds}s."
+    )
     await asyncio.sleep(delay_seconds)
 
     server_name = "mock-server"

@@ -42,7 +42,9 @@ class BlenderConnection:
         except Exception as e:
             logger.error(f"Failed to connect to Blender: {e}")
             self.sock = None
-            raise BlenderConnectionError(f"Failed to connect to Blender at {self.host}:{self.port}") from e
+            raise BlenderConnectionError(
+                f"Failed to connect to Blender at {self.host}:{self.port}"
+            ) from e
 
     def disconnect(self):
         """Disconnect from the Blender addon."""
@@ -59,7 +61,9 @@ class BlenderConnection:
         """Check if connected to Blender."""
         return self.sock is not None
 
-    def send_command(self, command_type: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
+    def send_command(
+        self, command_type: str, params: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Send a command to Blender and return the response."""
         if not self.sock:
             self.connect()
@@ -81,12 +85,16 @@ class BlenderConnection:
             return response.get("result", {})
 
         except json.JSONDecodeError as e:
-            raise BlenderResponseError(f"Invalid JSON response from Blender: {e}") from e
+            raise BlenderResponseError(
+                f"Invalid JSON response from Blender: {e}"
+            ) from e
         except BlenderMCPError:
             raise
         except Exception as e:
             self.disconnect()
-            raise BlenderConnectionError(f"Error communicating with Blender: {e}") from e
+            raise BlenderConnectionError(
+                f"Error communicating with Blender: {e}"
+            ) from e
 
     def _receive_response(self, buffer_size: int = 8192) -> bytes:
         """Receive the complete response from Blender."""
@@ -113,7 +121,7 @@ class BlenderConnection:
                     continue
 
         except TimeoutError:
-            raise BlenderTimeoutError("Timeout waiting for Blender response")
+            raise BlenderTimeoutError("Timeout waiting for Blender response") from None
         except Exception as e:
             raise BlenderConnectionError(f"Error receiving response: {e}") from e
 
@@ -169,7 +177,9 @@ class BlenderMCPServer(BaseServer):
             # Quick socket check
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(2.0)
-            result = sock.connect_ex((self.blender_connection.host, self.blender_connection.port))
+            result = sock.connect_ex(
+                (self.blender_connection.host, self.blender_connection.port)
+            )
             sock.close()
             return result == 0
         except Exception:
@@ -186,7 +196,9 @@ class BlenderMCPServer(BaseServer):
             if connection_available:
                 logger.info("Blender connection test successful")
             else:
-                logger.warning("Blender not accessible. Ensure Blender is running with the addon active.")
+                logger.warning(
+                    "Blender not accessible. Ensure Blender is running with the addon active."
+                )
         except Exception as e:
             logger.warning(f"Blender connection test failed: {e}")
 
@@ -213,7 +225,9 @@ class BlenderMCPServer(BaseServer):
                 return False
 
             # Try a simple ping command
-            result = await asyncio.get_event_loop().run_in_executor(None, self.blender_connection.send_command, "ping")
+            await asyncio.get_event_loop().run_in_executor(
+                None, self.blender_connection.send_command, "ping"
+            )
             return True
         except Exception as e:
             logger.debug(f"Health check failed: {e}")
@@ -231,7 +245,9 @@ class BlenderMCPServer(BaseServer):
             logger.info("Executing get_state (get_scene_info) command.")
 
             # Run the Blender command in executor to avoid blocking
-            result = await loop.run_in_executor(None, self.blender_connection.send_command, "get_scene_info")
+            result = await loop.run_in_executor(
+                None, self.blender_connection.send_command, "get_scene_info"
+            )
 
             # Add diagnostic information
             result["_connection_info"] = {
@@ -280,7 +296,10 @@ class BlenderMCPServer(BaseServer):
 
             # Run the Blender command in executor
             result = await loop.run_in_executor(
-                None, self.blender_connection.send_command, "execute_code", {"code": code_to_execute}
+                None,
+                self.blender_connection.send_command,
+                "execute_code",
+                {"code": code_to_execute},
             )
 
             # Add server info to result

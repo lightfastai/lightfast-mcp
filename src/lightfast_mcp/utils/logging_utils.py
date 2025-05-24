@@ -42,7 +42,9 @@ def configure_logging(
 
     # Configure the handler specifically for the logger instance being passed or the root "FastMCP" logger.
     # Avoid adding handlers to the root logger of Python's logging system unless intended.
-    handler = RichHandler(console=Console(stderr=True), rich_tracebacks=True, show_path=False)
+    handler = RichHandler(
+        console=Console(stderr=True), rich_tracebacks=True, show_path=False
+    )
     # Using a simple formatter as RichHandler does most of the styling.
     # The default RichHandler format is "%(message)s" and it includes time and level.
     # formatter = logging.Formatter("%(message)s")

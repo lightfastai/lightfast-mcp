@@ -39,17 +39,17 @@ def main():
 
     # Check if we have pytest installed
     try:
-        import pytest
+        import importlib.util
+
+        if importlib.util.find_spec("pytest") is None:
+            raise ImportError
     except ImportError:
         print("❌ pytest not found. Install it with: uv add pytest pytest-asyncio")
         return False
 
     all_passed = True
 
-    if len(sys.argv) > 1:
-        test_type = sys.argv[1].lower()
-    else:
-        test_type = "all"
+    test_type = sys.argv[1].lower() if len(sys.argv) > 1 else "all"
 
     if test_type in ["unit", "all"]:
         # Run unit tests
@@ -59,13 +59,31 @@ def main():
 
     if test_type in ["integration", "all"]:
         # Run integration tests
-        integration_cmd = ["uv", "run", "pytest", "tests/integration", "-v", "--tb=short", "-m", "integration"]
+        integration_cmd = [
+            "uv",
+            "run",
+            "pytest",
+            "tests/integration",
+            "-v",
+            "--tb=short",
+            "-m",
+            "integration",
+        ]
         if not run_command(integration_cmd, "Integration Tests"):
             all_passed = False
 
     if test_type == "fast":
         # Run fast tests only (exclude slow ones)
-        fast_cmd = ["uv", "run", "pytest", "tests/", "-v", "--tb=short", "-m", "not slow"]
+        fast_cmd = [
+            "uv",
+            "run",
+            "pytest",
+            "tests/",
+            "-v",
+            "--tb=short",
+            "-m",
+            "not slow",
+        ]
         if not run_command(fast_cmd, "Fast Tests"):
             all_passed = False
 
@@ -78,7 +96,10 @@ def main():
     if test_type == "coverage":
         # Run tests with coverage
         try:
-            import coverage
+            import importlib.util
+
+            if importlib.util.find_spec("coverage") is None:
+                raise ImportError
         except ImportError:
             print("❌ coverage not found. Install it with: uv add coverage")
             return False

@@ -50,7 +50,9 @@ class MultiServerManager:
             # Signal handling might not work in some environments (like Jupyter)
             logger.debug("Could not setup signal handlers")
 
-    def start_server(self, server_config: ServerConfig, background: bool = False) -> bool:
+    def start_server(
+        self, server_config: ServerConfig, background: bool = False
+    ) -> bool:
         """Start a single server."""
         if server_config.name in self._running_servers:
             logger.warning(f"Server {server_config.name} is already running")
@@ -59,9 +61,13 @@ class MultiServerManager:
         try:
             # Validate configuration
             server_type = server_config.config.get("type", "unknown")
-            is_valid, error_msg = self.registry.validate_server_config(server_type, server_config)
+            is_valid, error_msg = self.registry.validate_server_config(
+                server_type, server_config
+            )
             if not is_valid:
-                logger.error(f"Invalid configuration for {server_config.name}: {error_msg}")
+                logger.error(
+                    f"Invalid configuration for {server_config.name}: {error_msg}"
+                )
                 return False
 
             # Create server instance
@@ -70,11 +76,15 @@ class MultiServerManager:
             if background:
                 # Run in background thread
                 thread = threading.Thread(
-                    target=self._run_server_in_thread, args=(server, server_config.name), daemon=True
+                    target=self._run_server_in_thread,
+                    args=(server, server_config.name),
+                    daemon=True,
                 )
                 thread.start()
 
-                server_process = ServerProcess(server=server, thread=thread, is_background=True)
+                server_process = ServerProcess(
+                    server=server, thread=thread, is_background=True
+                )
             else:
                 # Run in foreground (blocking)
                 server_process = ServerProcess(server=server, is_background=False)
@@ -82,7 +92,9 @@ class MultiServerManager:
                 server.run()
 
             self._running_servers[server_config.name] = server_process
-            logger.info(f"Started server: {server_config.name} (background: {background})")
+            logger.info(
+                f"Started server: {server_config.name} (background: {background})"
+            )
             return True
 
         except Exception as e:
@@ -108,7 +120,7 @@ class MultiServerManager:
             logger.warning(f"Server {server_name} is not running")
             return False
 
-        server_process = self._running_servers[server_name]
+        self._running_servers[server_name]
 
         try:
             # For now, we don't have a clean way to stop FastMCP servers
@@ -142,7 +154,9 @@ class MultiServerManager:
 
         return False
 
-    def start_multiple_servers(self, server_configs: list[ServerConfig], background: bool = True) -> dict[str, bool]:
+    def start_multiple_servers(
+        self, server_configs: list[ServerConfig], background: bool = True
+    ) -> dict[str, bool]:
         """Start multiple servers."""
         results = {}
 

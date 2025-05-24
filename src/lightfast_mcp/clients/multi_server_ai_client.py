@@ -59,7 +59,9 @@ class ServerConnection:
                 self.client = None
                 self.is_connected = False
 
-    async def call_tool(self, tool_name: str, arguments: dict[str, Any] = None) -> dict[str, Any]:
+    async def call_tool(
+        self, tool_name: str, arguments: dict[str, Any] = None
+    ) -> dict[str, Any]:
         """Call a tool on this server."""
         if not self.is_connected or not self.client:
             raise RuntimeError(f"Not connected to {self.name}")
@@ -96,11 +98,15 @@ class MultiServerAIClient:
         if self.ai_provider == "claude":
             key = os.getenv("ANTHROPIC_API_KEY")
             if not key:
-                raise ValueError("ANTHROPIC_API_KEY environment variable required for Claude")
+                raise ValueError(
+                    "ANTHROPIC_API_KEY environment variable required for Claude"
+                )
         elif self.ai_provider == "openai":
             key = os.getenv("OPENAI_API_KEY")
             if not key:
-                raise ValueError("OPENAI_API_KEY environment variable required for OpenAI")
+                raise ValueError(
+                    "OPENAI_API_KEY environment variable required for OpenAI"
+                )
         else:
             raise ValueError(f"Unsupported AI provider: {self.ai_provider}")
         return key
@@ -145,7 +151,9 @@ class MultiServerAIClient:
                 connection_results[server.name] = result
 
         successful = sum(1 for success in connection_results.values() if success)
-        logger.info(f"Successfully connected to {successful}/{len(self.servers)} servers")
+        logger.info(
+            f"Successfully connected to {successful}/{len(self.servers)} servers"
+        )
 
         return connection_results
 
@@ -181,7 +189,10 @@ class MultiServerAIClient:
         return None
 
     async def execute_tool(
-        self, tool_name: str, arguments: dict[str, Any] = None, server_name: str | None = None
+        self,
+        tool_name: str,
+        arguments: dict[str, Any] = None,
+        server_name: str | None = None,
     ) -> dict[str, Any]:
         """Execute a tool on the appropriate server."""
         # If server is specified, use it
@@ -237,7 +248,8 @@ class MultiServerAIClient:
 
             tools_description = "\n".join(tools_desc)
 
-            system_prompt = f"""You are an AI assistant that can control multiple creative applications through MCP servers.
+            system_prompt = f"""You are an AI assistant that can control multiple creative applications through MCP \
+servers.
 
 Connected Servers and Available Tools:
 {tools_description}
@@ -263,7 +275,9 @@ Otherwise, respond normally with helpful information."""
 
         elif self.ai_provider == "openai":
             response = await self.ai_client.chat.completions.create(
-                model="gpt-4o", messages=[{"role": "user", "content": full_message}], max_tokens=4000
+                model="gpt-4o",
+                messages=[{"role": "user", "content": full_message}],
+                max_tokens=4000,
             )
             return response.choices[0].message.content
 
@@ -281,7 +295,9 @@ Otherwise, respond normally with helpful information."""
                 if not tool_name:
                     return "Error: Tool name is required for tool calls"
 
-                logger.info(f"Executing tool: {tool_name} on server: {server_name or 'auto-detect'}")
+                logger.info(
+                    f"Executing tool: {tool_name} on server: {server_name or 'auto-detect'}"
+                )
                 result = await self.execute_tool(tool_name, arguments, server_name)
 
                 return f"Executed {tool_name}: {json.dumps(result, indent=2)}"

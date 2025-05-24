@@ -71,10 +71,18 @@ class TestMultiServerManager:
         with patch.object(manager.registry, "validate_server_config") as mock_validate:
             with patch.object(manager.registry, "create_server") as mock_create:
                 mock_validate.return_value = (True, "Valid")
-                server = MockTestServer(ServerConfig(name="test", description="Test", config={"type": "mock_test"}))
+                server = MockTestServer(
+                    ServerConfig(
+                        name="test", description="Test", config={"type": "mock_test"}
+                    )
+                )
                 mock_create.return_value = server
 
-                config = ServerConfig(name="test-server", description="Test server", config={"type": "mock_test"})
+                config = ServerConfig(
+                    name="test-server",
+                    description="Test server",
+                    config={"type": "mock_test"},
+                )
 
                 # Mock the server.run method to avoid actual execution
                 with patch.object(server, "run"):
@@ -91,10 +99,18 @@ class TestMultiServerManager:
         with patch.object(manager.registry, "validate_server_config") as mock_validate:
             with patch.object(manager.registry, "create_server") as mock_create:
                 mock_validate.return_value = (True, "Valid")
-                server = MockTestServer(ServerConfig(name="test", description="Test", config={"type": "mock_test"}))
+                server = MockTestServer(
+                    ServerConfig(
+                        name="test", description="Test", config={"type": "mock_test"}
+                    )
+                )
                 mock_create.return_value = server
 
-                config = ServerConfig(name="bg-server", description="Background server", config={"type": "mock_test"})
+                config = ServerConfig(
+                    name="bg-server",
+                    description="Background server",
+                    config={"type": "mock_test"},
+                )
 
                 # Mock threading
                 with patch("threading.Thread") as mock_thread:
@@ -112,7 +128,9 @@ class TestMultiServerManager:
         """Test starting a server that's already running."""
         manager = MultiServerManager()
 
-        config = ServerConfig(name="existing", description="Existing server", config={"type": "mock_test"})
+        config = ServerConfig(
+            name="existing", description="Existing server", config={"type": "mock_test"}
+        )
 
         # Manually add server to running servers
         server = MockTestServer(config)
@@ -133,7 +151,11 @@ class TestMultiServerManager:
                 mock_validate.return_value = (True, "Valid")
                 mock_create.side_effect = Exception("Creation failed")
 
-                config = ServerConfig(name="fail-server", description="Failing server", config={"type": "mock_test"})
+                config = ServerConfig(
+                    name="fail-server",
+                    description="Failing server",
+                    config={"type": "mock_test"},
+                )
 
                 result = manager.start_server(config, background=False)
 
@@ -145,7 +167,9 @@ class TestMultiServerManager:
         manager = MultiServerManager()
 
         # Manually add server to running servers
-        config = ServerConfig(name="stop-test", description="Stop test", config={"type": "mock_test"})
+        config = ServerConfig(
+            name="stop-test", description="Stop test", config={"type": "mock_test"}
+        )
         server = MockTestServer(config)
         from lightfast_mcp.core.multi_server_manager import ServerProcess
 
@@ -172,11 +196,15 @@ class TestMultiServerManager:
         mock_thread = MagicMock()
 
         # Manually add server with background thread
-        config = ServerConfig(name="bg-stop", description="Background stop", config={"type": "mock_test"})
+        config = ServerConfig(
+            name="bg-stop", description="Background stop", config={"type": "mock_test"}
+        )
         server = MockTestServer(config)
         from lightfast_mcp.core.multi_server_manager import ServerProcess
 
-        manager._running_servers["bg-stop"] = ServerProcess(server=server, thread=mock_thread, is_background=True)
+        manager._running_servers["bg-stop"] = ServerProcess(
+            server=server, thread=mock_thread, is_background=True
+        )
 
         result = manager.stop_server("bg-stop")
 
@@ -188,9 +216,21 @@ class TestMultiServerManager:
         manager = MultiServerManager()
 
         configs = [
-            ServerConfig(name="multi-server-0", description="Multi 0", config={"type": "mock_test"}),
-            ServerConfig(name="multi-server-1", description="Multi 1", config={"type": "mock_test"}),
-            ServerConfig(name="multi-server-2", description="Multi 2", config={"type": "mock_test"}),
+            ServerConfig(
+                name="multi-server-0",
+                description="Multi 0",
+                config={"type": "mock_test"},
+            ),
+            ServerConfig(
+                name="multi-server-1",
+                description="Multi 1",
+                config={"type": "mock_test"},
+            ),
+            ServerConfig(
+                name="multi-server-2",
+                description="Multi 2",
+                config={"type": "mock_test"},
+            ),
         ]
 
         with patch.object(manager.registry, "validate_server_config") as mock_validate:
@@ -202,7 +242,7 @@ class TestMultiServerManager:
             assert isinstance(results, dict)
             assert len(results) == 3
             # All should fail due to validation
-            for name, result in results.items():
+            for _name, result in results.items():
                 assert result is False
 
     def test_stop_all_servers(self):
@@ -211,7 +251,11 @@ class TestMultiServerManager:
 
         # Add multiple servers manually
         for i in range(3):
-            config = ServerConfig(name=f"stop-all-{i}", description=f"Stop all {i}", config={"type": "mock_test"})
+            config = ServerConfig(
+                name=f"stop-all-{i}",
+                description=f"Stop all {i}",
+                config={"type": "mock_test"},
+            )
             server = MockTestServer(config)
             from lightfast_mcp.core.multi_server_manager import ServerProcess
 
@@ -226,7 +270,9 @@ class TestMultiServerManager:
         manager = MultiServerManager()
 
         # Add a server
-        config = ServerConfig(name="info-server", description="Info server", config={"type": "mock_test"})
+        config = ServerConfig(
+            name="info-server", description="Info server", config={"type": "mock_test"}
+        )
         server = MockTestServer(config)
         from lightfast_mcp.core.multi_server_manager import ServerProcess
 
@@ -243,7 +289,11 @@ class TestMultiServerManager:
         manager = MultiServerManager()
 
         # Add a server
-        config = ServerConfig(name="status-server", description="Status server", config={"type": "mock_test"})
+        config = ServerConfig(
+            name="status-server",
+            description="Status server",
+            config={"type": "mock_test"},
+        )
         server = MockTestServer(config)
         from lightfast_mcp.core.multi_server_manager import ServerProcess
 
@@ -267,7 +317,11 @@ class TestMultiServerManager:
         manager = MultiServerManager()
 
         # Add a server
-        config = ServerConfig(name="running-check", description="Running check", config={"type": "mock_test"})
+        config = ServerConfig(
+            name="running-check",
+            description="Running check",
+            config={"type": "mock_test"},
+        )
         server = MockTestServer(config)
         from lightfast_mcp.core.multi_server_manager import ServerProcess
 
@@ -284,7 +338,11 @@ class TestMultiServerManager:
 
         # Add servers
         for i in range(3):
-            config = ServerConfig(name=f"count-{i}", description=f"Count {i}", config={"type": "mock_test"})
+            config = ServerConfig(
+                name=f"count-{i}",
+                description=f"Count {i}",
+                config={"type": "mock_test"},
+            )
             server = MockTestServer(config)
             from lightfast_mcp.core.multi_server_manager import ServerProcess
 
@@ -297,7 +355,9 @@ class TestMultiServerManager:
         manager = MultiServerManager()
 
         # Add a server with URL
-        config = ServerConfig(name="url-server", description="URL server", config={"type": "mock_test"})
+        config = ServerConfig(
+            name="url-server", description="URL server", config={"type": "mock_test"}
+        )
         server = MockTestServer(config)
         server.info.url = "http://localhost:8000/mcp"
         from lightfast_mcp.core.multi_server_manager import ServerProcess
@@ -314,7 +374,9 @@ class TestMultiServerManager:
         """Test listing available server types."""
         manager = MultiServerManager()
 
-        with patch.object(manager.registry, "get_available_server_types") as mock_get_types:
+        with patch.object(
+            manager.registry, "get_available_server_types"
+        ) as mock_get_types:
             mock_get_types.return_value = ["blender", "mock"]
 
             types = manager.list_available_server_types()
@@ -342,13 +404,19 @@ class TestMultiServerManager:
 
         # Add servers
         for i in range(2):
-            config = ServerConfig(name=f"health-{i}", description=f"Health {i}", config={"type": "mock_test"})
+            config = ServerConfig(
+                name=f"health-{i}",
+                description=f"Health {i}",
+                config={"type": "mock_test"},
+            )
             server = MockTestServer(config)
             from lightfast_mcp.core.multi_server_manager import ServerProcess
 
             manager._running_servers[f"health-{i}"] = ServerProcess(server=server)
 
-        with patch.object(MockTestServer, "health_check", new_callable=AsyncMock) as mock_health:
+        with patch.object(
+            MockTestServer, "health_check", new_callable=AsyncMock
+        ) as mock_health:
             mock_health.return_value = True
 
             results = await manager.health_check_all()
@@ -366,8 +434,14 @@ class TestMultiServerManagerErrorHandling:
         manager = MultiServerManager()
 
         configs = [
-            ServerConfig(name="success-server", description="Success", config={"type": "mock_test"}),
-            ServerConfig(name="fail-server", description="Fail", config={"type": "failing_mock"}),
+            ServerConfig(
+                name="success-server",
+                description="Success",
+                config={"type": "mock_test"},
+            ),
+            ServerConfig(
+                name="fail-server", description="Fail", config={"type": "failing_mock"}
+            ),
         ]
 
         with patch.object(manager.registry, "validate_server_config") as mock_validate:
@@ -385,7 +459,9 @@ class TestMultiServerManagerErrorHandling:
         """Test handling of configuration validation failures."""
         manager = MultiServerManager()
 
-        config = ServerConfig(name="invalid-config", description="Invalid", config={"type": "unknown"})
+        config = ServerConfig(
+            name="invalid-config", description="Invalid", config={"type": "unknown"}
+        )
 
         with patch.object(manager.registry, "validate_server_config") as mock_validate:
             mock_validate.return_value = (False, "Invalid configuration")
@@ -401,7 +477,11 @@ class TestMultiServerManagerErrorHandling:
 
         # Add some servers
         for i in range(2):
-            config = ServerConfig(name=f"shutdown-{i}", description=f"Shutdown {i}", config={"type": "mock_test"})
+            config = ServerConfig(
+                name=f"shutdown-{i}",
+                description=f"Shutdown {i}",
+                config={"type": "mock_test"},
+            )
             server = MockTestServer(config)
             from lightfast_mcp.core.multi_server_manager import ServerProcess
 

@@ -173,8 +173,12 @@ async def demo_ai_integration(server_urls):
             print("\n📡 Connecting to servers...")
             connection_results = await client.connect_to_servers()
 
-            successful_connections = sum(1 for success in connection_results.values() if success)
-            print(f"✅ Connected to {successful_connections}/{len(server_urls)} servers")
+            successful_connections = sum(
+                1 for success in connection_results.values() if success
+            )
+            print(
+                f"✅ Connected to {successful_connections}/{len(server_urls)} servers"
+            )
 
             if successful_connections > 0:
                 # Show available tools
@@ -225,7 +229,7 @@ async def main():
 
     try:
         # 1. Demonstrate server discovery
-        server_info = await demo_server_discovery()
+        await demo_server_discovery()
 
         print("\n" + "=" * 70)
 

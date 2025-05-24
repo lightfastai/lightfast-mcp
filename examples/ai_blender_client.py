@@ -36,11 +36,15 @@ class AIBlenderClient:
         if self.ai_provider == "claude":
             key = os.getenv("ANTHROPIC_API_KEY")
             if not key:
-                raise ValueError("ANTHROPIC_API_KEY environment variable required for Claude")
+                raise ValueError(
+                    "ANTHROPIC_API_KEY environment variable required for Claude"
+                )
         elif self.ai_provider == "openai":
             key = os.getenv("OPENAI_API_KEY")
             if not key:
-                raise ValueError("OPENAI_API_KEY environment variable required for OpenAI")
+                raise ValueError(
+                    "OPENAI_API_KEY environment variable required for OpenAI"
+                )
         else:
             raise ValueError(f"Unsupported AI provider: {self.ai_provider}")
         return key
@@ -65,7 +69,9 @@ class AIBlenderClient:
 
         except Exception as e:
             print(f"❌ Failed to connect to Blender MCP server: {e}")
-            print("   Make sure the HTTP server is running: ./scripts/test_blender.sh http")
+            print(
+                "   Make sure the HTTP server is running: ./scripts/test_blender.sh http"
+            )
             return False
 
     async def disconnect_from_blender(self):
@@ -82,18 +88,25 @@ class AIBlenderClient:
         try:
             # Get tools description
             tools = await self.mcp_client.list_tools()
-            tools_desc = "\n".join([f"- {tool.name}: {tool.description}" for tool in tools])
+            tools_desc = "\n".join(
+                [f"- {tool.name}: {tool.description}" for tool in tools]
+            )
 
             # Get scene state
             result = await self.mcp_client.call_tool("get_state")
             scene_state = json.loads(result[0].text) if result else {}
 
-            return {"tools_description": f"Available Blender tools:\n{tools_desc}", "scene_state": scene_state}
+            return {
+                "tools_description": f"Available Blender tools:\n{tools_desc}",
+                "scene_state": scene_state,
+            }
         except Exception as e:
             print(f"⚠️  Warning: Could not get Blender context: {e}")
             return {}
 
-    async def execute_blender_tool(self, tool_name: str, arguments: dict[str, Any] = None) -> dict[str, Any]:
+    async def execute_blender_tool(
+        self, tool_name: str, arguments: dict[str, Any] = None
+    ) -> dict[str, Any]:
         """Execute a tool on the Blender MCP server"""
         if not self.mcp_client:
             raise RuntimeError("Not connected to Blender MCP server")
@@ -140,7 +153,9 @@ Otherwise, respond normally."""
 
         elif self.ai_provider == "openai":
             response = await self.ai_client.chat.completions.create(
-                model="gpt-4o", messages=[{"role": "user", "content": full_message}], max_tokens=4000
+                model="gpt-4o",
+                messages=[{"role": "user", "content": full_message}],
+                max_tokens=4000,
             )
             return response.choices[0].message.content
 

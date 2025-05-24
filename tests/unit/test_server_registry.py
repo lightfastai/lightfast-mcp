@@ -94,7 +94,9 @@ class TestServerRegistry:
         registry = ServerRegistry()
         registry.register_server_class("test_a", TestServerA)
 
-        config = ServerConfig(name="test", description="Test server", config={"type": "test_a"})
+        config = ServerConfig(
+            name="test", description="Test server", config={"type": "test_a"}
+        )
 
         server = registry.create_server("test_a", config)
 
@@ -106,7 +108,9 @@ class TestServerRegistry:
         """Test creating server with unknown type raises error."""
         registry = ServerRegistry()
 
-        config = ServerConfig(name="test", description="Test server", config={"type": "unknown"})
+        config = ServerConfig(
+            name="test", description="Test server", config={"type": "unknown"}
+        )
 
         with pytest.raises(ValueError, match="Unknown server type: unknown"):
             registry.create_server("unknown", config)
@@ -128,7 +132,9 @@ class TestServerRegistry:
         registry = ServerRegistry()
         registry.register_server_class("test_a", TestServerA)
 
-        config = ServerConfig(name="test-instance", description="Test server", config={"type": "test_a"})
+        config = ServerConfig(
+            name="test-instance", description="Test server", config={"type": "test_a"}
+        )
         created_server = registry.create_server("test_a", config)
 
         retrieved_server = registry.get_server_instance("test-instance")
@@ -148,7 +154,9 @@ class TestServerRegistry:
         registry = ServerRegistry()
         registry.register_server_class("test_a", TestServerA)
 
-        config = ServerConfig(name="test-instance", description="Test server", config={"type": "test_a"})
+        config = ServerConfig(
+            name="test-instance", description="Test server", config={"type": "test_a"}
+        )
         registry.create_server("test_a", config)
 
         # Verify it exists
@@ -173,7 +181,9 @@ class TestServerRegistry:
         registry = ServerRegistry()
         registry.register_server_class("test_a", TestServerA)
 
-        config = ServerConfig(name="test", description="Test server", config={"type": "test_a"})
+        config = ServerConfig(
+            name="test", description="Test server", config={"type": "test_a"}
+        )
 
         is_valid, message = registry.validate_server_config("test_a", config)
 
@@ -184,7 +194,9 @@ class TestServerRegistry:
         """Test validation with unknown server type."""
         registry = ServerRegistry()
 
-        config = ServerConfig(name="test", description="Test server", config={"type": "unknown"})
+        config = ServerConfig(
+            name="test", description="Test server", config={"type": "unknown"}
+        )
 
         is_valid, message = registry.validate_server_config("unknown", config)
 
@@ -196,7 +208,9 @@ class TestServerRegistry:
         registry = ServerRegistry()
         registry.register_server_class("test_a", TestServerA)
 
-        config = ServerConfig(name="", description="Test server", config={"type": "test_a"})
+        config = ServerConfig(
+            name="", description="Test server", config={"type": "test_a"}
+        )
 
         is_valid, message = registry.validate_server_config("test_a", config)
 
@@ -279,7 +293,9 @@ class TestServerAutoDiscovery:
         registry._server_classes.clear()
 
         # Mock an import error scenario
-        with patch("importlib.import_module", side_effect=ImportError("Mocked import error")):
+        with patch(
+            "importlib.import_module", side_effect=ImportError("Mocked import error")
+        ):
             registry._discover_servers_in_package("lightfast_mcp.servers")
 
         # Should handle gracefully
@@ -322,7 +338,9 @@ class TestServerRegistryIntegration:
         registry = get_registry()
 
         # Test creating a mock server
-        mock_config = ServerConfig(name="test-mock", description="Test mock server", config={"type": "mock"})
+        mock_config = ServerConfig(
+            name="test-mock", description="Test mock server", config={"type": "mock"}
+        )
 
         mock_server = registry.create_server("mock", mock_config)
 
@@ -332,7 +350,9 @@ class TestServerRegistryIntegration:
 
         # Test creating a blender server
         blender_config = ServerConfig(
-            name="test-blender", description="Test blender server", config={"type": "blender"}
+            name="test-blender",
+            description="Test blender server",
+            config={"type": "blender"},
         )
 
         blender_server = registry.create_server("blender", blender_config)

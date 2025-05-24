@@ -30,7 +30,9 @@ class ServerRegistry:
         # Discover servers in the servers package
         self._discover_servers_in_package("lightfast_mcp.servers")
 
-        logger.info(f"Found {len(self._server_classes)} server types: {list(self._server_classes.keys())}")
+        logger.info(
+            f"Found {len(self._server_classes)} server types: {list(self._server_classes.keys())}"
+        )
 
     def _discover_servers_in_package(self, package_name: str):
         """Discover servers in a specific package."""
@@ -40,7 +42,7 @@ class ServerRegistry:
             package_path = Path(package.__file__).parent
 
             # Iterate through all modules in the package
-            for finder, name, ispkg in pkgutil.iter_modules([str(package_path)]):
+            for _finder, name, ispkg in pkgutil.iter_modules([str(package_path)]):
                 if ispkg:
                     # Recursively search subpackages
                     subpackage_name = f"{package_name}.{name}"
@@ -120,13 +122,19 @@ class ServerRegistry:
             info[server_type] = {
                 "class_name": server_class.__name__,
                 "version": getattr(server_class, "SERVER_VERSION", "1.0.0"),
-                "required_dependencies": getattr(server_class, "REQUIRED_DEPENDENCIES", []),
+                "required_dependencies": getattr(
+                    server_class, "REQUIRED_DEPENDENCIES", []
+                ),
                 "required_apps": getattr(server_class, "REQUIRED_APPS", []),
-                "description": getattr(server_class, "__doc__", "No description available"),
+                "description": getattr(
+                    server_class, "__doc__", "No description available"
+                ),
             }
         return info
 
-    def validate_server_config(self, server_type: str, config: ServerConfig) -> tuple[bool, str]:
+    def validate_server_config(
+        self, server_type: str, config: ServerConfig
+    ) -> tuple[bool, str]:
         """Validate a server configuration."""
         server_class = self.get_server_class(server_type)
         if not server_class:
@@ -147,7 +155,10 @@ class ServerRegistry:
                 and instance.config.transport in ["http", "streamable-http"]
                 and config.transport in ["http", "streamable-http"]
             ):
-                return False, f"Port {config.port} on {config.host} is already in use by {instance.config.name}"
+                return (
+                    False,
+                    f"Port {config.port} on {config.host} is already in use by {instance.config.name}",
+                )
 
         return True, "Configuration is valid"
 

@@ -42,7 +42,9 @@ async def test_server_creation():
         print(f"  Creating {server_type} server...")
 
         config = ServerConfig(
-            name=f"test-{server_type}", description=f"Test {server_type} server", config={"type": server_type}
+            name=f"test-{server_type}",
+            description=f"Test {server_type} server",
+            config={"type": server_type},
         )
 
         try:
@@ -61,7 +63,11 @@ async def test_mock_tools():
     print("🛠️  Testing mock server tools...")
 
     # Test the tools directly
-    from lightfast_mcp.servers.mock.tools import execute_mock_action, fetch_mock_data, get_server_status
+    from lightfast_mcp.servers.mock.tools import (
+        execute_mock_action,
+        fetch_mock_data,
+        get_server_status,
+    )
 
     # Test get_server_status
     status = await get_server_status(ctx=None)
@@ -74,7 +80,9 @@ async def test_mock_tools():
     assert data.get("id") == "test-123"
 
     # Test execute_mock_action
-    result = await execute_mock_action(ctx=None, action_name="test_action", delay_seconds=0.01)
+    result = await execute_mock_action(
+        ctx=None, action_name="test_action", delay_seconds=0.01
+    )
     print(f"  ✅ execute_mock_action completed: {result.get('action_name')}")
     assert result.get("action_name") == "test_action"
 

@@ -20,7 +20,9 @@ from lightfast_mcp.servers.mock.tools import (
 def mock_server():
     """Create a MockMCPServer instance for testing."""
     config = ServerConfig(
-        name="test-mock", description="Test mock server", config={"type": "mock", "delay_seconds": 0.01}
+        name="test-mock",
+        description="Test mock server",
+        config={"type": "mock", "delay_seconds": 0.01},
     )
     return MockMCPServer(config)
 
@@ -64,7 +66,9 @@ async def test_execute_mock_action():
     params = {"param1": "value1", "param2": 100}
     delay = 0.01  # Use a very small delay for testing
 
-    result = await execute_mock_action(ctx=None, action_name=action_name, parameters=params, delay_seconds=delay)
+    result = await execute_mock_action(
+        ctx=None, action_name=action_name, parameters=params, delay_seconds=delay
+    )
     await asyncio.sleep(delay + 0.01)  # Ensure the mock delay has passed
 
     assert isinstance(result, dict)
@@ -113,7 +117,11 @@ async def test_tool_integration_with_server(mock_server):
         assert "execute_mock_action" in tools
 
         # Test calling tools through the tools module functions
-        from lightfast_mcp.servers.mock.tools import execute_mock_action, fetch_mock_data, get_server_status
+        from lightfast_mcp.servers.mock.tools import (
+            execute_mock_action,
+            fetch_mock_data,
+            get_server_status,
+        )
 
         # Test get_server_status
         status = await get_server_status(ctx=None)
@@ -121,12 +129,16 @@ async def test_tool_integration_with_server(mock_server):
         assert status["server_type"] == "mock"
 
         # Test fetch_mock_data
-        data = await fetch_mock_data(ctx=None, data_id="integration-test", delay_seconds=0.01)
+        data = await fetch_mock_data(
+            ctx=None, data_id="integration-test", delay_seconds=0.01
+        )
         assert data["id"] == "integration-test"
         assert "content" in data
 
         # Test execute_mock_action
-        result = await execute_mock_action(ctx=None, action_name="integration-action", delay_seconds=0.01)
+        result = await execute_mock_action(
+            ctx=None, action_name="integration-action", delay_seconds=0.01
+        )
         assert result["action_name"] == "integration-action"
         assert result["status"] == "completed_mock"
 

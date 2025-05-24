@@ -35,7 +35,7 @@ def create_sample_config():
     print("📝 Creating sample configuration...")
 
     config_loader = ConfigLoader()
-    success = config_loader.create_sample_config("config/servers.yaml")
+    success = config_loader.create_sample_config("servers.yaml")
 
     if success:
         print("✅ Sample configuration created at: config/servers.yaml")
@@ -73,7 +73,9 @@ def list_available_servers():
 
     if not configs:
         print("❌ No server configurations found.")
-        print("   Run 'python lightfast_mcp_manager.py init' to create a sample configuration.")
+        print(
+            "   Run 'python lightfast_mcp_manager.py init' to create a sample configuration."
+        )
         return
 
     for config in configs:
@@ -97,7 +99,9 @@ def start_servers_interactive():
 
     if not selected_configs:
         print("❌ No server configurations found.")
-        print("   Run 'python lightfast_mcp_manager.py init' to create a sample configuration.")
+        print(
+            "   Run 'python lightfast_mcp_manager.py init' to create a sample configuration."
+        )
         return
 
     # Let user select servers
@@ -221,12 +225,14 @@ async def start_ai_client():
                 server_name = f"server-{port}"
                 discovered_servers[server_name] = url
                 print(f"   ✅ Found server at {url}")
-        except:
+        except Exception:
             pass
 
     if not discovered_servers:
         print("❌ No running MCP servers found.")
-        print("   Start some servers first with 'python lightfast_mcp_manager.py start'")
+        print(
+            "   Start some servers first with 'python lightfast_mcp_manager.py start'"
+        )
         return
 
     # Add discovered servers to client
@@ -237,7 +243,9 @@ async def start_ai_client():
     print(f"\n📡 Connecting to {len(discovered_servers)} servers...")
     connection_results = await client.connect_to_servers()
 
-    successful_connections = sum(1 for success in connection_results.values() if success)
+    successful_connections = sum(
+        1 for success in connection_results.values() if success
+    )
     print(f"✅ Connected to {successful_connections}/{len(discovered_servers)} servers")
 
     if successful_connections == 0:
@@ -299,13 +307,19 @@ Examples:
         """,
     )
 
-    parser.add_argument("command", choices=["init", "list", "start", "ai"], help="Command to run")
+    parser.add_argument(
+        "command", choices=["init", "list", "start", "ai"], help="Command to run"
+    )
 
-    parser.add_argument("servers", nargs="*", help="Server names to start (for 'start' command)")
+    parser.add_argument(
+        "servers", nargs="*", help="Server names to start (for 'start' command)"
+    )
 
     parser.add_argument("--config", help="Configuration file path")
 
-    parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose logging")
+    parser.add_argument(
+        "--verbose", "-v", action="store_true", help="Enable verbose logging"
+    )
 
     args = parser.parse_args()
 

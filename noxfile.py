@@ -76,9 +76,18 @@ def format(session):
 def security(session):
     """Run security scanning."""
     session.install("bandit[toml]", "safety")
-    session.run("bandit", "-r", "src/", "-f", "json", "-o", "bandit-report.json", success_codes=[0, 1])
-    # Safety output options: 'screen', 'text', 'json', 'bare', 'html'
-    session.run("safety", "check", "--output", "json", success_codes=[0, 1])
+    session.run(
+        "bandit",
+        "-r",
+        "src/",
+        "-f",
+        "json",
+        "-o",
+        "bandit-report.json",
+        success_codes=[0, 1],
+    )
+    # Use the new 'scan' command instead of deprecated 'check'
+    session.run("safety", "scan", "--output", "json", success_codes=[0, 1])
 
 
 @nox.session(python=PYTHON_VERSIONS)

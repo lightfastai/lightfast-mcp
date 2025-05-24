@@ -19,7 +19,9 @@ class ServerSelector:
         self.available_configs: list[ServerConfig] = []
         self.selected_configs: list[ServerConfig] = []
 
-    def load_available_servers(self, config_file: str | None = None) -> list[ServerConfig]:
+    def load_available_servers(
+        self, config_file: str | None = None
+    ) -> list[ServerConfig]:
         """Load available server configurations."""
         self.available_configs = self.config_loader.load_servers_config(config_file)
         logger.info(f"Loaded {len(self.available_configs)} server configurations")
@@ -33,7 +35,9 @@ class ServerSelector:
         """Interactive server selection via console."""
         if not self.available_configs:
             print("❌ No server configurations available.")
-            print("   Create a configuration file first or check your config directory.")
+            print(
+                "   Create a configuration file first or check your config directory."
+            )
             return []
 
         print("🚀 Lightfast MCP Server Selection")
@@ -44,14 +48,18 @@ class ServerSelector:
         for i, config in enumerate(self.available_configs, 1):
             server_type = config.config.get("type", "unknown")
             status = "✅" if self._check_server_requirements(config) else "⚠️ "
-            print(f"  {i}. {status} {config.name} ({server_type}) - {config.description}")
+            print(
+                f"  {i}. {status} {config.name} ({server_type}) - {config.description}"
+            )
             if not self._check_server_requirements(config):
                 issues = self._get_requirement_issues(config)
                 for issue in issues:
                     print(f"      🔸 {issue}")
 
         print()
-        print("Enter server numbers to start (comma-separated), 'all' for all servers, or 'none' to cancel:")
+        print(
+            "Enter server numbers to start (comma-separated), 'all' for all servers, or 'none' to cancel:"
+        )
 
         try:
             selection = input("Selection: ").strip()
@@ -74,7 +82,9 @@ class ServerSelector:
                     except ValueError:
                         print(f"⚠️  Invalid number: {part.strip()}")
 
-                self.selected_configs = [self.available_configs[i] for i in selected_indices]
+                self.selected_configs = [
+                    self.available_configs[i] for i in selected_indices
+                ]
 
             print(f"\n✅ Selected {len(self.selected_configs)} servers:")
             for config in self.selected_configs:
@@ -216,9 +226,8 @@ def interactive_server_selection(config_file: str | None = None) -> list[ServerC
         print("📝 Would you like to create a sample configuration file? (y/n)")
         try:
             create_sample = input().strip().lower()
-            if create_sample in ["y", "yes"]:
-                if selector.create_sample_configuration():
-                    print("Edit the configuration file and run the command again.")
+            if create_sample in ["y", "yes"] and selector.create_sample_configuration():
+                print("Edit the configuration file and run the command again.")
         except KeyboardInterrupt:
             pass
         return []

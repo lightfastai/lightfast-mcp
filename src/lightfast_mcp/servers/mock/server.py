@@ -51,8 +51,14 @@ class MockMCPServer(BaseServer):
         self.mcp.tool()(tools.execute_mock_action)
 
         # Update the server info with available tools
-        self.info.tools = ["get_server_status", "fetch_mock_data", "execute_mock_action"]
-        logger.info("Registered 3 tools: get_server_status, fetch_mock_data, execute_mock_action")
+        self.info.tools = [
+            "get_server_status",
+            "fetch_mock_data",
+            "execute_mock_action",
+        ]
+        logger.info(
+            "Registered 3 tools: get_server_status, fetch_mock_data, execute_mock_action"
+        )
 
     async def _on_startup(self):
         """Mock server startup logic."""

@@ -51,7 +51,11 @@ def sample_mock_config():
     """Provide a sample Mock server configuration."""
     from lightfast_mcp.core.base_server import ServerConfig
 
-    return ServerConfig(name="test-mock", description="Test Mock server", config={"type": "mock", "delay_seconds": 0.1})
+    return ServerConfig(
+        name="test-mock",
+        description="Test Mock server",
+        config={"type": "mock", "delay_seconds": 0.1},
+    )
 
 
 @pytest.fixture
@@ -60,8 +64,16 @@ def sample_multi_server_configs():
     from lightfast_mcp.core.base_server import ServerConfig
 
     return [
-        ServerConfig(name="multi-blender", description="Multi test Blender", config={"type": "blender"}),
-        ServerConfig(name="multi-mock", description="Multi test Mock", config={"type": "mock", "delay_seconds": 0.1}),
+        ServerConfig(
+            name="multi-blender",
+            description="Multi test Blender",
+            config={"type": "blender"},
+        ),
+        ServerConfig(
+            name="multi-mock",
+            description="Multi test Mock",
+            config={"type": "mock", "delay_seconds": 0.1},
+        ),
     ]
 
 
@@ -90,6 +102,8 @@ def clean_singletons():
 # Pytest configuration
 def pytest_configure(config):
     """Configure pytest with custom markers."""
-    config.addinivalue_line("markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')")
+    config.addinivalue_line(
+        "markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')"
+    )
     config.addinivalue_line("markers", "integration: marks tests as integration tests")
     config.addinivalue_line("markers", "unit: marks tests as unit tests")

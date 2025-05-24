@@ -35,7 +35,9 @@ class TestBlenderMCPServer:
 
     def test_blender_server_default_config(self):
         """Test BlenderMCPServer with minimal config using defaults."""
-        config = ServerConfig(name="default-test", description="Default test", config={"type": "blender"})
+        config = ServerConfig(
+            name="default-test", description="Default test", config={"type": "blender"}
+        )
 
         server = BlenderMCPServer(config)
 
@@ -117,7 +119,9 @@ class TestMockMCPServer:
 
     def test_mock_server_default_config(self):
         """Test MockMCPServer with default configuration."""
-        config = ServerConfig(name="default-mock", description="Default mock", config={"type": "mock"})
+        config = ServerConfig(
+            name="default-mock", description="Default mock", config={"type": "mock"}
+        )
 
         server = MockMCPServer(config)
 
@@ -245,7 +249,9 @@ class TestServerConfigValidation:
 
         # Should create server but use defaults for invalid values
         server = BlenderMCPServer(config)
-        assert server.config.config.get("blender_port") == "not_a_number"  # Stored as-is
+        assert (
+            server.config.config.get("blender_port") == "not_a_number"
+        )  # Stored as-is
 
     def test_mock_server_invalid_delay(self):
         """Test MockMCPServer with invalid delay configuration."""

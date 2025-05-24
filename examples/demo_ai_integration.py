@@ -44,10 +44,14 @@ async def demo_blender_connection():
             # Test execute_command
             print("\n🔧 Testing execute_command tool...")
             test_code = "print('Hello from AI -> MCP -> Blender!')"
-            result = await client.call_tool("execute_command", {"code_to_execute": test_code})
+            result = await client.call_tool(
+                "execute_command", {"code_to_execute": test_code}
+            )
             if result:
                 exec_result = json.loads(result[0].text)
-                print(f"✅ Code execution result: {exec_result.get('result', 'No output')}")
+                print(
+                    f"✅ Code execution result: {exec_result.get('result', 'No output')}"
+                )
 
             return True
 
@@ -78,7 +82,8 @@ async def demo_ai_workflow():
 
             # Simulate AI response
             objects = state_data.get("objects", [])[:5]  # First 5 objects
-            response = f"""I can see your Blender scene contains {state_data.get("object_count", 0)} objects. Here are some of them:
+            object_count = state_data.get("object_count", 0)
+            response = f"""I can see your Blender scene contains {object_count} objects. Here are some of them:
 {chr(10).join(f"• {obj}" for obj in objects)}
 
 The active object is: {state_data.get("active_object_name", "None")}
@@ -116,7 +121,9 @@ new_obj.name = "AI_Created_Sphere"
 print(f"✅ Created sphere: {new_obj.name} at location {new_obj.location}")
 """
 
-            result = await client.call_tool("execute_command", {"code_to_execute": code})
+            result = await client.call_tool(
+                "execute_command", {"code_to_execute": code}
+            )
             exec_result = json.loads(result[0].text)
 
             print(f"🤖 AI: {exec_result.get('result', 'Command executed')}")
@@ -157,9 +164,15 @@ def show_setup_guide():
         print("✅ .env file found")
         with open(".env") as f:
             content = f.read()
-            if "ANTHROPIC_API_KEY=" in content and "your_claude_api_key_here" not in content:
+            if (
+                "ANTHROPIC_API_KEY=" in content
+                and "your_claude_api_key_here" not in content
+            ):
                 print("✅ Claude API key appears to be set")
-            elif "OPENAI_API_KEY=" in content and "your_openai_api_key_here" not in content:
+            elif (
+                "OPENAI_API_KEY=" in content
+                and "your_openai_api_key_here" not in content
+            ):
                 print("✅ OpenAI API key appears to be set")
             else:
                 print("⚠️  API keys need to be configured in .env")

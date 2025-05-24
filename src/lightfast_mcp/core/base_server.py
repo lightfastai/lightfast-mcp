@@ -32,7 +32,9 @@ class ServerConfig:
 
     # Dependencies and requirements
     dependencies: list[str] = field(default_factory=list)
-    required_apps: list[str] = field(default_factory=list)  # e.g., ["Blender", "TouchDesigner"]
+    required_apps: list[str] = field(
+        default_factory=list
+    )  # e.g., ["Blender", "TouchDesigner"]
 
 
 @dataclass
@@ -137,12 +139,14 @@ class BaseServer(ABC):
         return True
 
     async def _on_startup(self):
-        """Custom startup logic. Override in subclasses."""
-        pass
+        """Custom startup logic. Override in subclasses if needed."""
+        # Default implementation does nothing
+        return
 
     async def _on_shutdown(self):
-        """Custom shutdown logic. Override in subclasses."""
-        pass
+        """Custom shutdown logic. Override in subclasses if needed."""
+        # Default implementation does nothing
+        return
 
     async def health_check(self) -> bool:
         """Perform a health check on the server."""
@@ -176,7 +180,9 @@ class BaseServer(ABC):
 
         # Build URL for HTTP transports
         if self.config.transport in ["http", "streamable-http"]:
-            self.info.url = f"http://{self.config.host}:{self.config.port}{self.config.path}"
+            self.info.url = (
+                f"http://{self.config.host}:{self.config.port}{self.config.path}"
+            )
             self.logger.info(f"Server will be available at: {self.info.url}")
 
         # Run with appropriate transport
