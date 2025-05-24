@@ -11,6 +11,7 @@ from lightfast_mcp.core.base_server import ServerConfig
 from lightfast_mcp.core.config_loader import ConfigLoader
 
 
+@pytest.mark.integration
 class TestSystemIntegration:
     """Integration tests for the complete system."""
 
@@ -164,6 +165,7 @@ class TestSystemIntegration:
         assert registry_types == manager_types
 
 
+@pytest.mark.integration
 class TestErrorHandlingIntegration:
     """Integration tests for error handling across the system."""
 
@@ -238,6 +240,7 @@ class TestErrorHandlingIntegration:
         assert "already in use" in message
 
 
+@pytest.mark.integration
 class TestRealWorldScenarios:
     """Integration tests for real-world usage scenarios."""
 
