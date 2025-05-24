@@ -1,7 +1,25 @@
-"""Custom exceptions for the Blender MCP Server."""
+"""Custom exceptions for the lightfast-mcp project."""
 
 
-class BlenderMCPError(Exception):
+class LightfastMCPError(Exception):
+    """Base exception for all lightfast-mcp related errors."""
+
+    pass
+
+
+class ServerStartupError(LightfastMCPError):
+    """Raised when a server fails to start up properly."""
+
+    pass
+
+
+class ServerConfigurationError(LightfastMCPError):
+    """Raised when there are issues with server configuration."""
+
+    pass
+
+
+class BlenderMCPError(LightfastMCPError):
     """Base exception for all Blender MCP Server related errors."""
 
     pass

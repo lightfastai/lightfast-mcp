@@ -22,6 +22,7 @@ dependencies = [
     "rich",
     "anthropic",
     "openai",
+    "pyyaml",  # For YAML configuration support
 ]
 
 [project.optional-dependencies]
@@ -30,14 +31,24 @@ dev = [
     "taskipy",
     "pytest",
     "pytest-asyncio",
+    "pytest-cov",
+    "coverage",
     "nox",
     "mypy",
     "build",
 ]
 
 [project.scripts]
+# Main manager CLI
+lightfast-mcp-manager = "lightfast_mcp_manager:main"
+
+# Individual server scripts  
 lightfast-mock-server = "lightfast_mcp.servers.mock_server:main"
 lightfast-blender-server = "lightfast_mcp.servers.blender_mcp_server:main"
+
+# Direct modular server access
+lightfast-mock = "lightfast_mcp.servers.mock.server:main"
+lightfast-blender = "lightfast_mcp.servers.blender.server:main"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
@@ -45,7 +56,15 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
-packages = ["lightfast_mcp", "lightfast_mcp.servers", "lightfast_mcp.utils"]
+packages = [
+    "lightfast_mcp",
+    "lightfast_mcp.core", 
+    "lightfast_mcp.servers",
+    "lightfast_mcp.servers.blender",
+    "lightfast_mcp.servers.mock",
+    "lightfast_mcp.clients",
+    "lightfast_mcp.utils"
+]
 
 [project.urls]
 "Homepage" = "https://github.com/lightfastai/lightfast-mcp"
@@ -72,11 +91,29 @@ ignore = []
 quote-style = "double"
 skip-magic-trailing-comma = false
 
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+
 [tool.taskipy.tasks]
-lint = "ruff check ."
-format = "ruff format ."
-check_format = "ruff format --check ."
-fix = "ruff check . --fix && ruff format ."
-mock_server = "python -m lightfast_mcp.servers.mock_server"
-blender_server = "python -m lightfast_mcp.servers.blender_mcp_server"
-test = "pytest"
+lint = "uv run ruff check ."
+format = "uv run ruff format ."
+check_format = "uv run ruff format --check ."
+fix = "uv run ruff check . --fix && uv run ruff format ."
+mock_server = "uv run python -m lightfast_mcp.servers.mock_server"
+blender_server = "uv run python -m lightfast_mcp.servers.blender_mcp_server"
+test = "uv run pytest"
+test_fast = "uv run python run_tests.py fast"
+test_coverage = "uv run python run_tests.py coverage"
+demo = "uv run python test_working_system.py"
+
+[dependency-groups]
+dev = [
+    "coverage>=7.8.2",
+    "pytest>=8.3.5",
+    "pytest-asyncio>=0.26.0",
+    "pytest-cov>=6.1.1",
+]

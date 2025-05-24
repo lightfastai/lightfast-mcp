@@ -1,0 +1,282 @@
+"""Configuration loader for MCP servers."""
+
+import json
+import os
+from pathlib import Path
+from typing import Any
+
+try:
+    import yaml
+
+    YAML_AVAILABLE = True
+except ImportError:
+    YAML_AVAILABLE = False
+
+from ..utils.logging_utils import get_logger
+from .base_server import ServerConfig
+
+logger = get_logger("ConfigLoader")
+
+
+class ConfigLoader:
+    """Loader for server configurations from files."""
+
+    def __init__(self, config_dir: str | Path | None = None):
+        """Initialize the config loader."""
+        self.config_dir = Path(config_dir) if config_dir else Path.cwd() / "config"
+
+        # Ensure config directory exists
+        self.config_dir.mkdir(exist_ok=True)
+
+        logger.info(f"Config directory: {self.config_dir}")
+
+    def load_servers_config(self, config_file: str | Path | None = None) -> list[ServerConfig]:
+        """Load server configurations from a file."""
+        if config_file is None:
+            # Look for default config files
+            config_file = self._find_default_config()
+
+        if not config_file:
+            logger.warning("No configuration file found, returning empty list")
+            return []
+
+        config_path = Path(config_file)
+        if not config_path.is_absolute():
+            config_path = self.config_dir / config_path
+
+        if not config_path.exists():
+            logger.error(f"Configuration file not found: {config_path}")
+            return []
+
+        logger.info(f"Loading server configurations from: {config_path}")
+
+        try:
+            if config_path.suffix.lower() in [".yaml", ".yml"]:
+                return self._load_yaml_config(config_path)
+            elif config_path.suffix.lower() == ".json":
+                return self._load_json_config(config_path)
+            else:
+                logger.error(f"Unsupported config file format: {config_path.suffix}")
+                return []
+        except Exception as e:
+            logger.error(f"Error loading configuration: {e}")
+            return []
+
+    def _find_default_config(self) -> Path | None:
+        """Find the default configuration file."""
+        possible_files = [
+            "servers.yaml",
+            "servers.yml",
+            "servers.json",
+            "lightfast-mcp.yaml",
+            "lightfast-mcp.yml",
+            "lightfast-mcp.json",
+        ]
+
+        for filename in possible_files:
+            config_path = self.config_dir / filename
+            if config_path.exists():
+                logger.info(f"Found default config file: {config_path}")
+                return config_path
+
+        return None
+
+    def _load_yaml_config(self, config_path: Path) -> list[ServerConfig]:
+        """Load configuration from YAML file."""
+        if not YAML_AVAILABLE:
+            raise ImportError("PyYAML is required to load YAML configuration files. Install with: pip install pyyaml")
+
+        with open(config_path, encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+
+        return self._parse_config_data(data)
+
+    def _load_json_config(self, config_path: Path) -> list[ServerConfig]:
+        """Load configuration from JSON file."""
+        with open(config_path, encoding="utf-8") as f:
+            data = json.load(f)
+
+        return self._parse_config_data(data)
+
+    def _parse_config_data(self, data: dict[str, Any]) -> list[ServerConfig]:
+        """Parse configuration data into ServerConfig objects."""
+        if not isinstance(data, dict):
+            raise ValueError("Configuration must be a dictionary")
+
+        servers_data = data.get("servers", [])
+        if not isinstance(servers_data, list):
+            raise ValueError("'servers' must be a list")
+
+        server_configs = []
+
+        for i, server_data in enumerate(servers_data):
+            try:
+                server_config = self._parse_server_config(server_data)
+                server_configs.append(server_config)
+            except Exception as e:
+                logger.error(f"Error parsing server config at index {i}: {e}")
+                continue
+
+        logger.info(f"Loaded {len(server_configs)} server configurations")
+        return server_configs
+
+    def _parse_server_config(self, server_data: dict[str, Any]) -> ServerConfig:
+        """Parse a single server configuration."""
+        if not isinstance(server_data, dict):
+            raise ValueError("Server configuration must be a dictionary")
+
+        # Required fields
+        name = server_data.get("name")
+        if not name:
+            raise ValueError("Server 'name' is required")
+
+        description = server_data.get("description", f"{name} MCP Server")
+
+        # Optional fields with defaults
+        version = server_data.get("version", "1.0.0")
+        host = server_data.get("host", "localhost")
+        port = server_data.get("port", 8000)
+        transport = server_data.get("transport", "stdio")
+        path = server_data.get("path", "/mcp")
+
+        # Server-specific configuration
+        config = server_data.get("config", {})
+
+        # Add server type to config if not present
+        if "type" not in config:
+            # Try to infer from name or set a default
+            config["type"] = server_data.get("type", "unknown")
+
+        # Dependencies and requirements
+        dependencies = server_data.get("dependencies", [])
+        required_apps = server_data.get("required_apps", [])
+
+        return ServerConfig(
+            name=name,
+            description=description,
+            version=version,
+            host=host,
+            port=port,
+            transport=transport,
+            path=path,
+            config=config,
+            dependencies=dependencies,
+            required_apps=required_apps,
+        )
+
+    def save_servers_config(self, server_configs: list[ServerConfig], config_file: str | Path | None = None) -> bool:
+        """Save server configurations to a file."""
+        if config_file is None:
+            config_file = self.config_dir / "servers.yaml"
+        else:
+            config_file = Path(config_file)
+            if not config_file.is_absolute():
+                config_file = self.config_dir / config_file
+
+        try:
+            # Convert server configs to dictionary format
+            data = {"servers": [self._server_config_to_dict(config) for config in server_configs]}
+
+            # Save based on file extension
+            if config_file.suffix.lower() in [".yaml", ".yml"]:
+                self._save_yaml_config(config_file, data)
+            elif config_file.suffix.lower() == ".json":
+                self._save_json_config(config_file, data)
+            else:
+                logger.error(f"Unsupported config file format for saving: {config_file.suffix}")
+                return False
+
+            logger.info(f"Saved {len(server_configs)} server configurations to: {config_file}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error saving configuration: {e}")
+            return False
+
+    def _server_config_to_dict(self, server_config: ServerConfig) -> dict[str, Any]:
+        """Convert ServerConfig to dictionary."""
+        return {
+            "name": server_config.name,
+            "description": server_config.description,
+            "version": server_config.version,
+            "type": server_config.config.get("type", "unknown"),
+            "host": server_config.host,
+            "port": server_config.port,
+            "transport": server_config.transport,
+            "path": server_config.path,
+            "config": server_config.config,
+            "dependencies": server_config.dependencies,
+            "required_apps": server_config.required_apps,
+        }
+
+    def _save_yaml_config(self, config_file: Path, data: dict[str, Any]):
+        """Save configuration to YAML file."""
+        if not YAML_AVAILABLE:
+            raise ImportError("PyYAML is required to save YAML configuration files. Install with: pip install pyyaml")
+
+        with open(config_file, "w", encoding="utf-8") as f:
+            yaml.dump(data, f, default_flow_style=False, indent=2)
+
+    def _save_json_config(self, config_file: Path, data: dict[str, Any]):
+        """Save configuration to JSON file."""
+        with open(config_file, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+
+    def create_sample_config(self, config_file: str | Path | None = None) -> bool:
+        """Create a sample configuration file."""
+        sample_configs = [
+            ServerConfig(
+                name="blender-server",
+                description="Blender MCP Server for 3D modeling and animation",
+                version="1.0.0",
+                host="localhost",
+                port=8001,
+                transport="streamable-http",
+                path="/mcp",
+                config={
+                    "type": "blender",
+                    "blender_host": "localhost",
+                    "blender_port": 9876,
+                },
+                dependencies=[],
+                required_apps=["Blender"],
+            ),
+            ServerConfig(
+                name="mock-server",
+                description="Mock MCP Server for testing and development",
+                version="1.0.0",
+                host="localhost",
+                port=8002,
+                transport="streamable-http",
+                path="/mcp",
+                config={
+                    "type": "mock",
+                },
+                dependencies=[],
+                required_apps=[],
+            ),
+        ]
+
+        if config_file is None:
+            config_file = self.config_dir / "servers.yaml"
+
+        return self.save_servers_config(sample_configs, config_file)
+
+
+# Environment variable support
+def load_config_from_env() -> list[ServerConfig]:
+    """Load configuration from environment variables."""
+    configs = []
+
+    # Check for environment-based configuration
+    env_config = os.getenv("LIGHTFAST_MCP_SERVERS")
+    if env_config:
+        try:
+            data = json.loads(env_config)
+            loader = ConfigLoader()
+            configs = loader._parse_config_data(data)
+            logger.info(f"Loaded {len(configs)} server configs from environment")
+        except Exception as e:
+            logger.error(f"Error parsing environment configuration: {e}")
+
+    return configs
