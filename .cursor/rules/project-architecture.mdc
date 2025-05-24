@@ -1,0 +1,44 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: Lightfast MCP project architecture, structure, and file organization patterns
+alwaysApply: true
+---
+
+# Project Architecture
+
+## Core Structure
+```
+src/lightfast_mcp/
+├── core/           # Base classes, config loading, server registry
+├── servers/        # MCP server implementations
+│   ├── blender/    # Blender MCP server (modular implementation)
+│   ├── mock/       # Mock server for testing
+│   ├── blender_mcp_server.py  # Blender entry point
+│   └── mock_server.py         # Mock entry point  
+├── clients/        # Multi-server client and server selection
+└── utils/          # Logging, configuration utilities
+```
+
+## Entry Points
+- `lightfast-mcp-manager`: Main CLI for managing multiple servers
+- `lightfast-blender-server`: Direct Blender server entry point
+- `lightfast-mock-server`: Direct mock server entry point
+
+## File Patterns
+- `servers/{app}_mcp_server.py`: Entry point scripts
+- `servers/{app}/server.py`: Main server implementation  
+- `servers/{app}/tools.py`: Tool implementations
+- `servers/{app}/resources.py`: Resource implementations (if applicable)
+- `config/servers.yaml`: Server configuration
+- `tests/unit/test_{module}.py`: Unit tests
+- `tests/integration/test_{feature}.py`: Integration tests
+- `tests/e2e/test_{workflow}.py`: End-to-end tests
+
+## Configuration Files
+- `.cursor/mcp.json`: Cursor MCP integration config
+- `pyproject.toml`: Project configuration and dependencies
+- `config/servers.yaml`: Server configuration

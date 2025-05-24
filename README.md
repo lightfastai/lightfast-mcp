@@ -39,7 +39,7 @@ Otherwise installation instructions are on their website: [Install uv](https://d
 
 ## Development
 
-For development setup and workflow information, please see our [Developer Guide](DEV.md).
+For development setup, workflow information, and Cursor IDE integration, please see our [Developer Guide](DEV.md).
 
 ## Documentation
 

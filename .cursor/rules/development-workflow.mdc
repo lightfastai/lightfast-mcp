@@ -1,0 +1,63 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: Development workflow commands and tooling for lightfast-mcp
+alwaysApply: true
+---
+
+# Development Workflow
+
+## Tool Stack
+- Use `uv` for dependency management and running commands
+- Use `taskipy` for common development tasks
+- Use `nox` for comprehensive testing across Python versions
+- Use `ruff` for linting and formatting
+
+## Common Commands
+
+### Setup & Development
+```bash
+# Setup
+uv sync --extra dev
+
+# Development
+uv run task lint          # Run linting
+uv run task format        # Format code  
+uv run task test_fast     # Quick tests
+uv run task demo          # Test working system
+```
+
+### Server Management
+```bash
+uv run lightfast-mcp-manager init   # Create sample config
+uv run lightfast-mcp-manager list   # List available servers
+uv run lightfast-mcp-manager start  # Start servers interactively
+uv run lightfast-mcp-manager ai     # Start AI client
+
+# Individual Servers  
+uv run lightfast-blender-server     # Start Blender server directly
+uv run lightfast-mock-server        # Start mock server directly
+```
+
+### Testing Commands
+```bash
+# Fast feedback
+uv run python scripts/run_tests.py fast
+
+# Full test suite
+nox
+
+# Specific test types
+nox -s test_e2e          # End-to-end tests
+nox -s test-3-13         # Python 3.13 tests
+nox -s typecheck         # MyPy type checking
+```
+
+## Development Guidelines
+- Use async/await patterns throughout for better performance
+- Prefer configuration over hardcoded values
+- Include appropriate tests for new functionality
+- Follow the existing project patterns and conventions

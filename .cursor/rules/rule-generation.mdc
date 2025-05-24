@@ -1,0 +1,107 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: Generate new Cursor rules based on discovered development patterns and workflows
+alwaysApply: false
+---
+
+# Rule Generation Workflow
+
+Use this rule when developing new workflow patterns that should be captured as reusable Cursor rules.
+
+## When to Generate New Rules
+
+Generate new rules when you discover:
+- **Repetitive Workflows**: Actions you perform multiple times
+- **Context-Specific Patterns**: File-type specific behaviors
+- **Quality Gates**: Validation steps that should be automated
+- **Debugging Procedures**: Common troubleshooting steps
+- **Integration Patterns**: Multi-tool workflows
+
+## Rule Template for lightfast-mcp
+
+Use this template structure for new rules:
+
+@.cursor/rules/server-development-workflow.mdc
+
+Follow this pattern, adapting the workflow steps for your specific use case.
+
+## Suggested Rule Categories
+
+### New Server Types
+Create rules for new creative applications:
+- TouchDesigner MCP development workflow
+- Ableton Live MCP development workflow
+- Unity/Unreal Engine MCP development workflow
+
+### Development Phases
+Create rules for different development phases:
+- Prototyping workflow (fast iteration, minimal validation)
+- Production workflow (comprehensive checks)
+- Debugging workflow (diagnostic commands, logging)
+
+### Integration Testing
+Create rules for testing integrations:
+- Multi-server workflow testing
+- Cross-platform testing workflow
+- Performance testing workflow
+
+## Rule Naming Convention
+
+Use descriptive names that indicate:
+- **Context**: When the rule applies
+- **Action**: What workflow it provides
+- **Scope**: How specific vs. general it is
+
+Examples:
+- `touchdesigner-development-workflow.mdc`
+- `multi-server-integration-testing.mdc`
+- `performance-optimization-workflow.mdc`
+- `production-deployment-checklist.mdc`
+
+## Rule File Organization
+
+Organize rules by:
+- **Always Applied**: Core concepts, architecture, security
+- **Auto-Attached**: File-pattern based rules
+- **Manual**: Specialized workflows triggered with `@rule-name`
+
+## Testing New Rules
+
+After creating a new rule:
+
+1. **Test Auto-Attachment**: Edit matching files to verify rule triggers
+2. **Test Manual Activation**: Use `@rule-name` to verify manual trigger
+3. **Validate Commands**: Ensure all suggested commands work
+4. **Check Conflicts**: Verify rule doesn't conflict with existing rules
+
+## Example: Creating a TouchDesigner Rule
+
+```bash
+# Create new rule file
+touch .cursor/rules/touchdesigner-workflow.mdc
+
+# Add content following template
+# Test with TouchDesigner files
+# Verify workflow steps work
+# Commit the new rule
+```
+
+## Rule Maintenance
+
+Regularly review and update rules:
+- Remove outdated commands
+- Add new workflow steps
+- Update file patterns as codebase evolves
+- Merge similar rules to reduce complexity
+
+## Quality Guidelines for New Rules
+
+- **Specific**: Provide concrete, actionable steps
+- **Testable**: Include commands that can be executed
+- **Focused**: One workflow per rule
+- **Maintainable**: Commands that won't break frequently
+- **Documented**: Clear descriptions and examples

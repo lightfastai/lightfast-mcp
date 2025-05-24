@@ -640,6 +640,248 @@ uv run lightfast-mcp-manager ai      # Connect AI
 
 The new system maintains backward compatibility while providing much more flexibility and power.
 
+## 🎯 Cursor Integration
+
+Lightfast MCP includes comprehensive Cursor IDE integration using the Model Context Protocol. This creates an intelligent development environment where Cursor understands your MCP project and provides contextual assistance.
+
+### Rule Structure Types
+
+Our Cursor rules use the official MDC format with different activation patterns:
+
+| Rule Type       | Description                                                                                  |
+| --------------- | -------------------------------------------------------------------------------------------- |
+| Always          | Always included in the model context (`alwaysApply: true`)                                  |
+| Auto Attached   | Included when files matching a glob pattern are referenced (`globs: ["pattern"]`)           |
+| Agent Requested | Rule is available to the AI, which decides whether to include it. Must provide a description |
+| Manual          | Only included when explicitly mentioned using `@ruleName`                                   |
+
+### Rule Organization
+
+#### **Always Applied Rules** (`alwaysApply: true`)
+- `mcp-concepts.mdc`: Core MCP concepts and terminology
+- `project-architecture.mdc`: Project structure and patterns  
+- `development-workflow.mdc`: Development commands and tooling
+- `security-guidelines.mdc`: Security best practices
+
+#### **Auto-Attached Rules** (`globs: ["pattern"]`)
+- `server-development-workflow.mdc`: Server development workflow (server files)
+- `blender-integration.mdc`: Blender development workflow (Blender files)
+- `testing-strategy.mdc`: Testing workflow (test files)
+- `config-validation-workflow.mdc`: Configuration validation (config files)
+- `tech-documentation.mdc`: Technical documentation guidelines (markdown files)
+
+#### **Manual Rules** (`@rule-name` activation)
+- `server-extension.mdc`: Guidelines for adding new servers
+- `pre-commit-workflow.mdc`: Comprehensive pre-commit validation
+- `rule-generation.mdc`: Template for creating new workflow rules
+
+### MCP Server Integration (`.cursor/mcp.json`)
+
+The project includes ready-to-use MCP server configurations for Cursor:
+
+```json
+{
+  "mcpServers": {
+    "lightfast-mock": {
+      "command": "uv",
+      "args": ["run", "lightfast-mock-server"],
+      "env": {"LIGHTFAST_MCP_LOG_LEVEL": "INFO"}
+    },
+    "lightfast-blender": {
+      "command": "uv", 
+      "args": ["run", "lightfast-blender-server"],
+      "env": {
+        "LIGHTFAST_MCP_LOG_LEVEL": "INFO",
+        "BLENDER_HOST": "localhost",
+        "BLENDER_PORT": "9876"
+      }
+    }
+  }
+}
+```
+
+### Cursor Setup
+
+#### **Project-Level Integration** (Ready to Use)
+The `.cursor/mcp.json` file is pre-configured. Cursor's Composer Agent automatically has access to:
+- **lightfast-mock**: Mock MCP server for testing and development
+- **lightfast-blender**: Blender MCP server for 3D modeling/animation
+- **lightfast-manager**: Multi-server manager for complex workflows
+
+#### **Global Integration** (Optional)
+To use lightfast-mcp across all Cursor projects:
+
+```bash
+# Copy global configuration template
+cp .cursor/mcp_global_example.json ~/.cursor/mcp.json
+
+# Update paths in ~/.cursor/mcp.json to point to your installation
+# Restart Cursor to load the configuration
+```
+
+### Automated Workflow Triggers
+
+When editing different file types, Cursor automatically suggests relevant actions:
+
+#### **Server Files** (`src/lightfast_mcp/servers/**/*.py`)
+```
+"Run fast tests: uv run python scripts/run_tests.py fast"
+"Restart Blender server and test tools"
+"Validate tool decorators and error handling"
+```
+
+#### **Test Files** (`tests/**/*.py`)
+```
+"Run this specific test: uv run pytest {current_file} -v"
+"Run related fast tests for immediate feedback"
+"Check test coverage for new code paths"
+```
+
+#### **Configuration Files** (`*.yaml`, `*.json`)
+```
+"Validate YAML syntax and test configuration loading"
+"Test server startup with new configuration"
+"Check for port conflicts and security issues"
+```
+
+#### **Documentation Files** (`*.md`)
+```
+"Reference @DEV.md for comprehensive technical information"
+"Use consistent commands and terminology from DEV.md"
+"Avoid duplicating DEV.md content - link to it instead"
+```
+
+### Manual Workflow Activation
+
+Use `@rule-name` syntax for specialized workflows:
+
+```
+"@server-extension guide me through adding a TouchDesigner server"
+"@pre-commit-workflow ensure this code is ready for commit" 
+"@rule-generation create a workflow rule for Unity integration"
+"@blender-integration help me debug Blender connection issues"
+```
+
+### Development Use Cases
+
+#### **Server Development**
+```
+"Help me add a new tool to the Blender MCP server"
+"Review this MCP tool implementation for security issues"
+"Generate tests for the new animation tools"
+"Optimize the server startup sequence"
+```
+
+#### **Multi-Application Workflows**
+```
+"Create a workflow that generates 3D models in Blender based on AI descriptions"
+"Help me design architecture for real-time collaboration between applications"
+"Show me how to implement resource sharing between MCP servers"
+```
+
+#### **Quality Assurance**
+```
+"Check if this MCP server follows the project conventions"
+"Suggest improvements for this tool's error handling"
+"Help me refactor this server to use the new base class"
+```
+
+### Live Integration Testing
+
+#### **With Mock Server**
+```bash
+# Start mock server
+uv run lightfast-mock-server
+
+# Test in Cursor chat:
+"Use the lightfast-mock server to test error handling"
+"Test tool execution and response validation"
+```
+
+#### **With Blender Server** (requires Blender running)
+```bash
+# Start Blender with addon active
+# Start Blender server
+uv run lightfast-blender-server
+
+# Test in Cursor chat:
+"Connect to Blender and create a simple cube"
+"List all objects in the current Blender scene"
+"Test Blender tool error handling with invalid inputs"
+```
+
+### Troubleshooting Cursor Integration
+
+#### **MCP Servers Not Available**
+1. Ensure `uv` is installed and in PATH
+2. Run `uv sync --extra dev` in project directory  
+3. Test servers manually: `uv run lightfast-mock-server`
+4. Restart Cursor after configuration changes
+
+#### **Blender Server Issues**
+1. Verify Blender is running and listening on port 9876
+2. Check Blender addon is installed and activated
+3. Confirm Blender MCP panel shows "Server active"
+4. Test connection: `curl http://localhost:8001/health`
+
+#### **Permission Errors**
+1. Check file permissions on lightfast-mcp directory
+2. Ensure `uv` has permission to install/run packages
+3. On macOS, allow Cursor in Security & Privacy settings
+
+### Advanced Configuration
+
+#### **Custom Environment Variables**
+```json
+{
+  "mcpServers": {
+    "lightfast-blender": {
+      "env": {
+        "LIGHTFAST_MCP_LOG_LEVEL": "DEBUG",
+        "BLENDER_HOST": "192.168.1.100",
+        "CUSTOM_CONFIG_PATH": "/path/to/config"
+      }
+    }
+  }
+}
+```
+
+#### **Multiple Server Instances**
+```json
+{
+  "mcpServers": {
+    "blender-local": {
+      "command": "uv",
+      "args": ["run", "lightfast-blender-server"],
+      "env": {"BLENDER_HOST": "localhost", "BLENDER_PORT": "9876"}
+    },
+    "blender-remote": {
+      "command": "uv",
+      "args": ["run", "lightfast-blender-server"], 
+      "env": {"BLENDER_HOST": "192.168.1.100", "BLENDER_PORT": "9876"}
+    }
+  }
+}
+```
+
+### Key Benefits
+
+#### **For Development**
+- **Contextual Understanding**: Cursor understands MCP patterns and project structure
+- **Intelligent Suggestions**: Better recommendations for server development and tool creation
+- **Workflow Integration**: Direct access to project commands and testing
+- **Pattern Recognition**: Understands server implementations vs. entry points
+
+#### **For Testing & Debugging**
+- **Live Server Integration**: Direct interaction with MCP servers during development
+- **Real-time Testing**: Test tools and workflows without leaving the editor
+- **Multi-server Scenarios**: Test complex workflows across multiple applications
+
+#### **For Documentation & Learning** 
+- **MCP Education**: Built-in understanding of MCP concepts
+- **Best Practices**: Guidance on security, error handling, and optimization
+- **Architecture Guidance**: Help extending the project and adding servers
+
 ## 📚 Additional Resources
 
 - **Examples**: See `examples/` directory for working demos

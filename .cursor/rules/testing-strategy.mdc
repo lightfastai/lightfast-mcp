@@ -1,0 +1,118 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: Automated testing workflow with specific actions when editing test files
+globs: ["tests/**/*.py", "**/test_*.py"]
+alwaysApply: false
+---
+
+# Testing Workflow
+
+When editing test files, execute this workflow immediately:
+
+## Immediate Actions After Test File Changes
+
+1. **Run the Specific Test**: `uv run pytest {current_test_file} -v`
+2. **Run Related Fast Tests**: `uv run python scripts/run_tests.py fast`
+3. **Check Test Coverage**: Ensure new code paths are covered
+
+## Test File Validation Checklist
+
+- [ ] Test function names start with `test_`
+- [ ] Async tests use `@pytest.mark.asyncio`
+- [ ] Integration tests use `@pytest.mark.integration`
+- [ ] Tests have descriptive docstrings
+- [ ] Both success and failure scenarios are tested
+- [ ] External dependencies are properly mocked
+
+## Automatic Commands by Test Type
+
+### Unit Tests (`tests/unit/`)
+```bash
+# Run just the current test file
+uv run pytest {current_file} -v
+
+# Run all unit tests for the module being tested
+uv run pytest tests/unit/test_{module_name}* -v
+```
+
+### Integration Tests (`tests/integration/`)
+```bash
+# Run the current integration test
+uv run pytest {current_file} -v
+
+# Ensure test servers are available
+uv run lightfast-mock-server &
+sleep 2
+uv run pytest {current_file} -v
+pkill -f lightfast-mock-server
+```
+
+### E2E Tests (`tests/e2e/`)
+```bash
+# Run the current E2E test in isolation
+uv run pytest {current_file} -v -s
+
+# Run full E2E suite if major changes
+nox -s test_e2e
+```
+
+## Test Development Workflow
+
+When writing new tests:
+
+1. **Write Failing Test**: Start with a test that fails
+2. **Run Test**: `uv run pytest {test_file}::{test_function} -v`
+3. **Implement Feature**: Make the test pass
+4. **Run Full Test Suite**: `uv run python scripts/run_tests.py fast`
+5. **Check Coverage**: Ensure adequate test coverage
+
+## Required Test Patterns
+
+### Unit Test Template
+```python
+import pytest
+from lightfast_mcp.servers.{module} import {Class}
+
+@pytest.mark.asyncio
+async def test_{function_name}_success():
+    """Test {function} succeeds with valid input."""
+    # Arrange
+    instance = {Class}()
+    
+    # Act
+    result = await instance.{function}("valid_input")
+    
+    # Assert
+    assert result == "expected_output"
+
+@pytest.mark.asyncio
+async def test_{function_name}_failure():
+    """Test {function} handles invalid input gracefully."""
+    # Arrange
+    instance = {Class}()
+    
+    # Act & Assert
+    with pytest.raises(ValueError, match="expected error message"):
+        await instance.{function}("invalid_input")
+```
+
+## Performance Testing
+- Unit tests should complete in under 100ms each
+- Integration tests should complete in under 5 seconds each
+- E2E tests should complete in under 30 seconds each
+
+## Before Committing Tests
+```bash
+# Run the full test suite
+nox -s test-3-13
+
+# Check test coverage
+uv run python scripts/run_tests.py coverage
+
+# Ensure type checking passes
+nox -s typecheck
+```

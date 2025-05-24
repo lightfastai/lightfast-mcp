@@ -1,0 +1,166 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Blender Development Workflow
+
+When editing Blender MCP files, follow this specific workflow:
+
+## Immediate Actions After Blender Code Changes
+
+1. **Restart Blender Server**: Kill and restart the Blender MCP server
+2. **Test Blender Connection**: Verify connection to Blender instance
+3. **Test New/Modified Tools**: Use Cursor chat to test Blender tools
+4. **Check Blender Addon Status**: Ensure addon is still active
+
+## Automatic Commands for Blender Development
+
+### After Editing Server Files (`src/lightfast_mcp/servers/blender/`)
+```bash
+# Stop any running Blender server
+pkill -f lightfast-blender-server
+
+# Run fast tests
+uv run python scripts/run_tests.py fast
+
+# Start Blender server in background for testing
+uv run lightfast-blender-server &
+BLENDER_PID=$!
+
+# Wait for server startup
+sleep 3
+
+# Test server is responding
+curl -f http://localhost:8001/health || echo "❌ Blender server not responding"
+
+# Test via manager
+uv run lightfast-mcp-manager ai
+```
+
+### After Editing Blender Addon (`addons/blender/`)
+```bash
+# Note: Blender addon requires manual reload in Blender
+echo "🔄 Blender addon updated - reload addon in Blender:"
+echo "   1. Open Blender Preferences > Add-ons"
+echo "   2. Find 'Lightfast Blender MCP Addon'"
+echo "   3. Disable and re-enable the addon"
+echo "   4. Check the Lightfast MCP panel shows 'Server active'"
+```
+
+## Blender Development Checklist
+
+### Before Testing Blender Tools
+- [ ] Blender is running (open Blender application)
+- [ ] Blender addon is installed and enabled
+- [ ] Blender MCP panel shows "Server active" status
+- [ ] No port conflicts on 8001 (Blender MCP) and 9876 (Blender internal)
+- [ ] Network connectivity between MCP server and Blender
+
+### Tool Development Validation
+- [ ] Tool descriptions mention 3D/Blender context
+- [ ] Error handling for Blender API exceptions
+- [ ] Input validation for Blender object names
+- [ ] Clear documentation of what the tool does in Blender
+- [ ] Test with both empty and populated Blender scenes
+
+## Blender Testing Workflow
+
+### Manual Testing Steps
+1. **Start Blender**: Open Blender application
+2. **Enable Addon**: Ensure Lightfast MCP addon is active
+3. **Start MCP Server**: Use addon panel or `uv run lightfast-blender-server`
+4. **Test in Cursor**: Use Cursor chat to call Blender tools
+5. **Verify Results**: Check Blender scene reflects the changes
+
+### Automated Testing Commands
+```bash
+# Test server can start
+timeout 10 uv run lightfast-blender-server &
+sleep 5
+curl -f http://localhost:8001/health
+pkill -f lightfast-blender-server
+
+# Test Blender integration tests
+uv run pytest tests/integration/test_blender* -v
+
+# Test tool descriptions and metadata
+uv run python -c "
+from lightfast_mcp.servers.blender.server import BlenderMCPServer
+from lightfast_mcp.core.base_server import ServerConfig
+config = ServerConfig('test', 'test', 'localhost', 8001, 'http', '/mcp', {})
+server = BlenderMCPServer(config)
+print('Available tools:', [tool.__name__ for tool in server.tools])
+"
+```
+
+## Blender-Specific Debugging
+
+### Connection Issues
+```bash
+# Check if Blender is listening on port 9876
+netstat -an | grep 9876
+
+# Check if MCP server is listening on port 8001
+netstat -an | grep 8001
+
+# Test direct connection to Blender
+python -c "
+import socket
+s = socket.socket()
+try:
+    s.connect(('localhost', 9876))
+    print('✅ Blender connection successful')
+except:
+    print('❌ Cannot connect to Blender')
+s.close()
+"
+```
+
+### Performance Monitoring
+- Blender tool calls should complete within 5 seconds
+- Monitor Blender memory usage during tool execution
+- Check for memory leaks after multiple tool calls
+- Verify Blender scene state is properly restored after errors
+
+## Blender Tool Patterns
+
+### Required Tool Structure
+```python
+@mcp.tool()
+async def blender_create_object(object_type: str, name: str = "Object") -> str:
+    """Create a 3D object in Blender.
+    
+    Args:
+        object_type: Type of object (cube, sphere, cylinder, etc.)
+        name: Name for the new object
+        
+    Returns:
+        Status message about object creation
+    """
+    # Validate inputs
+    if object_type not in ["cube", "sphere", "cylinder", "plane"]:
+        raise ValueError(f"Unsupported object type: {object_type}")
+    
+    # Connect to Blender and execute
+    # Handle Blender API exceptions
+    # Return clear status message
+```
+
+## Before Committing Blender Changes
+
+```bash
+# Run Blender-specific tests
+uv run pytest tests/unit/test_blender* tests/integration/test_blender* -v
+
+# Test server startup and shutdown
+uv run lightfast-blender-server &
+sleep 5
+pkill -f lightfast-blender-server
+
+# Validate tool descriptions
+uv run python scripts/validate_blender_tools.py  # If exists
+
+# Check addon syntax
+python -m py_compile addons/blender/lightfast_blender_addon.py
+```
