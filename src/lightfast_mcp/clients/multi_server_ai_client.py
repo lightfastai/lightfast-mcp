@@ -54,7 +54,8 @@ class ServerConnection:
                 await self.client.__aexit__(None, None, None)
                 logger.info(f"Disconnected from {self.name}")
             except Exception as e:
-                logger.error(f"Error disconnecting from {self.name}: {e}")
+                # Log the error but don't raise it during cleanup
+                logger.debug(f"Error disconnecting from {self.name}: {e}")
             finally:
                 self.client = None
                 self.is_connected = False
@@ -169,13 +170,33 @@ class MultiServerAIClient:
         """Disconnect from all servers."""
         logger.info("Disconnecting from all servers...")
 
-        tasks = []
+        # Create list of disconnect tasks but handle them individually
+        # to avoid one failure affecting others
+        disconnection_tasks = []
         for server in self.servers.values():
             if server.is_connected:
-                tasks.append(server.disconnect())
+                disconnection_tasks.append(self._safe_disconnect(server))
 
-        if tasks:
-            await asyncio.gather(*tasks, return_exceptions=True)
+        if disconnection_tasks:
+            # Use gather with return_exceptions=True to handle errors gracefully
+            results = await asyncio.gather(*disconnection_tasks, return_exceptions=True)
+
+            # Log any errors that occurred during disconnection
+            for server_name, result in zip(
+                [s.name for s in self.servers.values() if s.is_connected], results
+            ):
+                if isinstance(result, Exception):
+                    logger.debug(f"Error disconnecting from {server_name}: {result}")
+
+    async def _safe_disconnect(self, server):
+        """Safely disconnect from a server with error handling."""
+        try:
+            await server.disconnect()
+        except Exception as e:
+            # Don't raise, just log for debugging
+            logger.debug(f"Safe disconnect error for {server.name}: {e}")
+            # Still mark as disconnected
+            server.is_connected = False
 
     def get_connected_servers(self) -> list[str]:
         """Get list of connected server names."""

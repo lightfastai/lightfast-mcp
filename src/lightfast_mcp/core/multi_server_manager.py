@@ -1,6 +1,8 @@
 """Multi-server manager for running multiple MCP servers simultaneously."""
 
+import asyncio
 import signal
+import subprocess
 import threading
 import time
 from dataclasses import dataclass, field
@@ -17,11 +19,13 @@ logger = get_logger("MultiServerManager")
 class ServerProcess:
     """Information about a running server process."""
 
-    server: BaseServer
+    server: BaseServer | None = None
     thread: threading.Thread | None = None
+    process: subprocess.Popen | None = None
     process_id: int | None = None
     start_time: float = field(default_factory=time.time)
     is_background: bool = False
+    config: ServerConfig | None = None
 
 
 class MultiServerManager:
@@ -70,11 +74,91 @@ class MultiServerManager:
                 )
                 return False
 
+            # For HTTP transports, use subprocess to avoid asyncio conflicts
+            if server_config.transport in ["http", "streamable-http"]:
+                success = self._start_server_subprocess(server_config, background)
+            else:
+                # For stdio transport, use the traditional approach
+                success = self._start_server_traditional(server_config, background)
+
+            if success:
+                logger.info(
+                    f"Started server: {server_config.name} (background: {background})"
+                )
+            return success
+
+        except Exception as e:
+            logger.error(f"Failed to start server {server_config.name}: {e}")
+            return False
+
+    def _start_server_subprocess(
+        self, server_config: ServerConfig, background: bool
+    ) -> bool:
+        """Start a server using subprocess (for HTTP transports)."""
+        try:
+            # Determine the correct script based on server type
+            server_type = server_config.config.get("type", "unknown")
+
+            if server_type == "mock":
+                script_module = "lightfast_mcp.servers.mock_server"
+            elif server_type == "blender":
+                script_module = "lightfast_mcp.servers.blender_mcp_server"
+            else:
+                logger.error(f"Unknown server type for subprocess: {server_type}")
+                return False
+
+            # Create environment with server config
+            import json
+            import os
+
+            env = os.environ.copy()
+            env["LIGHTFAST_MCP_SERVER_CONFIG"] = json.dumps(
+                {
+                    "name": server_config.name,
+                    "description": server_config.description,
+                    "host": server_config.host,
+                    "port": server_config.port,
+                    "transport": server_config.transport,
+                    "path": server_config.path,
+                    "config": server_config.config,
+                }
+            )
+
+            # Start the subprocess
+            process = subprocess.Popen(
+                ["python", "-m", script_module],
+                env=env,
+                stdout=subprocess.PIPE if background else None,
+                stderr=subprocess.PIPE if background else None,
+                text=True,
+            )
+
+            server_process = ServerProcess(
+                process=process,
+                process_id=process.pid,
+                is_background=background,
+                config=server_config,
+            )
+
+            self._running_servers[server_config.name] = server_process
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to start server subprocess: {e}")
+            return False
+
+    def _start_server_traditional(
+        self, server_config: ServerConfig, background: bool
+    ) -> bool:
+        """Start a server using the traditional approach (for stdio transport)."""
+        try:
             # Create server instance
-            server = self.registry.create_server(server_type, server_config)
+            server = self.registry.create_server(
+                server_config.config.get("type"), server_config
+            )
 
             if background:
-                # Run in background thread
+                # Run in background thread with proper asyncio handling
                 thread = threading.Thread(
                     target=self._run_server_in_thread,
                     args=(server, server_config.name),
@@ -83,29 +167,43 @@ class MultiServerManager:
                 thread.start()
 
                 server_process = ServerProcess(
-                    server=server, thread=thread, is_background=True
+                    server=server,
+                    thread=thread,
+                    is_background=True,
+                    config=server_config,
                 )
             else:
                 # Run in foreground (blocking)
-                server_process = ServerProcess(server=server, is_background=False)
+                server_process = ServerProcess(
+                    server=server, is_background=False, config=server_config
+                )
                 # This will block
                 server.run()
 
             self._running_servers[server_config.name] = server_process
-            logger.info(
-                f"Started server: {server_config.name} (background: {background})"
-            )
             return True
 
         except Exception as e:
-            logger.error(f"Failed to start server {server_config.name}: {e}")
+            logger.error(f"Failed to start server traditionally: {e}")
             return False
 
     def _run_server_in_thread(self, server: BaseServer, server_name: str):
-        """Run a server in a background thread."""
+        """Run a server in a background thread with proper asyncio handling."""
         try:
             logger.info(f"Running server {server_name} in background thread")
-            server.run()
+
+            # Create a new event loop for this thread
+            # This is crucial for FastMCP servers which are asyncio-based
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+            try:
+                # Run the server in the new event loop
+                server.run()
+            finally:
+                # Clean up the event loop
+                loop.close()
+
         except Exception as e:
             logger.error(f"Error running server {server_name}: {e}")
         finally:
@@ -120,12 +218,28 @@ class MultiServerManager:
             logger.warning(f"Server {server_name} is not running")
             return False
 
-        self._running_servers[server_name]
+        server_process = self._running_servers[server_name]
 
         try:
-            # For now, we don't have a clean way to stop FastMCP servers
-            # This would need to be implemented based on FastMCP's capabilities
-            logger.warning(f"Graceful shutdown not yet implemented for {server_name}")
+            # Handle subprocess
+            if server_process.process:
+                try:
+                    server_process.process.terminate()
+                    # Wait up to 5 seconds for graceful shutdown
+                    server_process.process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    logger.warning(
+                        f"Server {server_name} didn't stop gracefully, forcing..."
+                    )
+                    server_process.process.kill()
+                except Exception as e:
+                    logger.error(f"Error stopping server process {server_name}: {e}")
+
+            # Handle threaded server
+            elif server_process.thread and server_process.thread.is_alive():
+                logger.info(
+                    f"Server {server_name} thread is still running, waiting for natural shutdown..."
+                )
 
             # Remove from running servers
             del self._running_servers[server_name]
@@ -143,8 +257,12 @@ class MultiServerManager:
             return False
 
         server_process = self._running_servers[server_name]
-        config = server_process.server.config
+        config = server_process.config
         background = server_process.is_background
+
+        if not config:
+            logger.error(f"No config found for server {server_name}")
+            return False
 
         # Stop the server
         if self.stop_server(server_name):
@@ -164,6 +282,8 @@ class MultiServerManager:
 
         for config in server_configs:
             results[config.name] = self.start_server(config, background)
+            # Add a small delay between server starts to avoid port conflicts
+            time.sleep(1.0)  # Increased delay for subprocess startup
 
         successful = sum(1 for success in results.values() if success)
         logger.info(f"Successfully started {successful}/{len(server_configs)} servers")
@@ -174,13 +294,37 @@ class MultiServerManager:
         """Get information about all running servers."""
         info = {}
         for name, server_process in self._running_servers.items():
-            info[name] = server_process.server.info
+            if server_process.server:
+                info[name] = server_process.server.info
+            elif server_process.config:
+                # Create ServerInfo for subprocess-based servers
+                server_info = ServerInfo(config=server_process.config)
+                server_info.is_running = self._is_process_running(server_process)
+                if server_process.config.transport in ["http", "streamable-http"]:
+                    server_info.url = (
+                        f"http://{server_process.config.host}:{server_process.config.port}"
+                        f"{server_process.config.path}"
+                    )
+                info[name] = server_info
         return info
+
+    def _is_process_running(self, server_process: ServerProcess) -> bool:
+        """Check if a subprocess is still running."""
+        if server_process.process:
+            return server_process.process.poll() is None
+        return False
 
     def get_server_status(self, server_name: str) -> ServerInfo | None:
         """Get status of a specific server."""
         if server_name in self._running_servers:
-            return self._running_servers[server_name].server.info
+            server_process = self._running_servers[server_name]
+            if server_process.server:
+                return server_process.server.info
+            elif server_process.config:
+                # Create ServerInfo for subprocess-based servers
+                server_info = ServerInfo(config=server_process.config)
+                server_info.is_running = self._is_process_running(server_process)
+                return server_info
         return None
 
     async def health_check_all(self) -> dict[str, bool]:
@@ -189,7 +333,11 @@ class MultiServerManager:
 
         for name, server_process in self._running_servers.items():
             try:
-                results[name] = await server_process.server.health_check()
+                if server_process.server:
+                    results[name] = await server_process.server.health_check()
+                else:
+                    # For subprocess-based servers, just check if process is running
+                    results[name] = self._is_process_running(server_process)
             except Exception as e:
                 logger.error(f"Health check failed for {name}: {e}")
                 results[name] = False
@@ -215,13 +363,27 @@ class MultiServerManager:
         """Get URLs for all HTTP servers."""
         urls = {}
         for name, server_process in self._running_servers.items():
-            if server_process.server.info.url:
+            if server_process.server and server_process.server.info.url:
                 urls[name] = server_process.server.info.url
+            elif server_process.config and server_process.config.transport in [
+                "http",
+                "streamable-http",
+            ]:
+                urls[name] = (
+                    f"http://{server_process.config.host}:{server_process.config.port}"
+                    f"{server_process.config.path}"
+                )
         return urls
 
     def is_server_running(self, server_name: str) -> bool:
         """Check if a specific server is running."""
-        return server_name in self._running_servers
+        if server_name in self._running_servers:
+            server_process = self._running_servers[server_name]
+            if server_process.server:
+                return server_process.server.info.is_running
+            else:
+                return self._is_process_running(server_process)
+        return False
 
     def get_server_count(self) -> int:
         """Get the number of running servers."""

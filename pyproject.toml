@@ -102,16 +102,35 @@ markers = [
 ]
 
 [tool.taskipy.tasks]
+# Linting and formatting
 lint = "uv run ruff check ."
 format = "uv run ruff format ."
 check_format = "uv run ruff format --check ."
 fix = "uv run ruff check . --fix && uv run ruff format ."
-mock_server = "uv run python -m lightfast_mcp.servers.mock_server"
-blender_server = "uv run python -m lightfast_mcp.servers.blender_mcp_server"
+
+# Testing
 test = "uv run pytest"
 test_fast = "uv run python scripts/run_tests.py fast"
 test_coverage = "uv run python scripts/run_tests.py coverage"
 demo = "uv run python scripts/test_working_system.py"
+
+# MCP Manager (Recommended approach)
+manager = "uv run lightfast-mcp-manager"
+start_servers = "uv run lightfast-mcp-manager start"
+list_servers = "uv run lightfast-mcp-manager list"
+ai_client = "uv run lightfast-mcp-manager ai"
+
+# Individual servers via CLI scripts (Clean entry points)
+mock_server = "uv run lightfast-mock-server"
+blender_server = "uv run lightfast-blender-server"
+
+# Direct server access (Implementation layer)
+mock_direct = "uv run lightfast-mock"
+blender_direct = "uv run lightfast-blender"
+
+# Development server access (Module-based)
+mock_dev = "uv run python -m lightfast_mcp.servers.mock_server"
+blender_dev = "uv run python -m lightfast_mcp.servers.blender_mcp_server"
 
 [dependency-groups]
 dev = [

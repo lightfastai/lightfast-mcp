@@ -90,7 +90,27 @@ def start_servers_interactive():
 
     if not selected_configs:
         print("❌ No server configurations found.")
-        print("   Run 'lightfast-mcp-manager init' to create a sample configuration.")
+        print("   Would you like to create a sample configuration? (y/n)")
+        try:
+            create_sample = input().strip().lower()
+            if create_sample in ["y", "yes"]:
+                config_loader = ConfigLoader()
+                if config_loader.create_sample_config("servers.yaml"):
+                    print("✅ Sample configuration created at: config/servers.yaml")
+                    print("🔄 Loading the new configuration...")
+                    selected_configs = selector.load_available_servers()
+                else:
+                    print("❌ Failed to create sample configuration")
+                    return
+            else:
+                print("👋 No configuration created. Goodbye!")
+                return
+        except KeyboardInterrupt:
+            print("\n👋 Cancelled. Goodbye!")
+            return
+
+    if not selected_configs:
+        print("❌ Still no server configurations available.")
         return
 
     # Let user select servers
@@ -104,11 +124,18 @@ def start_servers_interactive():
     manager = get_manager()
 
     print(f"\n🚀 Starting {len(selected_configs)} servers...")
+    print("   This may take a few moments as servers initialize...")
+
     results = manager.start_multiple_servers(selected_configs, background=True)
 
     # Show results
     successful = sum(1 for success in results.values() if success)
     print(f"✅ Successfully started {successful}/{len(selected_configs)} servers")
+
+    # Show any failures
+    failed_servers = [name for name, success in results.items() if not success]
+    if failed_servers:
+        print(f"❌ Failed to start: {', '.join(failed_servers)}")
 
     if successful > 0:
         # Show server URLs
@@ -119,7 +146,9 @@ def start_servers_interactive():
                 print(f"   • {name}: {url}")
 
         print("\n🎯 Servers are running! Use the AI client to interact with them.")
-        print("   Run 'lightfast-mcp-manager ai' to start the AI client.")
+        print(
+            "   Run 'lightfast-mcp-manager ai' (or 'uv run task ai_client') to start the AI client."
+        )
         print("   Press Ctrl+C to shutdown all servers.\n")
 
         try:
@@ -197,6 +226,10 @@ async def start_ai_client():
     # Auto-discover running servers (look for common ports)
     common_ports = [8001, 8002, 8003, 8004, 8005]
     print("🔍 Auto-discovering running servers...")
+    print("   Waiting a moment for servers to fully start up...")
+
+    # Give servers time to fully start up
+    await asyncio.sleep(2)
 
     discovered_servers = {}
     for port in common_ports:
@@ -206,7 +239,7 @@ async def start_ai_client():
             import socket
 
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(1.0)
+            sock.settimeout(2.0)  # Increased timeout
             result = sock.connect_ex(("localhost", port))
             sock.close()
 
@@ -214,12 +247,15 @@ async def start_ai_client():
                 server_name = f"server-{port}"
                 discovered_servers[server_name] = url
                 print(f"   ✅ Found server at {url}")
-        except Exception:
-            pass
+            else:
+                print(f"   ⚪ No server found at port {port}")
+        except Exception as e:
+            print(f"   ❌ Error checking port {port}: {e}")
 
     if not discovered_servers:
         print("❌ No running MCP servers found.")
         print("   Start some servers first with 'lightfast-mcp-manager start'")
+        print("   Make sure to wait a few seconds for servers to fully start.")
         return
 
     # Add discovered servers to client
@@ -228,7 +264,14 @@ async def start_ai_client():
 
     # Connect to servers
     print(f"\n📡 Connecting to {len(discovered_servers)} servers...")
-    connection_results = await client.connect_to_servers()
+    try:
+        connection_results = await client.connect_to_servers()
+    except Exception as e:
+        print(f"❌ Error connecting to servers: {e}")
+        print(
+            "   This might be due to server startup timing. Try again in a few seconds."
+        )
+        return
 
     successful_connections = sum(
         1 for success in connection_results.values() if success
@@ -237,6 +280,7 @@ async def start_ai_client():
 
     if successful_connections == 0:
         print("❌ Could not connect to any servers.")
+        print("   Servers might still be starting up. Try again in a few seconds.")
         return
 
     # Show available tools
