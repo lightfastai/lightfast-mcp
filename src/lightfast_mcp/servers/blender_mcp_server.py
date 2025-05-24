@@ -7,9 +7,9 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Any
 
-from mcp.server.fastmcp import Context, FastMCP
+from fastmcp import Context, FastMCP
 
-from ..exceptions import (
+from lightfast_mcp.exceptions import (
     BlenderCommandError,
     BlenderConnectionError,
     BlenderMCPError,
@@ -18,7 +18,7 @@ from ..exceptions import (
 )
 
 # Import from your new logging utility
-from ..utils.logging_utils import configure_logging, get_logger
+from lightfast_mcp.utils.logging_utils import configure_logging, get_logger
 
 # Configure logging
 configure_logging(level="INFO")

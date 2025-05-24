@@ -1,0 +1,14 @@
+# AI API Keys - Copy this file to .env and add your actual API keys
+
+# For Claude AI (Anthropic)
+ANTHROPIC_API_KEY=your_claude_api_key_here
+
+# For OpenAI 
+OPENAI_API_KEY=your_openai_api_key_here
+
+# Choose which AI provider to use by default (claude or openai)
+AI_PROVIDER=claude
+
+# Blender MCP Server settings
+BLENDER_MCP_HOST=127.0.0.1
+BLENDER_MCP_PORT=8000 
