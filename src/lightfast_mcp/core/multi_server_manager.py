@@ -1,8 +1,10 @@
 """Multi-server manager for running multiple MCP servers simultaneously."""
 
 import asyncio
+import shutil
 import signal
 import subprocess
+import sys
 import threading
 import time
 from dataclasses import dataclass, field
@@ -104,13 +106,19 @@ class MultiServerManager:
             # Determine the correct script based on server type
             server_type = server_config.config.get("type", "unknown")
 
-            if server_type == "mock":
-                script_module = "lightfast_mcp.servers.mock_server"
-            elif server_type == "blender":
-                script_module = "lightfast_mcp.servers.blender_mcp_server"
-            else:
-                logger.error(f"Unknown server type for subprocess: {server_type}")
+            # Validated list of trusted server modules (security: only allow known modules)
+            trusted_modules = {
+                "mock": "lightfast_mcp.servers.mock_server",
+                "blender": "lightfast_mcp.servers.blender_mcp_server",
+            }
+
+            if server_type not in trusted_modules:
+                logger.error(
+                    f"Unknown or untrusted server type for subprocess: {server_type}"
+                )
                 return False
+
+            script_module = trusted_modules[server_type]
 
             # Create environment with server config
             import json
@@ -130,10 +138,18 @@ class MultiServerManager:
             )
 
             # Start the subprocess
+            # Security: Use full path to python executable and validated module name
+            python_executable = (
+                sys.executable or shutil.which("python3") or shutil.which("python")
+            )
+            if not python_executable:
+                logger.error("Could not find Python executable")
+                return False
+
             # Only capture logs if background=True AND show_logs=False
             capture_logs = background and not show_logs
             process = subprocess.Popen(
-                ["python", "-m", script_module],
+                [python_executable, "-m", script_module],  # nosec B603 - using validated module and full path
                 env=env,
                 stdout=subprocess.PIPE if capture_logs else None,
                 stderr=subprocess.PIPE if capture_logs else None,
