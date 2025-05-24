@@ -1,0 +1,28 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: Core Model Context Protocol concepts and terminology for lightfast-mcp
+alwaysApply: true
+---
+
+# MCP Core Concepts
+
+This is **lightfast-mcp**, a Model Context Protocol (MCP) implementation for creative applications like Blender. Remember these key concepts:
+
+## MCP Protocol Fundamentals
+- **MCP Server**: Exposes tools and resources through standardized protocol (this project implements servers)
+- **MCP Client**: Connects to servers to use tools (AI models use clients)
+- **Transport Types**: `stdio` (local subprocess) or `sse` (HTTP Server-Sent Events)
+- **Tools**: Functions that can be called by AI models with `@mcp.tool()` decorator
+- **Resources**: Data sources that can be read by AI models with `@mcp.resource()` decorator
+- **Prompts**: Reusable prompt templates with parameters
+
+## Project Context
+- We implement MCP servers for creative applications
+- FastMCP library provides the `@mcp.tool()` and `@mcp.resource()` decorators
+- All servers inherit from `BaseServer` and use `ServerConfig`
+- Support both `stdio` and `streamable-http` transports
+- Configuration-driven design using YAML/JSON config files

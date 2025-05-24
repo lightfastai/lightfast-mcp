@@ -7,20 +7,21 @@ requires-python = ">=3.10"
 authors = [
     {name = "Jeevan Pillay", email = "jp@lightfast.ai"}
 ]
-license = {text = "MIT"}
+license = "MIT"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "mcp[cli]>=1.3.0",
+    "fastmcp>=2.0.0",
     "rich",
-    "requests",
+    "anthropic",
+    "openai",
+    "pyyaml",  # For YAML configuration support
 ]
 
 [project.optional-dependencies]
@@ -29,14 +30,24 @@ dev = [
     "taskipy",
     "pytest",
     "pytest-asyncio",
+    "pytest-cov",
+    "coverage",
     "nox",
     "mypy",
     "build",
 ]
 
 [project.scripts]
+# Main manager CLI
+lightfast-mcp-manager = "lightfast_mcp.cli:main"
+
+# Individual server scripts  
 lightfast-mock-server = "lightfast_mcp.servers.mock_server:main"
 lightfast-blender-server = "lightfast_mcp.servers.blender_mcp_server:main"
+
+# Direct modular server access
+lightfast-mock = "lightfast_mcp.servers.mock.server:main"
+lightfast-blender = "lightfast_mcp.servers.blender.server:main"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
@@ -44,7 +55,15 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
-packages = ["lightfast_mcp", "lightfast_mcp.servers", "lightfast_mcp.utils"]
+packages = [
+    "lightfast_mcp",
+    "lightfast_mcp.core", 
+    "lightfast_mcp.servers",
+    "lightfast_mcp.servers.blender",
+    "lightfast_mcp.servers.mock",
+    "lightfast_mcp.clients",
+    "lightfast_mcp.utils"
+]
 
 [project.urls]
 "Homepage" = "https://github.com/lightfastai/lightfast-mcp"
@@ -71,11 +90,52 @@ ignore = []
 quote-style = "double"
 skip-magic-trailing-comma = false
 
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+markers = [
+    "integration: marks tests as integration tests",
+    "slow: marks tests as slow running",
+]
+
 [tool.taskipy.tasks]
-lint = "ruff check ."
-format = "ruff format ."
-check_format = "ruff format --check ."
-fix = "ruff check . --fix && ruff format ."
-mock_server = "python -m lightfast_mcp.servers.mock_server"
-blender_server = "python -m lightfast_mcp.servers.blender_mcp_server"
-test = "pytest"
+# Linting and formatting
+lint = "uv run ruff check ."
+format = "uv run ruff format ."
+check_format = "uv run ruff format --check ."
+fix = "uv run ruff check . --fix && uv run ruff format ."
+
+# Testing
+test = "uv run pytest"
+test_fast = "uv run python scripts/run_tests.py fast"
+test_coverage = "uv run python scripts/run_tests.py coverage"
+demo = "uv run python scripts/test_working_system.py"
+
+# MCP Manager (Recommended approach)
+manager = "uv run lightfast-mcp-manager"
+start_servers = "uv run lightfast-mcp-manager start"
+list_servers = "uv run lightfast-mcp-manager list"
+ai_client = "uv run lightfast-mcp-manager ai"
+
+# Individual servers via CLI scripts (Clean entry points)
+mock_server = "uv run lightfast-mock-server"
+blender_server = "uv run lightfast-blender-server"
+
+# Direct server access (Implementation layer)
+mock_direct = "uv run lightfast-mock"
+blender_direct = "uv run lightfast-blender"
+
+# Development server access (Module-based)
+mock_dev = "uv run python -m lightfast_mcp.servers.mock_server"
+blender_dev = "uv run python -m lightfast_mcp.servers.blender_mcp_server"
+
+[dependency-groups]
+dev = [
+    "coverage>=7.8.2",
+    "pytest>=8.3.5",
+    "pytest-asyncio>=0.26.0",
+    "pytest-cov>=6.1.1",
+]

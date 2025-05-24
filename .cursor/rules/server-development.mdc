@@ -1,0 +1,71 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: MCP server development patterns and best practices  
+alwaysApply: false
+---
+
+# MCP Server Development
+
+## Server Configuration Pattern
+```python
+config = ServerConfig(
+    name="MyServer",
+    description="Description of what this server does",
+    host="localhost", 
+    port=8001,
+    transport="streamable-http",  # or "stdio"
+    path="/mcp",
+    config={"type": "my_server", "custom_param": "value"}
+)
+```
+
+## Tool Implementation Pattern
+```python
+@mcp.tool()
+async def my_tool(param: str) -> str:
+    """Tool description for AI to understand usage.
+    
+    Args:
+        param: Description of the parameter
+        
+    Returns:
+        Description of the return value
+    """
+    # Validate inputs
+    if not param:
+        raise ValueError("Parameter cannot be empty")
+    
+    # Implement tool logic
+    result = await some_async_operation(param)
+    return result
+```
+
+## Resource Implementation Pattern
+```python
+@mcp.resource("my-resource://path/{id}")
+async def get_resource(id: str) -> str:
+    """Resource description for AI context.
+    
+    Args:
+        id: Resource identifier
+        
+    Returns:
+        Resource content
+    """
+    # Validate resource ID
+    # Return resource content
+    return "content"
+```
+
+## Best Practices
+- All servers inherit from `BaseServer` and use `ServerConfig`
+- Use `@mcp.tool()` decorator for tools, `@mcp.resource()` for resources
+- Support both `stdio` and `streamable-http` transports
+- Validate all inputs from AI models
+- Handle errors gracefully with meaningful messages
+- Use clear descriptions for AI consumption
+- Log security-relevant operations

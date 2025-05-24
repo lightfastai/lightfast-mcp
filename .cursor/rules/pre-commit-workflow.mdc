@@ -1,0 +1,210 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: Pre-commit workflow ensuring comprehensive validation before committing changes
+alwaysApply: false
+---
+
+# Pre-Commit Workflow
+
+Before committing any changes to lightfast-mcp, execute this comprehensive validation workflow:
+
+## Mandatory Pre-Commit Steps
+
+1. **Format and Lint**: Ensure code style compliance
+2. **Run Tests**: Execute comprehensive test suite
+3. **Validate Configs**: Check all configuration files
+4. **Test Server Startup**: Verify servers can start
+5. **Security Check**: Run security validation
+6. **Type Check**: Ensure type safety
+
+## Automatic Pre-Commit Commands
+
+Run this command sequence before every commit:
+
+```bash
+#!/bin/bash
+echo "🚀 Running lightfast-mcp pre-commit checks..."
+
+# Step 1: Format and Lint
+echo "📝 Step 1: Formatting and linting..."
+uv run task format
+uv run task lint
+
+# Step 2: Fast tests for immediate feedback
+echo "⚡ Step 2: Running fast tests..."
+uv run python scripts/run_tests.py fast
+
+# Step 3: Configuration validation
+echo "⚙️  Step 3: Validating configurations..."
+find config -name "*.yaml" -exec python -c "import yaml; yaml.safe_load(open('{}'))" \; 2>/dev/null
+find . -name "*.json" -exec python -c "import json; json.load(open('{}'))" \; 2>/dev/null
+echo "✅ Configuration files validated"
+
+# Step 4: Test server startup
+echo "🏁 Step 4: Testing server startup..."
+timeout 10 uv run lightfast-mock-server &
+MOCK_PID=$!
+sleep 3
+kill $MOCK_PID 2>/dev/null || true
+echo "✅ Mock server startup tested"
+
+# Step 5: System integration test
+echo "🧪 Step 5: System integration test..."
+uv run python scripts/test_working_system.py
+
+# Step 6: Type checking
+echo "🔍 Step 6: Type checking..."
+nox -s typecheck
+
+# Step 7: Security check
+echo "🔒 Step 7: Security check..."
+python -m py_compile $(find src -name "*.py")
+echo "✅ Python compilation successful"
+
+echo "✨ All pre-commit checks passed!"
+```
+
+## File-Type Specific Validations
+
+### For Server File Changes
+```bash
+# Additional checks when server files are modified
+echo "🖥️  Server-specific validations..."
+
+# Test MCP protocol compliance
+uv run pytest tests/unit/test_*server*.py -v
+
+# Validate tool decorators and signatures
+python -c "
+import ast
+import glob
+for file in glob.glob('src/lightfast_mcp/servers/**/*.py', recursive=True):
+    with open(file) as f:
+        tree = ast.parse(f.read())
+        # Check for @mcp.tool() decorators
+        print(f'Validated: {file}')
+"
+```
+
+### For Test File Changes
+```bash
+# Additional checks when test files are modified
+echo "🧪 Test-specific validations..."
+
+# Run affected tests with coverage
+uv run pytest --cov=src/lightfast_mcp --cov-report=term-missing tests/
+
+# Ensure test performance
+uv run pytest --durations=10 tests/unit/
+```
+
+### For Configuration Changes
+```bash
+# Additional checks when config files are modified
+echo "⚙️  Configuration-specific validations..."
+
+# Test configuration loading
+uv run lightfast-mcp-manager list
+
+# Test server startup with new config
+uv run lightfast-mcp-manager start --hide-logs &
+sleep 5
+pkill -f lightfast-mcp-manager
+```
+
+## Quality Gates
+
+### Code Quality Thresholds
+- **Test Coverage**: Minimum 80% for new code
+- **Linting**: Zero linting errors
+- **Type Checking**: Zero type errors
+- **Security**: No high/medium security issues
+
+### Performance Thresholds
+- **Unit Tests**: Complete in under 30 seconds
+- **Fast Tests**: Complete in under 60 seconds
+- **Server Startup**: Complete in under 10 seconds
+
+## Pre-Commit Checklist
+
+- [ ] All files formatted with `uv run task format`
+- [ ] No linting errors from `uv run task lint`
+- [ ] Fast tests pass: `uv run python scripts/run_tests.py fast`
+- [ ] System test passes: `uv run python scripts/test_working_system.py`
+- [ ] Type checking passes: `nox -s typecheck`
+- [ ] Configuration files are valid
+- [ ] Servers can start without errors
+- [ ] No security warnings
+- [ ] Commit message follows conventional format
+
+## Commit Message Format
+
+Use conventional commit format:
+
+```
+type(scope): description
+
+feat(blender): add new 3D object creation tool
+fix(server): resolve port conflict issue
+docs(readme): update installation instructions
+test(integration): add Blender connection tests
+```
+
+## Emergency Commit Workflow
+
+For urgent fixes that need to bypass some checks:
+
+```bash
+# Minimal checks for emergency commits
+uv run task format
+uv run task lint
+uv run python scripts/run_tests.py fast
+
+# Add "EMERGENCY:" prefix to commit message
+git commit -m "EMERGENCY: fix critical server crash issue"
+```
+
+## Failed Check Recovery
+
+### If Tests Fail
+```bash
+# Run specific failing test for debugging
+uv run pytest tests/path/to/failing_test.py::test_name -v -s
+
+# Run tests with debugging output
+uv run pytest --pdb --pdbcls=IPython.terminal.debugger:Pdb
+```
+
+### If Linting Fails
+```bash
+# Auto-fix what's possible
+uv run task fix
+
+# Check specific linting issues
+uv run ruff check . --diff
+```
+
+### If Type Checking Fails
+```bash
+# Show detailed type errors
+uv run mypy src/lightfast_mcp --show-error-codes
+```
+
+## Post-Commit Validation
+
+After committing, run comprehensive tests:
+
+```bash
+# Full test suite
+nox
+
+# Integration tests with real applications
+nox -s test_e2e
+
+# Performance benchmarks
+uv run python scripts/benchmark_servers.py  # If exists
+```

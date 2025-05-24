@@ -1,107 +1,77 @@
-import asyncio
+"""
+Mock MCP server using the new modular architecture.
+This is now the clean entry point for the Mock server.
+"""
+
 import json
-import time
-from typing import Any
+import os
 
-from mcp.server.fastmcp import Context, FastMCP
-
-# Import from your new logging utility
+from ..core.base_server import ServerConfig
 from ..utils.logging_utils import configure_logging, get_logger
+from .mock.server import MockMCPServer
 
-# Configure logging using your new utility
-# This will configure the root "FastMCP" logger and by extension child loggers obtained via get_logger
-# You might want to pass a LOG_LEVEL from an environment variable here if desired.
-configure_logging(level="INFO")  # Default to INFO, can be changed or made env-dependent
+# Configure logging
+configure_logging(level="INFO")
+logger = get_logger("MockMCP")
 
-# Get a specific logger for this server, nested under "FastMCP"
-# The name here will be prefixed with "FastMCP." by get_logger, e.g., "FastMCP.MockServer"
-logger = get_logger("MockServer")
-
-SERVER_NAME = "MockMCP"  # This is used by FastMCP, not directly for logger name anymore
-# SERVER_DESCRIPTION is no longer used in mock_server.py logic
-
-# Create the MCP server
-mcp = FastMCP(
-    SERVER_NAME,
-    # description parameter is not used by FastMCP constructor in the mcp version we targetted earlier for fixes
-)
-
-
-@mcp.tool()
-async def get_server_status(ctx: Context) -> dict[str, Any]:
-    """
-    Get the current status of the mock MCP server.
-    """
-    logger.info("Received request for server status.")
-    await asyncio.sleep(0.1)  # Simulate a very small delay
-    return {
-        "status": "running",
-        "server_name": mcp.name,  # FastMCP stores the name given at construction
-        # "description": SERVER_DESCRIPTION, # Description is no longer returned
-        "timestamp": time.time(),
-    }
-
-
-@mcp.tool()
-async def fetch_mock_data(ctx: Context, data_id: str, delay_seconds: float = 1.0) -> dict[str, Any]:
-    """
-    Fetches mock data associated with a given ID after a specified delay.
-
-    Parameters:
-    - data_id: The identifier for the mock data to fetch.
-    - delay_seconds: The time in seconds to wait before returning the data.
-    """
-    logger.info(f"Received request to fetch mock data for id: '{data_id}' with delay: {delay_seconds}s.")
-    await asyncio.sleep(delay_seconds)
-    mock_data = {
-        "id": data_id,
-        "content": f"This is mock content for {data_id}.",
-        "details": {"field1": "value1", "field2": 123, "is_mock": True},
-        "retrieved_at": time.time(),
-    }
-    logger.info(f"Returning mock data for id: '{data_id}'.")
-    return mock_data
-
-
-@mcp.tool()
-async def execute_mock_action(
-    ctx: Context,
-    action_name: str,
-    parameters: dict[str, Any] | None = None,
-    delay_seconds: float = 0.5,
-) -> dict[str, Any]:
-    """
-    Simulates the execution of an action with given parameters after a specified delay.
-
-    Parameters:
-    - action_name: The name of the mock action to execute.
-    - parameters: A dictionary of parameters for the action.
-    - delay_seconds: The time in seconds to wait before returning the action result.
-    """
-    if parameters is None:
-        parameters = {}
-    # Use json.dumps for parameters in the log for better readability if it's complex
-    logger.info(
-        f"Received request to execute mock action: '{action_name}' with params: "
-        f"{json.dumps(parameters)} and delay: {delay_seconds}s."
-    )
-    await asyncio.sleep(delay_seconds)
-    result = {
-        "action_name": action_name,
-        "status": "completed_mock",
-        "parameters_received": parameters,
-        "message": f"Mock action '{action_name}' executed successfully.",
-        "completed_at": time.time(),
-    }
-    logger.info(f"Returning result for mock action: '{action_name}'.")
-    return result
+SERVER_NAME = "MockMCP"
 
 
 def main():
-    """Run the Mock MCP server"""
-    # Logging is configured once at the top of the module.
-    logger.info(f"Initializing Mock MCP Server: {SERVER_NAME} (logger: {logger.name}) for host communication.")
-    mcp.run()  # Runs using the stdio transport by default when launched by a host
+    """Run the Mock MCP server."""
+    logger.info("Starting Mock MCP server")
+
+    # Check for environment configuration (from MultiServerManager)
+    env_config = os.getenv("LIGHTFAST_MCP_SERVER_CONFIG")
+
+    if env_config:
+        try:
+            # Parse configuration from environment
+            config_data = json.loads(env_config)
+            config = ServerConfig(
+                name=config_data.get("name", SERVER_NAME),
+                description=config_data.get(
+                    "description", "Mock MCP Server for testing and development"
+                ),
+                host=config_data.get("host", "localhost"),
+                port=config_data.get("port", 8000),
+                transport=config_data.get(
+                    "transport", "streamable-http"
+                ),  # Default to HTTP for subprocess
+                path=config_data.get("path", "/mcp"),
+                config=config_data.get(
+                    "config", {"type": "mock", "delay_seconds": 0.5}
+                ),
+            )
+            logger.info(
+                f"Using environment configuration: {config.transport}://{config.host}:{config.port}"
+            )
+        except (json.JSONDecodeError, KeyError) as e:
+            logger.warning(f"Invalid environment configuration: {e}, using defaults")
+            config = _get_default_config()
+    else:
+        # Use default configuration for standalone running
+        config = _get_default_config()
+
+    # Create and run server
+    server = MockMCPServer(config)
+    server.run()
+
+
+def _get_default_config() -> ServerConfig:
+    """Get default configuration for standalone running."""
+    return ServerConfig(
+        name=SERVER_NAME,
+        description="Mock MCP Server for testing and development",
+        host="localhost",
+        port=8002,  # Use port 8002 by default for mock server
+        transport="streamable-http",  # Use HTTP by default for easier testing
+        path="/mcp",
+        config={
+            "type": "mock",
+            "delay_seconds": 0.5,
+        },
+    )
 
 
 if __name__ == "__main__":

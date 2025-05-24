@@ -1,0 +1,132 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: Configuration file validation workflow with automatic checks
+globs: ["config/**/*.yaml", "config/**/*.json", "*.yaml", "*.json", ".cursor/**/*.json"]
+alwaysApply: false
+---
+
+# Configuration Validation Workflow
+
+When editing configuration files, execute these validation steps immediately:
+
+## Immediate Actions After Config Changes
+
+1. **Validate Syntax**: Check YAML/JSON syntax is valid
+2. **Test Configuration Loading**: Verify config can be loaded by the application
+3. **Validate Schema**: Ensure required fields are present
+4. **Test Server Startup**: Verify servers can start with new configuration
+
+## Automatic Validation Commands
+
+### YAML Configuration Files
+```bash
+# Validate YAML syntax
+python -c "import yaml; yaml.safe_load(open('{current_file}'))"
+
+# Test configuration loading
+uv run python -c "from lightfast_mcp.core import ConfigLoader; ConfigLoader().load_servers_config('{current_file}')"
+
+# Test server startup with new config
+uv run lightfast-mcp-manager list
+```
+
+### JSON Configuration Files
+```bash
+# Validate JSON syntax
+python -c "import json; json.load(open('{current_file}'))"
+
+# For MCP configuration files
+if [[ "{current_file}" == *"mcp.json"* ]]; then
+    echo "MCP config updated - restart Cursor to reload"
+fi
+```
+
+## Configuration File Validation Checklist
+
+### Server Configuration (`config/servers.yaml`)
+- [ ] All servers have required fields: name, description, host, port, transport
+- [ ] Port numbers don't conflict (8001=Blender, 8002=Mock, 8003+=Others)
+- [ ] Transport types are valid: "stdio" or "streamable-http"
+- [ ] Server types match registered server types
+- [ ] Environment variables are properly formatted
+
+### MCP Configuration (`.cursor/mcp.json`)
+- [ ] Server commands use proper paths
+- [ ] Environment variables are correctly set
+- [ ] Working directories exist (for global configs)
+- [ ] Server names are unique
+
+## Test Configuration Changes
+
+### After Editing Server Config
+```bash
+# Test configuration loading
+uv run lightfast-mcp-manager list
+
+# Test server startup
+uv run lightfast-mcp-manager start --hide-logs &
+sleep 5
+pkill -f lightfast-mcp-manager
+
+# Validate no port conflicts
+netstat -an | grep -E ':(8001|8002|8003|8004|8005)\s'
+```
+
+### After Editing MCP Config
+```bash
+# Note: Requires Cursor restart to take effect
+echo "⚠️  MCP configuration changed - restart Cursor to reload"
+echo "📋 Updated servers:"
+cat {current_file} | grep -A2 -B2 '"command"'
+```
+
+## Configuration Templates
+
+### New Server Entry Template
+```yaml
+- name: "new-server"
+  description: "Description of what this server does"
+  host: "localhost"
+  port: 8006  # Use next available port
+  transport: "streamable-http"
+  config:
+    type: "new_server_type"
+    custom_param: "value"
+```
+
+### MCP Server Entry Template
+```json
+"server-name": {
+  "command": "uv",
+  "args": ["run", "lightfast-server-command"],
+  "env": {
+    "LOG_LEVEL": "INFO",
+    "CUSTOM_VAR": "value"
+  }
+}
+```
+
+## Configuration Security Checks
+
+- [ ] No sensitive data (passwords, API keys) in version-controlled configs
+- [ ] Environment variables used for secrets
+- [ ] File permissions are appropriate (644 for configs)
+- [ ] Network bindings are secure (localhost for development)
+
+## Before Committing Config Changes
+
+```bash
+# Validate all configuration files
+find config -name "*.yaml" -exec python -c "import yaml; yaml.safe_load(open('{}'))" \;
+find . -name "*.json" -exec python -c "import json; json.load(open('{}'))" \;
+
+# Test full system with new configuration
+uv run python scripts/test_working_system.py
+
+# Run configuration-related tests
+uv run pytest tests/unit/test_config* -v
+```

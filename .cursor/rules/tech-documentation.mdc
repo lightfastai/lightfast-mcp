@@ -1,0 +1,139 @@
+---
+description: Technical documentation guidelines ensuring consistency with DEV.md
+globs: ["*.md", "docs/**/*.md", "docs/**/*.mdx", "**/README.md", "CONTRIBUTING.md", "**/*README*", "docs/**/*.txt"]
+alwaysApply: false
+---
+
+# Technical Documentation Guidelines
+
+When creating or editing technical documentation, always reference the comprehensive developer guide:
+
+@DEV.md
+
+## Documentation Consistency Rules
+
+### 1. Architecture References
+- **Always reference DEV.md** for architectural explanations
+- **Use consistent terminology** from DEV.md (BaseServer, ServerConfig, etc.)
+- **Link to DEV.md sections** rather than duplicating content
+
+### 2. Code Examples
+- **Use patterns from DEV.md** for code examples
+- **Reference actual implementation files** mentioned in DEV.md
+- **Maintain consistency** with DEV.md command examples
+
+### 3. Setup Instructions
+- **Point to DEV.md Quick Start** for setup procedures
+- **Use same command patterns** as shown in DEV.md
+- **Reference DEV.md prerequisites** section
+
+### 4. Development Workflows
+- **Reference DEV.md workflows** for development processes
+- **Use consistent task commands** from DEV.md
+- **Point to DEV.md testing strategies**
+
+## Documentation Validation Checklist
+
+When editing technical documentation:
+
+- [ ] Referenced @DEV.md for comprehensive information
+- [ ] Used consistent terminology from DEV.md
+- [ ] Commands match those in DEV.md
+- [ ] Architecture descriptions align with DEV.md
+- [ ] Examples follow DEV.md patterns
+- [ ] No duplication of DEV.md content (link instead)
+
+## Quick Reference Commands
+
+Always use these commands from DEV.md:
+
+```bash
+# Setup (from DEV.md Quick Start)
+uv pip install -e ".[dev]"
+uv run lightfast-mcp-manager init
+uv run lightfast-mcp-manager start
+
+# Development (from DEV.md Development Tasks)
+uv run task lint
+uv run task format
+uv run python scripts/run_tests.py fast
+
+# Testing (from DEV.md Testing section)
+nox
+uv run pytest tests/unit/ -v
+```
+
+## Documentation Types
+
+### README Files
+- **Keep concise** - link to DEV.md for details
+- **Use DEV.md Quick Start** section for setup
+- **Reference DEV.md Architecture** for technical details
+
+### API Documentation
+- **Follow DEV.md patterns** for server implementation
+- **Use DEV.md examples** as templates
+- **Reference DEV.md configurations**
+
+### Tutorial Content
+- **Start with DEV.md Prerequisites**
+- **Use DEV.md workflow examples**
+- **Point to DEV.md for troubleshooting**
+
+## Content Guidelines
+
+### What to Include in Documentation
+- High-level overviews and use cases
+- Quick start guides (referencing DEV.md)
+- Specific examples for the documentation context
+- Links to relevant DEV.md sections
+
+### What NOT to Duplicate
+- Detailed architecture explanations (use @DEV.md)
+- Complete command references (link to DEV.md)
+- Full setup procedures (reference DEV.md Quick Start)
+- Testing methodologies (point to DEV.md Testing section)
+
+## Example Documentation Pattern
+
+```markdown
+# My Feature Documentation
+
+## Overview
+Brief description of the feature.
+
+## Quick Setup
+For complete setup instructions, see @DEV.md Quick Start section.
+
+```bash
+# Essential commands (from DEV.md)
+uv run lightfast-mcp-manager init
+uv run lightfast-mcp-manager start
+```
+
+## Architecture
+This feature builds on the lightfast-mcp architecture. 
+See @DEV.md Architecture Overview for details.
+
+## Development
+Follow the standard development workflow from @DEV.md Development Workflow.
+```
+
+## Before Committing Documentation
+
+```bash
+# Validate documentation references DEV.md
+grep -r "@DEV.md\|DEV.md" . --include="*.md"
+
+# Check command consistency with DEV.md
+grep -r "uv run\|nox\|task" . --include="*.md"
+
+# Ensure no major content duplication
+```
+
+## Documentation Maintenance
+
+- **Regular sync checks**: Ensure docs align with DEV.md updates
+- **Link validation**: Verify all DEV.md references remain valid  
+- **Command verification**: Test that referenced commands still work
+- **Content audits**: Remove duplicated content, add DEV.md links instead

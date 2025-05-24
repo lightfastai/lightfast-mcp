@@ -178,3 +178,9 @@ cython_debug/
 
 # MacOS
 .DS_Store
+
+# Cursor IDE
+.cursor/.env
+.cursor/local_*.json
+.cursor/workspace_*.json
+# Keep .cursor/rules/, .cursor/mcp.json, and .cursor/mcp_global_example.json in version control

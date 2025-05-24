@@ -1,0 +1,431 @@
+"""Multi-server AI client for connecting to multiple MCP servers simultaneously."""
+
+import asyncio
+import json
+import os
+from typing import Any
+
+import anthropic
+import openai
+from fastmcp import Client
+
+from ..utils.logging_utils import get_logger
+
+logger = get_logger("MultiServerAIClient")
+
+
+class ServerConnection:
+    """Represents a connection to an MCP server."""
+
+    def __init__(self, name: str, url: str, description: str = ""):
+        self.name = name
+        self.url = url
+        self.description = description
+        self.client: Client | None = None
+        self.tools: list[str] = []
+        self.is_connected = False
+        self.last_error = ""
+
+    async def connect(self) -> bool:
+        """Connect to the MCP server."""
+        try:
+            self.client = Client(self.url)
+            await self.client.__aenter__()
+
+            # Get available tools
+            tools_list = await self.client.list_tools()
+            self.tools = [tool.name for tool in tools_list]
+
+            self.is_connected = True
+            self.last_error = ""
+            logger.info(f"Connected to {self.name} at {self.url} (tools: {self.tools})")
+            return True
+
+        except Exception as e:
+            self.last_error = str(e)
+            self.is_connected = False
+            logger.error(f"Failed to connect to {self.name}: {e}")
+            return False
+
+    async def disconnect(self):
+        """Disconnect from the MCP server."""
+        if self.client and self.is_connected:
+            try:
+                await self.client.__aexit__(None, None, None)
+                logger.info(f"Disconnected from {self.name}")
+            except Exception as e:
+                # Log the error but don't raise it during cleanup
+                logger.debug(f"Error disconnecting from {self.name}: {e}")
+            finally:
+                self.client = None
+                self.is_connected = False
+
+    async def call_tool(
+        self, tool_name: str, arguments: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        """Call a tool on this server."""
+        if not self.is_connected or not self.client:
+            raise RuntimeError(f"Not connected to {self.name}")
+
+        if tool_name not in self.tools:
+            raise ValueError(f"Tool '{tool_name}' not available on {self.name}")
+
+        try:
+            result = await self.client.call_tool(tool_name, arguments or {})
+            if result and len(result) > 0:
+                # Handle different content types safely
+                content = result[0]
+                if hasattr(content, "text"):
+                    return json.loads(content.text)
+                else:
+                    # Handle other content types or return error
+                    return {
+                        "error": f"Unsupported content type: {type(content).__name__}"
+                    }
+            return {"error": "No result returned"}
+        except Exception as e:
+            return {"error": f"Tool execution failed: {str(e)}"}
+
+
+class MultiServerAIClient:
+    """AI client that can connect to multiple MCP servers simultaneously."""
+
+    def __init__(
+        self,
+        ai_provider: str = "claude",
+        api_key: str | None = None,
+    ):
+        self.ai_provider = ai_provider.lower()
+        self.api_key = api_key or self._get_api_key()
+        self.servers: dict[str, ServerConnection] = {}
+
+        # Initialize AI client
+        self._setup_ai_client()
+
+    def _get_api_key(self) -> str:
+        """Get API key from environment variables."""
+        if self.ai_provider == "claude":
+            key = os.getenv("ANTHROPIC_API_KEY")
+            if not key:
+                raise ValueError(
+                    "ANTHROPIC_API_KEY environment variable required for Claude"
+                )
+        elif self.ai_provider == "openai":
+            key = os.getenv("OPENAI_API_KEY")
+            if not key:
+                raise ValueError(
+                    "OPENAI_API_KEY environment variable required for OpenAI"
+                )
+        else:
+            raise ValueError(f"Unsupported AI provider: {self.ai_provider}")
+        return key
+
+    def _setup_ai_client(self):
+        """Setup AI client using official SDKs."""
+        if self.ai_provider == "claude":
+            self.ai_client = anthropic.AsyncAnthropic(api_key=self.api_key)
+        elif self.ai_provider == "openai":
+            self.ai_client = openai.AsyncOpenAI(api_key=self.api_key)
+
+    def add_server(self, name: str, url: str, description: str = ""):
+        """Add a server to connect to."""
+        self.servers[name] = ServerConnection(name, url, description)
+        logger.info(f"Added server: {name} at {url}")
+
+    def remove_server(self, name: str):
+        """Remove a server."""
+        if name in self.servers:
+            asyncio.create_task(self.servers[name].disconnect())
+            del self.servers[name]
+            logger.info(f"Removed server: {name}")
+
+    async def connect_to_servers(self) -> dict[str, bool]:
+        """Connect to all configured servers."""
+        logger.info(f"Connecting to {len(self.servers)} servers...")
+
+        # Connect to all servers concurrently
+        tasks = []
+        for server in self.servers.values():
+            tasks.append(server.connect())
+
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Build results dictionary
+        connection_results = {}
+        for server, result in zip(self.servers.values(), results, strict=False):
+            if isinstance(result, Exception):
+                connection_results[server.name] = False
+                logger.error(f"Exception connecting to {server.name}: {result}")
+            else:
+                connection_results[server.name] = bool(result)
+
+        successful = sum(1 for success in connection_results.values() if success)
+        logger.info(
+            f"Successfully connected to {successful}/{len(self.servers)} servers"
+        )
+
+        return connection_results
+
+    async def disconnect_from_servers(self):
+        """Disconnect from all servers."""
+        logger.info("Disconnecting from all servers...")
+
+        # Create list of disconnect tasks but handle them individually
+        # to avoid one failure affecting others
+        disconnection_tasks = []
+        for server in self.servers.values():
+            if server.is_connected:
+                disconnection_tasks.append(self._safe_disconnect(server))
+
+        if disconnection_tasks:
+            # Use gather with return_exceptions=True to handle errors gracefully
+            results = await asyncio.gather(*disconnection_tasks, return_exceptions=True)
+
+            # Log any errors that occurred during disconnection
+            for server_name, result in zip(
+                [s.name for s in self.servers.values() if s.is_connected], results
+            ):
+                if isinstance(result, Exception):
+                    logger.debug(f"Error disconnecting from {server_name}: {result}")
+
+    async def _safe_disconnect(self, server):
+        """Safely disconnect from a server with error handling."""
+        try:
+            await server.disconnect()
+        except Exception as e:
+            # Don't raise, just log for debugging
+            logger.debug(f"Safe disconnect error for {server.name}: {e}")
+            # Still mark as disconnected
+            server.is_connected = False
+
+    def get_connected_servers(self) -> list[str]:
+        """Get list of connected server names."""
+        return [name for name, server in self.servers.items() if server.is_connected]
+
+    def get_all_tools(self) -> dict[str, list[str]]:
+        """Get all available tools organized by server."""
+        tools_by_server = {}
+        for name, server in self.servers.items():
+            if server.is_connected:
+                tools_by_server[name] = server.tools
+        return tools_by_server
+
+    def find_tool_server(self, tool_name: str) -> str | None:
+        """Find which server has a specific tool."""
+        for name, server in self.servers.items():
+            if server.is_connected and tool_name in server.tools:
+                return name
+        return None
+
+    async def execute_tool(
+        self,
+        tool_name: str,
+        arguments: dict[str, Any] | None = None,
+        server_name: str | None = None,
+    ) -> dict[str, Any]:
+        """Execute a tool on the appropriate server."""
+        # If server is specified, use it
+        if server_name:
+            if server_name not in self.servers:
+                return {"error": f"Server '{server_name}' not found"}
+
+            if not self.servers[server_name].is_connected:
+                return {"error": f"Server '{server_name}' not connected"}
+
+            return await self.servers[server_name].call_tool(tool_name, arguments)
+
+        # Otherwise, find the server that has this tool
+        server_name = self.find_tool_server(tool_name)
+        if not server_name:
+            return {"error": f"Tool '{tool_name}' not found on any connected server"}
+
+        return await self.servers[server_name].call_tool(tool_name, arguments)
+
+    async def get_context_for_ai(self) -> dict[str, Any]:
+        """Get context about all connected servers for AI."""
+        context: dict[str, Any] = {
+            "connected_servers": {},
+            "available_tools": {},
+            "server_descriptions": {},
+        }
+
+        for name, server in self.servers.items():
+            if server.is_connected:
+                context["connected_servers"][name] = {
+                    "url": server.url,
+                    "tools": server.tools,
+                    "description": server.description,
+                }
+                context["available_tools"][name] = server.tools
+                context["server_descriptions"][name] = server.description
+
+        return context
+
+    async def chat_with_ai(self, message: str, include_context: bool = True) -> str:
+        """Chat with AI about the connected servers."""
+        # Build prompt with server context
+        if include_context:
+            context = await self.get_context_for_ai()
+
+            # Build tools description
+            tools_desc = []
+            for server_name, tools in context["available_tools"].items():
+                server_desc = context["server_descriptions"].get(server_name, "")
+                tools_desc.append(f"**{server_name}** ({server_desc}):")
+                for tool in tools:
+                    tools_desc.append(f"  - {tool}")
+
+            tools_description = "\n".join(tools_desc)
+
+            system_prompt = f"""You are an AI assistant that can control multiple creative applications through MCP servers.
+
+Connected Servers and Available Tools:
+{tools_description}
+
+IMPORTANT: When the user asks about server status, state, or wants to perform actions, you should use the available tools.
+
+When you want to use a tool, respond with ONLY JSON in this exact format (no extra text):
+{{"action": "tool_call", "tool": "tool_name", "server": "server_name", "arguments": {{"param": "value"}}}}
+
+TOOL PARAMETER SPECIFICATIONS:
+- get_server_status (mock server): no parameters {{}}
+- fetch_mock_data (mock server): {{"data_id": "string", "delay_seconds": number}}
+- execute_mock_action (mock server): {{"action_name": "string", "parameters": {{}}, "delay_seconds": number}}
+- get_state (blender server): no parameters {{}}
+- execute_command (blender server): {{"code_to_execute": "python_code_string"}}
+
+For Blender execute_command, provide actual Python code. Examples:
+- "add a cube" -> {{"code_to_execute": "import bpy\\nbpy.ops.mesh.primitive_cube_add(location=(0, 0, 0))"}}
+- "create tetrahedron" -> {{"code_to_execute": "import bpy\\n\\n# Create tetrahedron using icosphere with 0 subdivisions\\nbpy.ops.mesh.primitive_ico_sphere_add(subdivisions=0, location=(0, 0, 0))\\nbpy.context.active_object.name = 'Tetrahedron'"}}
+
+If the server name is not specified, I'll automatically find the right server for the tool.
+For conversational responses (when not using tools), respond normally with helpful information."""
+
+            full_message = f"{system_prompt}\n\nUser: {message}"
+        else:
+            full_message = message
+
+        # Make AI request
+        if self.ai_provider == "claude":
+            response = await self.ai_client.messages.create(
+                model="claude-3-5-sonnet-20241022",
+                max_tokens=4000,
+                messages=[{"role": "user", "content": full_message}],
+            )
+            return response.content[0].text
+
+        elif self.ai_provider == "openai":
+            response = await self.ai_client.chat.completions.create(
+                model="gpt-4o",
+                messages=[{"role": "user", "content": full_message}],
+                max_tokens=4000,
+            )
+            content = response.choices[0].message.content
+            return content if content is not None else ""
+
+        return ""  # Default return if no AI provider matches
+
+    async def process_ai_response(self, ai_response: str) -> str:
+        """Process AI response and execute tool calls if requested."""
+        logger.info(f"Processing AI response: {ai_response[:200]}...")
+
+        try:
+            # Try to parse as JSON (tool call)
+            response_data = json.loads(ai_response.strip())
+            logger.info(f"Successfully parsed JSON: {response_data}")
+
+            if response_data.get("action") == "tool_call":
+                tool_name = response_data.get("tool")
+                server_name = response_data.get("server")
+                arguments = response_data.get("arguments", {})
+
+                if not tool_name:
+                    return "Error: Tool name is required for tool calls"
+
+                logger.info(
+                    f"Executing tool: {tool_name} on server: {server_name or 'auto-detect'}"
+                )
+                result = await self.execute_tool(tool_name, arguments, server_name)
+
+                return f"Executed {tool_name}: {json.dumps(result, indent=2)}"
+            else:
+                logger.info(
+                    f"JSON parsed but no tool_call action found. Action was: {response_data.get('action', 'None')}"
+                )
+
+        except json.JSONDecodeError as e:
+            # Not a tool call, return as-is
+            logger.info(
+                f"AI response is not JSON (this is normal for conversational responses): {e}"
+            )
+
+            # Try to extract JSON from the response if it's embedded in text
+            json_match = self._extract_json_from_text(ai_response)
+            if json_match:
+                logger.info(f"Found embedded JSON in response: {json_match}")
+                try:
+                    response_data = json.loads(json_match)
+                    if response_data.get("action") == "tool_call":
+                        tool_name = response_data.get("tool")
+                        server_name = response_data.get("server")
+                        arguments = response_data.get("arguments", {})
+
+                        if tool_name:
+                            logger.info(f"Executing embedded tool: {tool_name}")
+                            result = await self.execute_tool(
+                                tool_name, arguments, server_name
+                            )
+                            return (
+                                f"Executed {tool_name}: {json.dumps(result, indent=2)}"
+                            )
+                except json.JSONDecodeError:
+                    logger.info("Embedded JSON was invalid")
+
+        return ai_response
+
+    def _extract_json_from_text(self, text: str) -> str | None:
+        """Try to extract JSON object from text that might contain explanations."""
+        import re
+
+        # Look for JSON objects in the text
+        json_pattern = r"\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}"
+        matches = re.findall(json_pattern, text)
+
+        for match in matches:
+            try:
+                # Test if it's valid JSON
+                parsed = json.loads(match)
+                if isinstance(parsed, dict) and parsed.get("action") == "tool_call":
+                    return match
+            except json.JSONDecodeError:
+                continue
+
+        return None
+
+    def get_server_status(self) -> dict[str, dict[str, Any]]:
+        """Get status of all servers."""
+        status = {}
+        for name, server in self.servers.items():
+            status[name] = {
+                "connected": server.is_connected,
+                "url": server.url,
+                "tools_count": len(server.tools),
+                "tools": server.tools,
+                "last_error": server.last_error,
+                "description": server.description,
+            }
+        return status
+
+
+# Convenience functions for common workflows
+async def create_multi_server_client_from_urls(
+    server_urls: dict[str, str], ai_provider: str = "claude", api_key: str | None = None
+) -> MultiServerAIClient:
+    """Create and connect a multi-server client from a dictionary of server URLs."""
+    client = MultiServerAIClient(ai_provider=ai_provider, api_key=api_key)
+
+    for name, url in server_urls.items():
+        client.add_server(name, url)
+
+    await client.connect_to_servers()
+    return client

@@ -1,0 +1,28 @@
+servers:
+- config:
+    blender_host: localhost
+    blender_port: 9876
+    type: blender
+  dependencies: []
+  description: Blender MCP Server for 3D modeling and animation
+  host: localhost
+  name: blender-server
+  path: /mcp
+  port: 8001
+  required_apps:
+  - Blender
+  transport: streamable-http
+  type: blender
+  version: 1.0.0
+- config:
+    type: mock
+  dependencies: []
+  description: Mock MCP Server for testing and development
+  host: localhost
+  name: mock-server
+  path: /mcp
+  port: 8002
+  required_apps: []
+  transport: streamable-http
+  type: mock
+  version: 1.0.0

@@ -1,0 +1,62 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+description: Security guidelines and best practices for MCP server development
+alwaysApply: true
+---
+
+# Security Guidelines
+
+## Input Validation
+- **Always validate inputs** from AI models before processing
+- **Sanitize file paths** to prevent directory traversal attacks
+- **Validate command parameters** before executing system operations
+- **Check parameter types and ranges** according to tool specifications
+
+## File System Operations
+- **Use appropriate permissions** for file operations
+- **Restrict file access** to designated directories only
+- **Validate file extensions** and MIME types when applicable
+- **Never execute user-provided file paths** directly
+
+## System Operations
+- **Be cautious with system-level operations** that could affect the host
+- **Use subprocess safely** with proper argument validation
+- **Limit resource usage** to prevent DoS attacks
+- **Implement timeouts** for long-running operations
+
+## Network Security
+- **Validate network endpoints** before making connections
+- **Use secure protocols** when possible (HTTPS, secure WebSocket)
+- **Implement rate limiting** for resource-intensive operations
+- **Log security-relevant operations** for audit trails
+
+## Error Handling
+- **Don't expose sensitive information** in error messages
+- **Use generic error messages** for security-sensitive failures
+- **Log detailed errors securely** without exposing them to clients
+- **Handle exceptions gracefully** to prevent information leakage
+
+## Example Secure Tool Implementation
+```python
+@mcp.tool()
+async def secure_file_operation(filepath: str) -> str:
+    """Securely operate on files with validation."""
+    # Validate input
+    if not filepath or not isinstance(filepath, str):
+        raise ValueError("Invalid filepath provided")
+    
+    # Sanitize path
+    safe_path = Path(filepath).resolve()
+    allowed_dir = Path("/allowed/directory").resolve()
+    
+    # Check if path is within allowed directory
+    if not str(safe_path).startswith(str(allowed_dir)):
+        raise ValueError("Access denied: path outside allowed directory")
+    
+    # Proceed with secure operation
+    return "Operation completed safely"
+```

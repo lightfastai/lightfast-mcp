@@ -39,7 +39,7 @@ Otherwise installation instructions are on their website: [Install uv](https://d
 
 ## Development
 
-For development setup and workflow information, please see our [Developer Guide](DEV.md).
+For development setup, workflow information, and Cursor IDE integration, please see our [Developer Guide](DEV.md).
 
 ## Documentation
 
@@ -58,3 +58,18 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 ## Disclaimer
 
 This is a community-driven project. The integrations provided are third-party and not officially made or endorsed by the respective software vendors.
+
+## Quick Start
+
+```bash
+# Install and setup
+uv pip install -e ".[dev]"
+uv run lightfast-mcp-manager init
+uv run lightfast-mcp-manager start
+
+# Run tests
+nox  # Fast feedback loop
+nox -s test_e2e  # End-to-end tests
+```
+
+For comprehensive development documentation, testing guide, and architecture details, see [DEV.md](DEV.md).

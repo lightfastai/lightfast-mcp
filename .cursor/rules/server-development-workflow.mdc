@@ -1,0 +1,69 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: Automated workflow for MCP server development with specific action steps
+globs: ["src/lightfast_mcp/servers/**/*.py"]
+alwaysApply: false
+---
+
+# Server Development Workflow
+
+When editing MCP server files, follow this workflow:
+
+## Immediate Actions After Code Changes
+
+1. **Run Fast Tests**: Execute `uv run python scripts/run_tests.py fast` to get immediate feedback
+2. **Lint Check**: Run `uv run task lint` to catch style issues
+3. **Format Code**: Run `uv run task format` to ensure consistent formatting
+
+## After Adding/Modifying Tools
+
+1. **Test the Tool**: Create a unit test for the new/modified tool
+2. **Validate Tool Description**: Ensure tool has clear docstring for AI consumption
+3. **Test Server Startup**: Run `uv run lightfast-{server}-server` to verify server starts
+4. **Test Tool Integration**: Use `uv run lightfast-mcp-manager ai` to test the tool interactively
+
+## Server File Validation Checklist
+
+When editing server implementation files:
+
+- [ ] Tool functions use `@mcp.tool()` decorator
+- [ ] Tool functions have proper type hints
+- [ ] Tool functions have descriptive docstrings
+- [ ] Error handling is implemented for all tools
+- [ ] Input validation is present for all parameters
+- [ ] Server inherits from `BaseServer`
+- [ ] Configuration follows `ServerConfig` pattern
+
+## Automatic Commands to Run
+
+```bash
+# After any server file edit
+uv run task lint && uv run task format
+uv run python scripts/run_tests.py fast
+
+# After adding new tools
+uv run pytest tests/unit/test_*server*.py -v
+uv run lightfast-mock-server &  # Test server startup
+sleep 2 && pkill -f lightfast-mock-server
+
+# Before committing
+nox -s test-3.13  # Full test suite for current Python version
+```
+
+## Integration Testing Steps
+
+1. **Start Test Server**: `uv run lightfast-{server}-server`
+2. **Verify MCP Tools**: Check tools appear in Cursor's available tools
+3. **Test Tool Execution**: Try calling tools through Cursor chat
+4. **Check Error Handling**: Test invalid inputs to ensure graceful failures
+
+## Performance Considerations
+
+- Monitor server startup time - should be under 5 seconds
+- Test tool response time - most tools should respond under 2 seconds
+- Check memory usage during tool execution
+- Verify proper cleanup after tool execution

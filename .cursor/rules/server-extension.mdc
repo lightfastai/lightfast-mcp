@@ -1,0 +1,67 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: Guidelines for adding new MCP servers and extending the lightfast-mcp project
+alwaysApply: false
+---
+
+# Server Extension Guide
+
+## Adding New MCP Servers
+
+### 1. Create Server Directory Structure
+```
+src/lightfast_mcp/servers/{app}/
+├── __init__.py
+├── server.py          # Main server implementation
+├── tools.py           # Tool implementations
+└── resources.py       # Resource implementations (optional)
+```
+
+### 2. Create Entry Point Script
+Create `src/lightfast_mcp/servers/{app}_mcp_server.py`:
+
+@src/lightfast_mcp/servers/mock_server.py
+
+Follow this template pattern, replacing `mock` with your application name.
+
+### 3. Add to pyproject.toml
+Add new script entry:
+```toml
+[project.scripts]
+lightfast-{app}-server = "lightfast_mcp.servers.{app}_mcp_server:main"
+```
+
+### 4. Update Server Registry
+Add the new server to the registry in `src/lightfast_mcp/core/server_registry.py`
+
+### 5. Add Configuration Support
+Update sample configurations to include the new server type
+
+## Server Implementation Pattern
+```python
+from ..core.base_server import BaseServer
+from fastmcp import mcp
+
+class {App}MCPServer(BaseServer):
+    """MCP server for {App} integration."""
+    
+    def __init__(self, config):
+        super().__init__(config)
+        self.setup_{app}_connection()
+    
+    @mcp.tool()
+    async def {app}_tool(self, param: str) -> str:
+        """Tool description for AI."""
+        # Implementation
+        return "result"
+```
+
+## Testing New Servers
+1. Create unit tests in `tests/unit/test_{app}_server.py`
+2. Add integration tests in `tests/integration/test_{app}_integration.py`
+3. Include E2E tests if the application supports automation
+4. Test both stdio and HTTP transports

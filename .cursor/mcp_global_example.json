@@ -1,0 +1,37 @@
+{
+  "_comment": "Example global MCP configuration for ~/.cursor/mcp.json",
+  "_description": "Copy this configuration to ~/.cursor/mcp.json to make lightfast-mcp servers available across all Cursor projects",
+  "_setup_instructions": [
+    "1. Install lightfast-mcp: git clone https://github.com/lightfastai/lightfast-mcp.git && cd lightfast-mcp && uv sync --extra dev",
+    "2. Update the 'workingDirectory' paths below to point to your lightfast-mcp installation",
+    "3. Copy this configuration to ~/.cursor/mcp.json",
+    "4. Start Blender (if using blender server) and ensure it's listening on the configured port",
+    "5. Restart Cursor to load the new MCP configuration"
+  ],
+  "mcpServers": {
+    "lightfast-blender-global": {
+      "command": "uv",
+      "args": [
+        "run", 
+        "lightfast-blender-server"
+      ],
+      "workingDirectory": "/Users/your-username/path/to/lightfast-mcp",
+      "env": {
+        "LIGHTFAST_MCP_LOG_LEVEL": "INFO",
+        "BLENDER_HOST": "localhost",
+        "BLENDER_PORT": "9876"
+      }
+    },
+    "lightfast-mock-global": {
+      "command": "uv",
+      "args": [
+        "run", 
+        "lightfast-mock-server"
+      ],
+      "workingDirectory": "/Users/your-username/path/to/lightfast-mcp",
+      "env": {
+        "LIGHTFAST_MCP_LOG_LEVEL": "INFO"
+      }
+    }
+  }
+} 
