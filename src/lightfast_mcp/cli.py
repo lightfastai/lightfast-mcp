@@ -357,6 +357,7 @@ Examples:
     # Set logging level
     if args.verbose:
         configure_logging(level="DEBUG")
+        print("🔍 Debug logging enabled")
 
     # Handle commands
     if args.command == "init":

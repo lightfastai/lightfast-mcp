@@ -277,17 +277,29 @@ class MultiServerAIClient:
 
             tools_description = "\n".join(tools_desc)
 
-            system_prompt = f"""You are an AI assistant that can control multiple creative applications through MCP \
-servers.
+            system_prompt = f"""You are an AI assistant that can control multiple creative applications through MCP servers.
 
 Connected Servers and Available Tools:
 {tools_description}
 
-When you want to use a tool, respond with JSON in this format:
+IMPORTANT: When the user asks about server status, state, or wants to perform actions, you should use the available tools.
+
+When you want to use a tool, respond with ONLY JSON in this exact format (no extra text):
 {{"action": "tool_call", "tool": "tool_name", "server": "server_name", "arguments": {{"param": "value"}}}}
 
+TOOL PARAMETER SPECIFICATIONS:
+- get_server_status (mock server): no parameters {{}}
+- fetch_mock_data (mock server): {{"data_id": "string", "delay_seconds": number}}
+- execute_mock_action (mock server): {{"action_name": "string", "parameters": {{}}, "delay_seconds": number}}
+- get_state (blender server): no parameters {{}}
+- execute_command (blender server): {{"code_to_execute": "python_code_string"}}
+
+For Blender execute_command, provide actual Python code. Examples:
+- "add a cube" -> {{"code_to_execute": "import bpy\\nbpy.ops.mesh.primitive_cube_add(location=(0, 0, 0))"}}
+- "create tetrahedron" -> {{"code_to_execute": "import bpy\\n\\n# Create tetrahedron using icosphere with 0 subdivisions\\nbpy.ops.mesh.primitive_ico_sphere_add(subdivisions=0, location=(0, 0, 0))\\nbpy.context.active_object.name = 'Tetrahedron'"}}
+
 If the server name is not specified, I'll automatically find the right server for the tool.
-Otherwise, respond normally with helpful information."""
+For conversational responses (when not using tools), respond normally with helpful information."""
 
             full_message = f"{system_prompt}\n\nUser: {message}"
         else:
@@ -315,9 +327,12 @@ Otherwise, respond normally with helpful information."""
 
     async def process_ai_response(self, ai_response: str) -> str:
         """Process AI response and execute tool calls if requested."""
+        logger.info(f"Processing AI response: {ai_response[:200]}...")
+
         try:
             # Try to parse as JSON (tool call)
             response_data = json.loads(ai_response.strip())
+            logger.info(f"Successfully parsed JSON: {response_data}")
 
             if response_data.get("action") == "tool_call":
                 tool_name = response_data.get("tool")
@@ -333,12 +348,59 @@ Otherwise, respond normally with helpful information."""
                 result = await self.execute_tool(tool_name, arguments, server_name)
 
                 return f"Executed {tool_name}: {json.dumps(result, indent=2)}"
+            else:
+                logger.info(
+                    f"JSON parsed but no tool_call action found. Action was: {response_data.get('action', 'None')}"
+                )
 
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
             # Not a tool call, return as-is
-            pass
+            logger.info(
+                f"AI response is not JSON (this is normal for conversational responses): {e}"
+            )
+
+            # Try to extract JSON from the response if it's embedded in text
+            json_match = self._extract_json_from_text(ai_response)
+            if json_match:
+                logger.info(f"Found embedded JSON in response: {json_match}")
+                try:
+                    response_data = json.loads(json_match)
+                    if response_data.get("action") == "tool_call":
+                        tool_name = response_data.get("tool")
+                        server_name = response_data.get("server")
+                        arguments = response_data.get("arguments", {})
+
+                        if tool_name:
+                            logger.info(f"Executing embedded tool: {tool_name}")
+                            result = await self.execute_tool(
+                                tool_name, arguments, server_name
+                            )
+                            return (
+                                f"Executed {tool_name}: {json.dumps(result, indent=2)}"
+                            )
+                except json.JSONDecodeError:
+                    logger.info("Embedded JSON was invalid")
 
         return ai_response
+
+    def _extract_json_from_text(self, text: str) -> str | None:
+        """Try to extract JSON object from text that might contain explanations."""
+        import re
+
+        # Look for JSON objects in the text
+        json_pattern = r"\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}"
+        matches = re.findall(json_pattern, text)
+
+        for match in matches:
+            try:
+                # Test if it's valid JSON
+                parsed = json.loads(match)
+                if isinstance(parsed, dict) and parsed.get("action") == "tool_call":
+                    return match
+            except json.JSONDecodeError:
+                continue
+
+        return None
 
     def get_server_status(self) -> dict[str, dict[str, Any]]:
         """Get status of all servers."""
