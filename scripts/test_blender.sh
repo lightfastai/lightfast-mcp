@@ -68,12 +68,14 @@ check_blender_running()
 
 run_tests() {
     echo -e "${BLUE}🧪 Running Blender MCP tests...${NC}"
-    python test_blender_simple.py
+    echo -e "${GREEN}Running connection demo...${NC}"
+    uv run python demo_ai_integration.py
 }
 
 run_interactive() {
     echo -e "${BLUE}🚀 Starting interactive Blender MCP client...${NC}"
-    python test_blender_simple.py --interactive
+    echo -e "${GREEN}Starting MCP Inspector CLI for interactive testing...${NC}"
+    run_inspector_cli
 }
 
 run_dev() {
