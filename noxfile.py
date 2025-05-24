@@ -44,6 +44,22 @@ def test_integration(session):
 
 
 @nox.session(python="3.13")
+def test_e2e(session):
+    """Run end-to-end tests with longer timeout."""
+    session.install("-e", ".[dev]")
+    session.install("pytest-timeout")
+    session.run("pytest", "tests/e2e/", "-v", "--timeout=30")
+
+
+@nox.session(python="3.13")
+def test_all(session):
+    """Run all test types: unit, integration, and E2E."""
+    session.install("-e", ".[dev]")
+    session.install("pytest-timeout")
+    session.run("pytest", "tests/", "-v", "--timeout=30")
+
+
+@nox.session(python="3.13")
 def test_coverage(session):
     """Run tests with coverage reporting."""
     session.install("-e", ".[dev]")

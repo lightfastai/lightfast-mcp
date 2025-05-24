@@ -289,25 +289,56 @@ AI can call tools with automatic routing:
 
 ## 🧪 Testing & Development
 
-### Test Structure
+### Test Organization
+
+We have a comprehensive, multi-tiered testing strategy:
+
 ```
 tests/
-├── unit/                    # Unit tests for individual components
+├── unit/          # Fast, isolated unit tests for individual components
 │   ├── test_base_server.py
 │   ├── test_server_registry.py
 │   ├── test_mock_server_tools.py
 │   └── test_modular_servers.py
-├── integration/             # Integration tests
+├── integration/   # Cross-component integration tests
 │   └── test_system_integration.py
-└── conftest.py              # Shared fixtures
+├── e2e/          # End-to-end system workflow tests
+│   ├── test_e2e_scenarios.py
+│   └── test_multi_server_workflows.py
+└── conftest.py   # Shared fixtures
 ```
 
 ### Running Tests
+
+#### Quick Development (Default)
+```bash
+# Fast feedback loop (lint + typecheck + unit/integration tests)
+nox
+
+# Or with UV for faster execution
+uv run pytest tests/unit/ tests/integration/ -v
+```
+
+#### Comprehensive Testing
+```bash
+# All test types including E2E
+nox -s test_all
+
+# Individual test categories
+nox -s test           # Unit + integration tests
+nox -s test_integration  # Integration tests only  
+nox -s test_e2e      # End-to-end tests only
+
+# With coverage
+nox -s test_coverage
+```
+
+#### Legacy Test Scripts
 ```bash
 # Quick verification
 uv run python scripts/test_working_system.py
 
-# Test categories
+# Test categories via custom runner
 uv run python scripts/run_tests.py fast         # Fast tests (< 1s each)
 uv run python scripts/run_tests.py slow         # Slow tests
 uv run python scripts/run_tests.py unit         # Unit tests only
@@ -318,6 +349,43 @@ uv run python scripts/run_tests.py coverage     # With coverage report
 uv run pytest tests/unit/test_mock_server_tools.py -v
 uv run pytest tests/ -k "test_health_check" -v
 ```
+
+### Continuous Integration
+
+Our GitHub Actions pipeline runs tests in stages:
+
+1. **Fast Checks** (< 2 minutes) - Linting, formatting, fast tests
+2. **Comprehensive Tests** - Full test suite across Python 3.10-3.13
+3. **Integration Tests** - CLI workflows, real system testing
+4. **E2E Tests** - Complete system lifecycle, multi-server coordination
+
+### Test Types Explained
+
+#### Unit Tests (`tests/unit/`)
+- **Purpose**: Test individual components in isolation
+- **Speed**: Very fast (< 10 seconds)  
+- **Scope**: Single classes/functions
+- **Mocking**: Heavy use of mocks for dependencies
+
+#### Integration Tests (`tests/integration/`)  
+- **Purpose**: Test component interactions
+- **Speed**: Fast (< 30 seconds)
+- **Scope**: Multiple components working together
+- **Mocking**: Minimal, focuses on real interactions
+
+#### End-to-End Tests (`tests/e2e/`)
+- **Purpose**: Test complete user workflows
+- **Speed**: Slower (1-3 minutes)
+- **Scope**: Full system from CLI to server coordination
+- **Mocking**: None - tests real system behavior
+
+### E2E Test Benefits
+
+✅ **Real System Testing** - Starts actual servers, tests real workflows  
+✅ **Timing Isolation** - Longer timeouts, separate CI job  
+✅ **Resource Management** - Dedicated resources for intensive tests  
+✅ **Failure Isolation** - E2E failures don't mask unit test results  
+✅ **Production Confidence** - Tests match real deployment scenarios
 
 ### Test Development
 ```python
@@ -444,12 +512,23 @@ uv run python scripts/test_working_system.py
 uv run lightfast-mcp-manager init
 uv run lightfast-mcp-manager start mock-server
 
-# 4. Make changes, test, iterate
-uv run task fix                     # Format & lint
-uv run task test_fast               # Quick tests
-uv run python scripts/run_tests.py coverage # Full test suite
+# 4. Development cycle
+# During development - fast feedback
+uv run pytest tests/unit/ -v --ff
 
-# 5. Test AI integration
+# Format & lint
+uv run task fix                     
+
+# Quick tests
+nox
+
+# Before committing - comprehensive check  
+nox -s test_all
+
+# 5. Before release - full CI simulation
+nox -s lint typecheck test_coverage test_e2e build
+
+# 6. Test AI integration
 export ANTHROPIC_API_KEY=your_key
 uv run lightfast-mcp-manager ai
 ```
