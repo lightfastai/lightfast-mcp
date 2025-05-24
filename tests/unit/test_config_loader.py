@@ -125,7 +125,7 @@ class TestConfigLoaderComprehensive:
 
             try:
                 loader = ConfigLoader(config_dir=config_dir)
-                result = loader.create_sample_config("test.yaml")
+                _result = loader.create_sample_config("test.yaml")
                 # Result might be True if mkdir worked, but write should fail
                 # The actual behavior depends on system permissions
             except Exception:

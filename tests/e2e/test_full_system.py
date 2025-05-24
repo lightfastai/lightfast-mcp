@@ -109,19 +109,16 @@ class TestFullSystemWorkflow:
 
     def test_cli_integration_workflow(self):
         """Test CLI integration workflow."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            config_dir = Path(temp_dir)
+        with patch("lightfast_mcp.cli.ConfigLoader") as mock_config_loader:
+            mock_loader = MagicMock()
+            mock_loader.create_sample_config.return_value = True
+            mock_config_loader.return_value = mock_loader
 
-            with patch("lightfast_mcp.cli.ConfigLoader") as mock_config_loader:
-                mock_loader = MagicMock()
-                mock_loader.create_sample_config.return_value = True
-                mock_config_loader.return_value = mock_loader
+            # Test init command
+            with patch("sys.argv", ["cli.py", "init"]):
+                cli_main()
 
-                # Test init command
-                with patch("sys.argv", ["cli.py", "init"]):
-                    cli_main()
-
-                mock_loader.create_sample_config.assert_called_once()
+            mock_loader.create_sample_config.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_ai_client_workflow_simulation(self):
@@ -302,7 +299,7 @@ class TestSystemIntegrationScenarios:
 
             # 2. Load and verify configuration
             configs = loader.load_servers_config()
-            initial_count = len(configs)
+            assert len(configs) >= 2  # Verify we have initial configs
 
             # 3. Test environment override
             env_config = {

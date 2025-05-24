@@ -116,7 +116,7 @@ class TestCLI:
         }
         mock_get_manager.return_value = mock_manager
 
-        with patch("builtins.print") as mock_print:
+        with patch("builtins.print"):
             with patch(
                 "lightfast_mcp.cli.KeyboardInterrupt", side_effect=KeyboardInterrupt
             ):
