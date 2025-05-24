@@ -7,14 +7,13 @@ requires-python = ">=3.10"
 authors = [
     {name = "Jeevan Pillay", email = "jp@lightfast.ai"}
 ]
-license = {text = "MIT"}
+license = "MIT"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
 dependencies = [
@@ -40,7 +39,7 @@ dev = [
 
 [project.scripts]
 # Main manager CLI
-lightfast-mcp-manager = "lightfast_mcp_manager:main"
+lightfast-mcp-manager = "lightfast_mcp.cli:main"
 
 # Individual server scripts  
 lightfast-mock-server = "lightfast_mcp.servers.mock_server:main"
