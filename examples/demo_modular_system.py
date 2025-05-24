@@ -261,9 +261,9 @@ async def main():
         print("   ✅ Health monitoring and cleanup")
 
         print("\n🚀 Next Steps:")
-        print("   1. Run: python lightfast_mcp_manager.py init")
-        print("   2. Run: python lightfast_mcp_manager.py start")
-        print("   3. Run: python lightfast_mcp_manager.py ai")
+        print("   1. Run: lightfast-mcp-manager init")
+        print("   2. Run: lightfast-mcp-manager start")
+        print("   3. Run: lightfast-mcp-manager ai")
         print("   4. Create your own server following DEV.md")
 
     except KeyboardInterrupt:

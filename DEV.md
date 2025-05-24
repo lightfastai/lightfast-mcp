@@ -20,14 +20,14 @@ source .venv/bin/activate  # macOS/Linux or .venv\Scripts\activate on Windows
 uv pip install -e ".[dev]"
 
 # 3. Initialize configuration
-uv run python lightfast_mcp_manager.py init
+uv run lightfast-mcp-manager init
 
 # 4. Start servers interactively
-uv run python lightfast_mcp_manager.py start
+uv run lightfast-mcp-manager start
 
 # 5. Connect AI client (set API key first)
 export ANTHROPIC_API_KEY=your_key_here
-uv run python lightfast_mcp_manager.py ai
+uv run lightfast-mcp-manager ai
 ```
 
 ## 📊 Commands & Usage
@@ -35,22 +35,22 @@ uv run python lightfast_mcp_manager.py ai
 ### Server Management
 ```bash
 # List all available servers and configurations
-uv run python lightfast_mcp_manager.py list
+uv run lightfast-mcp-manager list
 
 # Start specific servers by name
-uv run python lightfast_mcp_manager.py start blender-server mock-server
+uv run lightfast-mcp-manager start blender-server mock-server
 
 # Start servers with verbose logging
-uv run python lightfast_mcp_manager.py start --verbose
+uv run lightfast-mcp-manager start --verbose
 ```
 
 ### AI Integration
 ```bash
 # Start AI client (auto-discovers running servers)
-uv run python lightfast_mcp_manager.py ai
+uv run lightfast-mcp-manager ai
 
 # Use a specific AI provider
-AI_PROVIDER=openai uv run python lightfast_mcp_manager.py ai
+AI_PROVIDER=openai uv run lightfast-mcp-manager ai
 ```
 
 ### Development Tasks
@@ -441,8 +441,8 @@ uv pip install -e ".[dev]"
 uv run python scripts/test_working_system.py
 
 # 3. Start development server
-uv run python lightfast_mcp_manager.py init
-uv run python lightfast_mcp_manager.py start mock-server
+uv run lightfast-mcp-manager init
+uv run lightfast-mcp-manager start mock-server
 
 # 4. Make changes, test, iterate
 uv run task fix                     # Format & lint
@@ -451,16 +451,16 @@ uv run python scripts/run_tests.py coverage # Full test suite
 
 # 5. Test AI integration
 export ANTHROPIC_API_KEY=your_key
-uv run python lightfast_mcp_manager.py ai
+uv run lightfast-mcp-manager ai
 ```
 
 ### Multi-Application Creative Workflow
 ```bash
 # 1. Start multiple creative app servers
-uv run python lightfast_mcp_manager.py start blender-server touchdesigner-server
+uv run lightfast-mcp-manager start blender-server touchdesigner-server
 
 # 2. Connect AI to control both
-uv run python lightfast_mcp_manager.py ai
+uv run lightfast-mcp-manager ai
 
 # 3. AI can now coordinate between applications:
 # "Create a sphere in Blender and send its vertices to TouchDesigner"
@@ -482,8 +482,8 @@ print('Available servers:', registry.get_available_server_types())
 "
 
 # 4. Add configuration and test
-uv run python lightfast_mcp_manager.py list
-uv run python lightfast_mcp_manager.py start myapp-server
+uv run lightfast-mcp-manager list
+uv run lightfast-mcp-manager start myapp-server
 ```
 
 ## 🔍 Monitoring & Debugging
@@ -501,7 +501,7 @@ print(health_results)  # {"server-name": True/False, ...}
 ### Server Status
 ```bash
 # Check running servers
-uv run python lightfast_mcp_manager.py list
+uv run lightfast-mcp-manager list
 
 # Server URLs (when using HTTP transport)
 # 📡 Server URLs:
@@ -518,7 +518,7 @@ from lightfast_mcp.utils.logging_utils import configure_logging
 configure_logging(level="DEBUG")
 
 # Or via command line
-uv run python lightfast_mcp_manager.py start --verbose
+uv run lightfast-mcp-manager start --verbose
 ```
 
 ## 🚀 Benefits of Modular Architecture
@@ -554,9 +554,9 @@ python ai_blender_client.py
 ### New Modular Approach:
 ```bash
 # Unified management
-uv run python lightfast_mcp_manager.py init    # Create config
-uv run python lightfast_mcp_manager.py start   # Start servers
-uv run python lightfast_mcp_manager.py ai      # Connect AI
+uv run lightfast-mcp-manager init    # Create config
+uv run lightfast-mcp-manager start   # Start servers
+uv run lightfast-mcp-manager ai      # Connect AI
 ```
 
 The new system maintains backward compatibility while providing much more flexibility and power.
@@ -580,10 +580,10 @@ uv run python scripts/test_working_system.py
 
 # Development
 uv run task fix && uv run task test_fast
-uv run python lightfast_mcp_manager.py start
+uv run lightfast-mcp-manager start
 
 # AI integration
-export ANTHROPIC_API_KEY=key && uv run python lightfast_mcp_manager.py ai
+export ANTHROPIC_API_KEY=key && uv run lightfast-mcp-manager ai
 ```
 
 ### File Structure
@@ -601,7 +601,6 @@ lightfast-mcp/
 │   ├── test_blender.sh          # Blender testing utilities
 │   ├── run_tests.py             # Test runner
 │   └── test_working_system.py   # Quick verification
-├── lightfast_mcp_manager.py    # Main CLI
 ```
 
 This modular architecture scales from simple single-server setups to complex multi-application creative workflows, all managed through a unified interface with powerful AI integration. 

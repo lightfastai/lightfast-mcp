@@ -95,7 +95,7 @@ run_inspector_cli() {
 
 run_http_server() {
     echo -e "${BLUE}🌐 Starting Blender MCP HTTP server for AI APIs...${NC}"
-    echo -e "${YELLOW}Note: Use 'uv run python lightfast_mcp_manager.py start' for the new modular system${NC}"
+    echo -e "${YELLOW}Note: Use 'uv run lightfast-mcp-manager start' for the new modular system${NC}"
     # Legacy HTTP server functionality - consider using the manager instead
     uv run python -c "
 from lightfast_mcp.servers.blender.server import BlenderMCPServer

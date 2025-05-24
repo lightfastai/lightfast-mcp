@@ -95,11 +95,11 @@ jobs:
     - name: Test CLI commands
       run: |
         # Test main CLI functionality
-        uv run python lightfast_mcp_manager.py init
-        uv run python lightfast_mcp_manager.py list
+        uv run lightfast-mcp-manager init
+        uv run lightfast-mcp-manager list
         
         # Test manager workflow
-        timeout 30s uv run python lightfast_mcp_manager.py start mock-server --verbose &
+        timeout 30s uv run lightfast-mcp-manager start mock-server --verbose &
         MANAGER_PID=$!
         sleep 5  # Let server start
         kill $MANAGER_PID || true
@@ -228,5 +228,5 @@ jobs:
 
     - name: Test CLI on ${{ matrix.os }}
       run: |
-        uv run python lightfast_mcp_manager.py init
-        uv run python lightfast_mcp_manager.py list 
+        uv run lightfast-mcp-manager init
+        uv run lightfast-mcp-manager list 
