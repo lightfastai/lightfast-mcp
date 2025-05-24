@@ -128,6 +128,7 @@ class TestCLI:
                 except KeyboardInterrupt:
                     pass
 
+        # Check that start_multiple_servers was called with the expected arguments
         mock_manager.start_multiple_servers.assert_called_once()
 
     @patch("lightfast_mcp.cli.ConfigLoader")
@@ -228,7 +229,7 @@ class TestCLI:
             with patch("sys.argv", ["cli.py", "start", "server1", "server2"]):
                 main()
 
-        mock_start.assert_called_once_with(["server1", "server2"])
+        mock_start.assert_called_once_with(["server1", "server2"], show_logs=True)
 
     def test_main_ai_command(self):
         """Test main function with ai command."""
