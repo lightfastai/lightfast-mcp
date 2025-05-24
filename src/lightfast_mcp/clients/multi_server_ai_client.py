@@ -60,7 +60,7 @@ class ServerConnection:
                 self.is_connected = False
 
     async def call_tool(
-        self, tool_name: str, arguments: dict[str, Any] = None
+        self, tool_name: str, arguments: dict[str, Any] | None = None
     ) -> dict[str, Any]:
         """Call a tool on this server."""
         if not self.is_connected or not self.client:
@@ -72,7 +72,15 @@ class ServerConnection:
         try:
             result = await self.client.call_tool(tool_name, arguments or {})
             if result and len(result) > 0:
-                return json.loads(result[0].text)
+                # Handle different content types safely
+                content = result[0]
+                if hasattr(content, "text"):
+                    return json.loads(content.text)
+                else:
+                    # Handle other content types or return error
+                    return {
+                        "error": f"Unsupported content type: {type(content).__name__}"
+                    }
             return {"error": "No result returned"}
         except Exception as e:
             return {"error": f"Tool execution failed: {str(e)}"}
@@ -148,7 +156,7 @@ class MultiServerAIClient:
                 connection_results[server.name] = False
                 logger.error(f"Exception connecting to {server.name}: {result}")
             else:
-                connection_results[server.name] = result
+                connection_results[server.name] = bool(result)
 
         successful = sum(1 for success in connection_results.values() if success)
         logger.info(
@@ -191,7 +199,7 @@ class MultiServerAIClient:
     async def execute_tool(
         self,
         tool_name: str,
-        arguments: dict[str, Any] = None,
+        arguments: dict[str, Any] | None = None,
         server_name: str | None = None,
     ) -> dict[str, Any]:
         """Execute a tool on the appropriate server."""
@@ -214,7 +222,7 @@ class MultiServerAIClient:
 
     async def get_context_for_ai(self) -> dict[str, Any]:
         """Get context about all connected servers for AI."""
-        context = {
+        context: dict[str, Any] = {
             "connected_servers": {},
             "available_tools": {},
             "server_descriptions": {},
@@ -279,7 +287,10 @@ Otherwise, respond normally with helpful information."""
                 messages=[{"role": "user", "content": full_message}],
                 max_tokens=4000,
             )
-            return response.choices[0].message.content
+            content = response.choices[0].message.content
+            return content if content is not None else ""
+
+        return ""  # Default return if no AI provider matches
 
     async def process_ai_response(self, ai_response: str) -> str:
         """Process AI response and execute tool calls if requested."""

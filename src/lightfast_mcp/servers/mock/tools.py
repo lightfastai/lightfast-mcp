@@ -37,7 +37,10 @@ async def get_server_status(ctx: Context) -> dict[str, Any]:
         config_name = _current_server.config.name
         description = _current_server.config.description
         version = _current_server.SERVER_VERSION
-        tools_count = len(getattr(_current_server, "info", {}).tools or [])
+        server_info = getattr(_current_server, "info", None)
+        tools_count = len(
+            server_info.tools if server_info and hasattr(server_info, "tools") else []
+        )
     else:
         # Fallback for testing
         server_name = "test-mock"
@@ -63,7 +66,7 @@ async def get_server_status(ctx: Context) -> dict[str, Any]:
 
 
 async def fetch_mock_data(
-    ctx: Context, data_id: str, delay_seconds: float = None
+    ctx: Context, data_id: str, delay_seconds: float | None = None
 ) -> dict[str, Any]:
     """
     Fetches mock data associated with a given ID after a specified delay.
@@ -109,7 +112,7 @@ async def execute_mock_action(
     ctx: Context,
     action_name: str,
     parameters: dict[str, Any] | None = None,
-    delay_seconds: float = None,
+    delay_seconds: float | None = None,
 ) -> dict[str, Any]:
     """
     Simulates the execution of an action with given parameters after a specified delay.

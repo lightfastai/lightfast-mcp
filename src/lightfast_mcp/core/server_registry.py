@@ -39,6 +39,12 @@ class ServerRegistry:
         try:
             # Import the package
             package = importlib.import_module(package_name)
+
+            # Check if package has a file path
+            if package.__file__ is None:
+                logger.debug(f"Package {package_name} has no __file__ attribute")
+                return
+
             package_path = Path(package.__file__).parent
 
             # Iterate through all modules in the package

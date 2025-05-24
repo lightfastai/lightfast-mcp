@@ -72,6 +72,8 @@ class BlenderConnection:
 
         try:
             logger.info(f"Sending command to Blender: {command_type}")
+            if not self.sock:
+                raise BlenderConnectionError("Connection to Blender failed")
             self.sock.sendall(json.dumps(command).encode("utf-8"))
 
             # Receive response
