@@ -7,7 +7,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from lightfast_mcp.clients.multi_server_ai_client import MultiServerAIClient
+from lightfast_mcp.clients.multi_server_ai_client import (
+    ConversationState,
+    MultiServerAIClient,
+    Step,
+    ToolCall,
+    ToolResult,
+)
 from lightfast_mcp.clients.server_selector import ServerSelector
 from lightfast_mcp.core.base_server import ServerConfig
 
@@ -18,14 +24,16 @@ class TestMultiServerAIClient:
     def test_init_claude_provider(self):
         """Test initialization with Claude provider."""
         with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
-            client = MultiServerAIClient(ai_provider="claude")
+            client = MultiServerAIClient(ai_provider="claude", max_steps=5)
             assert client.ai_provider == "claude"
+            assert client.conversation_state.max_steps == 5
 
     def test_init_openai_provider(self):
         """Test initialization with OpenAI provider."""
         with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
-            client = MultiServerAIClient(ai_provider="openai")
+            client = MultiServerAIClient(ai_provider="openai", max_steps=3)
             assert client.ai_provider == "openai"
+            assert client.conversation_state.max_steps == 3
 
     def test_init_no_api_key(self):
         """Test initialization without API key raises ValueError."""
@@ -99,8 +107,8 @@ class TestMultiServerAIClient:
             assert tools["test-server"] == ["tool1", "tool2"]
 
     @pytest.mark.asyncio
-    async def test_execute_tool_success(self):
-        """Test successful tool execution."""
+    async def test_execute_tool_call_success(self):
+        """Test successful tool call execution."""
         with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
             client = MultiServerAIClient(ai_provider="claude")
             client.add_server("test-server", "http://localhost:8001/mcp")
@@ -110,65 +118,153 @@ class TestMultiServerAIClient:
             server_conn.is_connected = True
             server_conn.tools = ["test_tool"]
 
+            # Create a tool call
+            tool_call = ToolCall(
+                id="test_call_1",
+                tool_name="test_tool",
+                arguments={"param": "value"},
+                server_name="test-server",
+            )
+
             # Mock call_tool method
             with patch.object(
                 server_conn, "call_tool", new_callable=AsyncMock
             ) as mock_call:
                 mock_call.return_value = {"result": "success"}
 
-                result = await client.execute_tool(
-                    "test_tool", {"param": "value"}, "test-server"
-                )
+                result = await client.execute_tool_call(tool_call)
 
-                assert result == {"result": "success"}
+                assert isinstance(result, ToolResult)
+                assert result.result == {"result": "success"}
+                assert result.error is None
                 mock_call.assert_called_once_with("test_tool", {"param": "value"})
 
     @pytest.mark.asyncio
+    async def test_execute_tool_call_failure(self):
+        """Test tool call execution failure."""
+        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+            client = MultiServerAIClient(ai_provider="claude")
+            client.add_server("test-server", "http://localhost:8001/mcp")
+
+            # Mock server connection and client properly
+            server_conn = client.servers["test-server"]
+            server_conn.is_connected = True
+            server_conn.client = MagicMock()  # Mock the MCP client
+            server_conn.tools = [
+                "test_tool"
+            ]  # Available tools (missing the one we'll request)
+
+            # Create a tool call with nonexistent tool
+            tool_call = ToolCall(
+                id="test_call_1",
+                tool_name="nonexistent_tool",
+                arguments={},
+                server_name="test-server",
+            )
+
+            result = await client.execute_tool_call(tool_call)
+
+            assert isinstance(result, ToolResult)
+            assert result.error is not None
+            # The error should be about the tool not being available
+            assert "not available" in result.error
+            assert "nonexistent_tool" in result.error
+
+    @pytest.mark.asyncio
+    async def test_chat_with_steps(self):
+        """Test chat with steps functionality."""
+        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+            client = MultiServerAIClient(ai_provider="claude", max_steps=2)
+
+            # Mock the generate_with_steps method
+            mock_step1 = Step(
+                step_number=0, text="Step 1 response", finish_reason="continue"
+            )
+            mock_step2 = Step(
+                step_number=1, text="Step 2 response", finish_reason="stop"
+            )
+
+            async def mock_generate(message, include_context=True):
+                yield mock_step1
+                yield mock_step2
+
+            with patch.object(client, "generate_with_steps", side_effect=mock_generate):
+                steps = await client.chat_with_steps("Test message")
+
+                assert len(steps) == 2
+                assert steps[0].text == "Step 1 response"
+                assert steps[1].text == "Step 2 response"
+
+    @pytest.mark.asyncio
     @patch("anthropic.AsyncAnthropic")
-    async def test_chat_with_ai_claude(self, mock_anthropic):
-        """Test chat with Claude AI."""
-        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
-            # Mock Claude response
-            mock_client = MagicMock()
-            mock_message = MagicMock()
-            mock_message.content = [MagicMock(text="AI response")]
-            mock_client.messages.create = AsyncMock(return_value=mock_message)
-            mock_anthropic.return_value = mock_client
-
-            client = MultiServerAIClient(ai_provider="claude")
-            response = await client.chat_with_ai("Test message")
-
-            assert "AI response" in str(response)
-
-    @pytest.mark.asyncio
-    @patch("openai.AsyncOpenAI")
-    async def test_chat_with_ai_openai(self, mock_openai):
-        """Test chat with OpenAI."""
-        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
-            # Mock OpenAI response
-            mock_client = MagicMock()
-            mock_response = MagicMock()
-            mock_response.choices = [
-                MagicMock(message=MagicMock(content="AI response"))
-            ]
-            mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
-            mock_openai.return_value = mock_client
-
-            client = MultiServerAIClient(ai_provider="openai")
-            response = await client.chat_with_ai("Test message")
-
-            assert "AI response" in str(response)
-
-    @pytest.mark.asyncio
-    async def test_process_ai_response_no_tool_calls(self):
-        """Test processing AI response without tool calls."""
+    async def test_chat_with_ai_claude_legacy(self, mock_anthropic):
+        """Test legacy chat with Claude AI (backward compatibility)."""
         with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
             client = MultiServerAIClient(ai_provider="claude")
 
-            # Test with plain string response (not JSON)
-            result = await client.process_ai_response("Simple response")
+            # Mock chat_with_steps to return simple steps
+            mock_steps = [Step(step_number=0, text="AI response", finish_reason="stop")]
 
-            assert result == "Simple response"
+            with patch.object(
+                client, "chat_with_steps", new_callable=AsyncMock
+            ) as mock_chat:
+                mock_chat.return_value = mock_steps
+
+                response = await client.chat_with_ai("Test message")
+
+                assert "AI response" in response
+                mock_chat.assert_called_once()
+
+    def test_conversation_state(self):
+        """Test conversation state management."""
+        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+            client = MultiServerAIClient(ai_provider="claude", max_steps=3)
+
+            conv_state = client.get_conversation_state()
+            assert isinstance(conv_state, ConversationState)
+            assert conv_state.max_steps == 3
+            assert conv_state.current_step == 0
+            assert not conv_state.is_complete
+
+    def test_step_functionality(self):
+        """Test Step class functionality."""
+        step = Step(step_number=1)
+
+        # Test adding tool calls
+        tool_call = ToolCall(id="test_1", tool_name="test_tool", arguments={})
+        step.add_tool_call(tool_call)
+        assert len(step.tool_calls) == 1
+        assert step.tool_calls[0].id == "test_1"
+
+        # Test adding tool results
+        tool_result = ToolResult(
+            id="test_1", tool_name="test_tool", arguments={}, result="success"
+        )
+        step.add_tool_result(tool_result)
+        assert len(step.tool_results) == 1
+        assert step.tool_results[0].result == "success"
+
+        # Test pending tool calls
+        assert not step.has_pending_tool_calls()  # result matches call
+
+        # Add another call without result
+        tool_call2 = ToolCall(id="test_2", tool_name="test_tool2", arguments={})
+        step.add_tool_call(tool_call2)
+        assert step.has_pending_tool_calls()  # now has pending call
+
+    def test_tool_result_states(self):
+        """Test ToolResult state property."""
+        # Test CALL state (no result or error)
+        result = ToolResult(id="test", tool_name="test", arguments={})
+        assert result.state.value == "call"
+
+        # Test RESULT state
+        result.result = {"success": True}
+        assert result.state.value == "result"
+
+        # Test ERROR state
+        result.error = "Something went wrong"
+        assert result.state.value == "error"
 
     @pytest.mark.asyncio
     async def test_disconnect_from_servers(self):

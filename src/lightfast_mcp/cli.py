@@ -340,32 +340,61 @@ async def start_ai_client():
             try:
                 print("🤔 AI is thinking...")
 
-                # Use the new step-based approach
-                steps = await client.chat_with_steps(user_input, max_steps=max_steps)
+                # Set max_steps on the client before generating
+                client.conversation_state.max_steps = max_steps
 
-                print(f"🤖 AI Response ({len(steps)} steps):")
-                print("-" * 40)
+                # Use the streaming approach instead of waiting for all steps
+                step_count = 0
 
-                for step in steps:
-                    # Display step information
-                    _display_step_info(
-                        step.step_number, len(steps), step.tool_calls, step.tool_results
-                    )
+                async for step in client.generate_with_steps(user_input):
+                    step_count += 1
+
+                    print(f"\n📍 Step {step_count}")
+                    print("-" * 20)
+
+                    # Display tool calls as they happen
+                    if step.tool_calls:
+                        for tool_call in step.tool_calls:
+                            server_info = (
+                                f" on {tool_call.server_name}"
+                                if tool_call.server_name
+                                else ""
+                            )
+                            print(f"🔧 Calling {tool_call.tool_name}{server_info}")
+                            if tool_call.arguments:
+                                print(f"   Arguments: {tool_call.arguments}")
+
+                    # Display tool results
+                    if step.tool_results:
+                        for result in step.tool_results:
+                            if result.error:
+                                print(f"❌ {result.tool_name}: {result.error}")
+                            else:
+                                print(f"✅ {result.tool_name}: Success")
+                                if result.result:
+                                    # Show a preview of the result
+                                    result_str = str(result.result)
+                                    if len(result_str) > 150:
+                                        result_str = result_str[:150] + "..."
+                                    print(f"   Result: {result_str}")
 
                     # Display text response if any
                     if step.text:
-                        print(f"    💬 {step.text}")
+                        print(f"💬 {step.text}")
 
-                # Get conversation state for summary
+                    # Show completion status for final step
+                    if step.finish_reason == "stop":
+                        print("✅ Conversation completed")
+                        break
+
+                # Get final conversation state
                 conv_state = client.get_conversation_state()
 
-                # Show completion status
-                if conv_state.is_complete:
-                    print("  ✅ Conversation completed")
-                elif len(steps) >= max_steps:
-                    print(f"  ⚠️  Reached max steps ({max_steps})")
+                # Show final status
+                if conv_state.current_step >= max_steps:
+                    print(f"\n⚠️  Reached max steps ({max_steps})")
 
-                print()
+                print()  # Add spacing
 
             except Exception as e:
                 print(f"❌ Error: {e}\n")

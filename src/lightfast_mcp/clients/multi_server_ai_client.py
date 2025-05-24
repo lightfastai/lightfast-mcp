@@ -379,19 +379,36 @@ You can use the available tools to interact with the connected servers. When you
             # Build tools for Claude's native tool calling
             claude_tools = []
             for server_name, server in self.servers.items():
-                if server.is_connected:
-                    for tool_name in server.tools:
-                        claude_tools.append(
-                            {
-                                "name": tool_name,
-                                "description": f"Call {tool_name} on {server_name} server",
-                                "input_schema": {
+                if server.is_connected and server.client:
+                    try:
+                        # Get actual tool schemas from the MCP server
+                        tools_list = await server.client.list_tools()
+
+                        for tool in tools_list:
+                            # Convert MCP tool schema to Claude format
+                            claude_tool = {
+                                "name": tool.name,
+                                "description": tool.description
+                                or f"Call {tool.name} on {server_name} server",
+                            }
+
+                            # Use the tool's input schema directly
+                            if tool.inputSchema:
+                                claude_tool["input_schema"] = tool.inputSchema
+                            else:
+                                # Fallback for tools without schema
+                                claude_tool["input_schema"] = {
                                     "type": "object",
                                     "properties": {},
                                     "additionalProperties": True,
-                                },
-                            }
-                        )
+                                }
+
+                            claude_tools.append(claude_tool)
+
+                    except Exception as e:
+                        logger.error(f"Error getting tools from {server_name}: {e}")
+
+            logger.info(f"Built {len(claude_tools)} tools for Claude")
 
             response = await self.ai_client.messages.create(
                 model="claude-sonnet-4-20250514",
