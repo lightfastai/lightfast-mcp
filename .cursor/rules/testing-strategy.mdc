@@ -1,9 +1,4 @@
 ---
-description: 
-globs: 
-alwaysApply: false
----
----
 description: Automated testing workflow with specific actions when editing test files
 globs: ["tests/**/*.py", "**/test_*.py"]
 alwaysApply: false

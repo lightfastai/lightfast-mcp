@@ -1,9 +1,4 @@
 ---
-description: 
-globs: 
-alwaysApply: false
----
----
 description: Automated workflow for MCP server development with specific action steps
 globs: ["src/lightfast_mcp/servers/**/*.py"]
 alwaysApply: false

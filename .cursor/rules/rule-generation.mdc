@@ -1,9 +1,4 @@
 ---
-description: 
-globs: 
-alwaysApply: false
----
----
 description: Generate new Cursor rules based on discovered development patterns and workflows
 alwaysApply: false
 ---

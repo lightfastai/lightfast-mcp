@@ -1,9 +1,4 @@
 ---
-description: 
-globs: 
-alwaysApply: false
----
----
 description: Guidelines for adding new MCP servers and extending the lightfast-mcp project
 alwaysApply: false
 ---

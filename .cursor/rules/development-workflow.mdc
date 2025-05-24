@@ -1,9 +1,4 @@
 ---
-description: 
-globs: 
-alwaysApply: false
----
----
 description: Development workflow commands and tooling for lightfast-mcp
 alwaysApply: true
 ---

@@ -1,9 +1,4 @@
 ---
-description: 
-globs: 
-alwaysApply: false
----
----
 description: Pre-commit workflow ensuring comprehensive validation before committing changes
 alwaysApply: false
 ---

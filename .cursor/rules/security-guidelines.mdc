@@ -1,9 +1,4 @@
 ---
-description: 
-globs: 
-alwaysApply: true
----
----
 description: Security guidelines and best practices for MCP server development
 alwaysApply: true
 ---

@@ -1,9 +1,4 @@
 ---
-description: 
-globs: 
-alwaysApply: false
----
----
 description: Lightfast MCP project architecture, structure, and file organization patterns
 alwaysApply: true
 ---

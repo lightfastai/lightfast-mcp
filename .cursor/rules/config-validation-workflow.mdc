@@ -1,9 +1,4 @@
 ---
-description: 
-globs: 
-alwaysApply: false
----
----
 description: Configuration file validation workflow with automatic checks
 globs: ["config/**/*.yaml", "config/**/*.json", "*.yaml", "*.json", ".cursor/**/*.json"]
 alwaysApply: false

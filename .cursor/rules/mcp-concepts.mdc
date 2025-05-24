@@ -1,9 +1,4 @@
 ---
-description: 
-globs: 
-alwaysApply: false
----
----
 description: Core Model Context Protocol concepts and terminology for lightfast-mcp
 alwaysApply: true
 ---
