@@ -208,6 +208,35 @@ def start_servers_by_names(server_names: list[str], show_logs: bool = True):
             manager.shutdown_all()
 
 
+def _display_step_info(
+    step_num: int, total_steps: int, tool_calls: list, tool_results: list
+):
+    """Display information about a step."""
+    print(f"  📍 Step {step_num + 1}/{total_steps}")
+
+    if tool_calls:
+        for tool_call in tool_calls:
+            server_info = (
+                f" on {tool_call.server_name}" if tool_call.server_name else ""
+            )
+            print(f"    🔧 Calling {tool_call.tool_name}{server_info}")
+            if tool_call.arguments:
+                print(f"       Arguments: {tool_call.arguments}")
+
+    if tool_results:
+        for result in tool_results:
+            if result.error:
+                print(f"    ❌ {result.tool_name}: {result.error}")
+            else:
+                print(f"    ✅ {result.tool_name}: Success")
+                if result.result:
+                    # Show a preview of the result
+                    result_str = str(result.result)
+                    if len(result_str) > 100:
+                        result_str = result_str[:100] + "..."
+                    print(f"       Result: {result_str}")
+
+
 async def start_ai_client():
     """Start the AI client for multi-server interaction."""
     print("🤖 Lightfast MCP AI Client")
@@ -215,9 +244,10 @@ async def start_ai_client():
 
     # Check for API keys
     ai_provider = os.getenv("AI_PROVIDER", "claude").lower()
+    max_steps = int(os.getenv("MAX_STEPS", "5"))
 
     try:
-        client = MultiServerAIClient(ai_provider=ai_provider)
+        client = MultiServerAIClient(ai_provider=ai_provider, max_steps=max_steps)
     except ValueError as e:
         print(f"❌ {e}")
         print("   Set your API key in the environment:")
@@ -293,7 +323,7 @@ async def start_ai_client():
     for server_name, tools in tools_by_server.items():
         print(f"   {server_name}: {', '.join(tools)}")
 
-    print(f"\n🤖 AI Client ready! (Using {ai_provider.upper()})")
+    print(f"\n🤖 AI Client ready! (Using {ai_provider.upper()}, max {max_steps} steps)")
     print("Ask questions about your creative applications or request actions...")
     print("Type 'quit' to exit\n")
 
@@ -308,14 +338,34 @@ async def start_ai_client():
                 continue
 
             try:
-                # Get AI response
                 print("🤔 AI is thinking...")
-                ai_response = await client.chat_with_ai(user_input)
 
-                # Process any tool calls
-                final_response = await client.process_ai_response(ai_response)
+                # Use the new step-based approach
+                steps = await client.chat_with_steps(user_input, max_steps=max_steps)
 
-                print(f"🤖 AI: {final_response}\n")
+                print(f"🤖 AI Response ({len(steps)} steps):")
+                print("-" * 40)
+
+                for step in steps:
+                    # Display step information
+                    _display_step_info(
+                        step.step_number, len(steps), step.tool_calls, step.tool_results
+                    )
+
+                    # Display text response if any
+                    if step.text:
+                        print(f"    💬 {step.text}")
+
+                # Get conversation state for summary
+                conv_state = client.get_conversation_state()
+
+                # Show completion status
+                if conv_state.is_complete:
+                    print("  ✅ Conversation completed")
+                elif len(steps) >= max_steps:
+                    print(f"  ⚠️  Reached max steps ({max_steps})")
+
+                print()
 
             except Exception as e:
                 print(f"❌ Error: {e}\n")
@@ -341,6 +391,12 @@ Examples:
   lightfast-mcp-manager start --hide-logs           # Start servers without showing logs
   lightfast-mcp-manager start --verbose             # Start with debug logging and server logs
   lightfast-mcp-manager ai                          # Start AI client
+
+Environment Variables:
+  AI_PROVIDER=claude|openai                         # AI provider (default: claude)
+  MAX_STEPS=5                                       # Maximum conversation steps (default: 5)
+  ANTHROPIC_API_KEY=...                            # Required for Claude
+  OPENAI_API_KEY=...                               # Required for OpenAI
         """,
     )
 
