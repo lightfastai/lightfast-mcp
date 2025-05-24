@@ -51,7 +51,7 @@ uv run lightfast-mock-server &  # Test server startup
 sleep 2 && pkill -f lightfast-mock-server
 
 # Before committing
-nox -s test-3-13  # Full test suite for current Python version
+nox -s test-3.13  # Full test suite for current Python version
 ```
 
 ## Integration Testing Steps

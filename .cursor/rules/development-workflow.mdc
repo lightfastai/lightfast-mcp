@@ -52,7 +52,7 @@ nox
 
 # Specific test types
 nox -s test_e2e          # End-to-end tests
-nox -s test-3-13         # Python 3.13 tests
+nox -s test-3.13         # Python 3.13 tests
 nox -s typecheck         # MyPy type checking
 ```
 

@@ -108,7 +108,7 @@ async def test_{function_name}_failure():
 ## Before Committing Tests
 ```bash
 # Run the full test suite
-nox -s test-3-13
+nox -s test-3.13
 
 # Check test coverage
 uv run python scripts/run_tests.py coverage
