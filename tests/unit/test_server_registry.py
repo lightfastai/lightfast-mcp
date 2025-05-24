@@ -10,7 +10,7 @@ from lightfast_mcp.core.base_server import BaseServer, ServerConfig
 from lightfast_mcp.core.server_registry import ServerRegistry, get_registry
 
 
-class TestServerA(BaseServer):
+class MockServerA(BaseServer):
     """Test server class A for registry testing."""
 
     SERVER_TYPE = "test_a"
@@ -21,7 +21,7 @@ class TestServerA(BaseServer):
         self.info.tools = ["test_tool_a"]
 
 
-class TestServerB(BaseServer):
+class MockServerB(BaseServer):
     """Test server class B for registry testing."""
 
     SERVER_TYPE = "test_b"
@@ -53,20 +53,20 @@ class TestServerRegistry:
         """Test registering a server class manually."""
         registry = ServerRegistry()
 
-        registry.register_server_class("test_a", TestServerA)
+        registry.register_server_class("test_a", MockServerA)
 
         assert "test_a" in registry._server_classes
-        assert registry._server_classes["test_a"] == TestServerA
+        assert registry._server_classes["test_a"] == MockServerA
 
     def test_register_duplicate_server_type(self):
         """Test that registering duplicate server types is allowed (overwrites)."""
         registry = ServerRegistry()
 
-        registry.register_server_class("duplicate", TestServerA)
-        registry.register_server_class("duplicate", TestServerB)
+        registry.register_server_class("duplicate", MockServerA)
+        registry.register_server_class("duplicate", MockServerB)
 
         # Should overwrite with the second registration
-        assert registry._server_classes["duplicate"] == TestServerB
+        assert registry._server_classes["duplicate"] == MockServerB
 
     def test_register_invalid_server_class(self):
         """Test registering an invalid server class."""
@@ -92,7 +92,7 @@ class TestServerRegistry:
     def test_create_server_success(self):
         """Test successfully creating a server."""
         registry = ServerRegistry()
-        registry.register_server_class("test_a", TestServerA)
+        registry.register_server_class("test_a", MockServerA)
 
         config = ServerConfig(
             name="test", description="Test server", config={"type": "test_a"}
@@ -100,7 +100,7 @@ class TestServerRegistry:
 
         server = registry.create_server("test_a", config)
 
-        assert isinstance(server, TestServerA)
+        assert isinstance(server, MockServerA)
         assert server.config == config
         assert "test" in registry._server_instances
 
@@ -118,19 +118,19 @@ class TestServerRegistry:
     def test_get_server_info(self):
         """Test getting server information for all types."""
         registry = ServerRegistry()
-        registry.register_server_class("test_a", TestServerA)
+        registry.register_server_class("test_a", MockServerA)
 
         info = registry.get_server_info()
 
         assert isinstance(info, dict)
         assert "test_a" in info
-        assert info["test_a"]["class_name"] == "TestServerA"
+        assert info["test_a"]["class_name"] == "MockServerA"
         assert info["test_a"]["version"] == "1.0.0"
 
     def test_get_server_instance(self):
         """Test getting a server instance by name."""
         registry = ServerRegistry()
-        registry.register_server_class("test_a", TestServerA)
+        registry.register_server_class("test_a", MockServerA)
 
         config = ServerConfig(
             name="test-instance", description="Test server", config={"type": "test_a"}
@@ -152,7 +152,7 @@ class TestServerRegistry:
     def test_remove_server_instance(self):
         """Test removing a server instance."""
         registry = ServerRegistry()
-        registry.register_server_class("test_a", TestServerA)
+        registry.register_server_class("test_a", MockServerA)
 
         config = ServerConfig(
             name="test-instance", description="Test server", config={"type": "test_a"}
@@ -179,7 +179,7 @@ class TestServerRegistry:
     def test_validate_server_config_success(self):
         """Test successful server configuration validation."""
         registry = ServerRegistry()
-        registry.register_server_class("test_a", TestServerA)
+        registry.register_server_class("test_a", MockServerA)
 
         config = ServerConfig(
             name="test", description="Test server", config={"type": "test_a"}
@@ -206,7 +206,7 @@ class TestServerRegistry:
     def test_validate_server_config_missing_name(self):
         """Test validation with missing server name."""
         registry = ServerRegistry()
-        registry.register_server_class("test_a", TestServerA)
+        registry.register_server_class("test_a", MockServerA)
 
         config = ServerConfig(
             name="", description="Test server", config={"type": "test_a"}
@@ -220,7 +220,7 @@ class TestServerRegistry:
     def test_validate_server_config_port_conflict(self):
         """Test validation with port conflict."""
         registry = ServerRegistry()
-        registry.register_server_class("test_a", TestServerA)
+        registry.register_server_class("test_a", MockServerA)
 
         # Create first server with HTTP transport
         config1 = ServerConfig(
