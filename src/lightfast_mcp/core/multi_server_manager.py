@@ -55,7 +55,10 @@ class MultiServerManager:
             logger.debug("Could not setup signal handlers")
 
     def start_server(
-        self, server_config: ServerConfig, background: bool = False
+        self,
+        server_config: ServerConfig,
+        background: bool = False,
+        show_logs: bool = True,
     ) -> bool:
         """Start a single server."""
         if server_config.name in self._running_servers:
@@ -76,7 +79,9 @@ class MultiServerManager:
 
             # For HTTP transports, use subprocess to avoid asyncio conflicts
             if server_config.transport in ["http", "streamable-http"]:
-                success = self._start_server_subprocess(server_config, background)
+                success = self._start_server_subprocess(
+                    server_config, background, show_logs
+                )
             else:
                 # For stdio transport, use the traditional approach
                 success = self._start_server_traditional(server_config, background)
@@ -92,7 +97,7 @@ class MultiServerManager:
             return False
 
     def _start_server_subprocess(
-        self, server_config: ServerConfig, background: bool
+        self, server_config: ServerConfig, background: bool, show_logs: bool = True
     ) -> bool:
         """Start a server using subprocess (for HTTP transports)."""
         try:
@@ -125,11 +130,13 @@ class MultiServerManager:
             )
 
             # Start the subprocess
+            # Only capture logs if background=True AND show_logs=False
+            capture_logs = background and not show_logs
             process = subprocess.Popen(
                 ["python", "-m", script_module],
                 env=env,
-                stdout=subprocess.PIPE if background else None,
-                stderr=subprocess.PIPE if background else None,
+                stdout=subprocess.PIPE if capture_logs else None,
+                stderr=subprocess.PIPE if capture_logs else None,
                 text=True,
             )
 
@@ -268,12 +275,15 @@ class MultiServerManager:
         if self.stop_server(server_name):
             # Start it again
             time.sleep(1)  # Brief delay
-            return self.start_server(config, background)
+            return self.start_server(config, background, show_logs=True)
 
         return False
 
     def start_multiple_servers(
-        self, server_configs: list[ServerConfig], background: bool = True
+        self,
+        server_configs: list[ServerConfig],
+        background: bool = True,
+        show_logs: bool = True,
     ) -> dict[str, bool]:
         """Start multiple servers."""
         results = {}
@@ -281,7 +291,7 @@ class MultiServerManager:
         logger.info(f"Starting {len(server_configs)} servers...")
 
         for config in server_configs:
-            results[config.name] = self.start_server(config, background)
+            results[config.name] = self.start_server(config, background, show_logs)
             # Add a small delay between server starts to avoid port conflicts
             time.sleep(1.0)  # Increased delay for subprocess startup
 

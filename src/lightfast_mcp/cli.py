@@ -79,7 +79,7 @@ def list_available_servers():
         print()
 
 
-def start_servers_interactive():
+def start_servers_interactive(show_logs: bool = True):
     """Start servers with interactive selection."""
     print("🚀 Lightfast MCP Multi-Server Manager")
     print("=" * 50)
@@ -126,7 +126,9 @@ def start_servers_interactive():
     print(f"\n🚀 Starting {len(selected_configs)} servers...")
     print("   This may take a few moments as servers initialize...")
 
-    results = manager.start_multiple_servers(selected_configs, background=True)
+    results = manager.start_multiple_servers(
+        selected_configs, background=True, show_logs=show_logs
+    )
 
     # Show results
     successful = sum(1 for success in results.values() if success)
@@ -160,7 +162,7 @@ def start_servers_interactive():
             print("👋 All servers stopped. Goodbye!")
 
 
-def start_servers_by_names(server_names: list[str]):
+def start_servers_by_names(server_names: list[str], show_logs: bool = True):
     """Start specific servers by name."""
     config_loader = ConfigLoader()
     all_configs = config_loader.load_servers_config()
@@ -184,7 +186,9 @@ def start_servers_by_names(server_names: list[str]):
 
     # Start servers
     manager = get_manager()
-    results = manager.start_multiple_servers(selected_configs, background=True)
+    results = manager.start_multiple_servers(
+        selected_configs, background=True, show_logs=show_logs
+    )
 
     # Show results
     successful = sum(1 for success in results.values() if success)
@@ -330,11 +334,13 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  lightfast-mcp-manager init                    # Create sample configuration
-  lightfast-mcp-manager list                    # List available servers
-  lightfast-mcp-manager start                   # Interactive server selection
-  lightfast-mcp-manager start blender-server    # Start specific server
-  lightfast-mcp-manager ai                      # Start AI client
+  lightfast-mcp-manager init                        # Create sample configuration
+  lightfast-mcp-manager list                        # List available servers
+  lightfast-mcp-manager start                       # Interactive server selection
+  lightfast-mcp-manager start blender-server        # Start specific server
+  lightfast-mcp-manager start --hide-logs           # Start servers without showing logs
+  lightfast-mcp-manager start --verbose             # Start with debug logging and server logs
+  lightfast-mcp-manager ai                          # Start AI client
         """,
     )
 
@@ -352,12 +358,28 @@ Examples:
         "--verbose", "-v", action="store_true", help="Enable verbose logging"
     )
 
+    parser.add_argument(
+        "--show-logs",
+        action="store_true",
+        default=True,
+        help="Show server logs in terminal (default: True)",
+    )
+
+    parser.add_argument(
+        "--hide-logs", action="store_true", help="Hide server logs from terminal"
+    )
+
     args = parser.parse_args()
 
     # Set logging level
     if args.verbose:
         configure_logging(level="DEBUG")
         print("🔍 Debug logging enabled")
+
+    # Determine log visibility (--hide-logs takes precedence)
+    show_logs = not args.hide_logs if args.hide_logs else args.show_logs
+    if args.verbose:
+        print(f"📊 Server logs visibility: {'Enabled' if show_logs else 'Disabled'}")
 
     # Handle commands
     if args.command == "init":
@@ -368,9 +390,9 @@ Examples:
 
     elif args.command == "start":
         if args.servers:
-            start_servers_by_names(args.servers)
+            start_servers_by_names(args.servers, show_logs=show_logs)
         else:
-            start_servers_interactive()
+            start_servers_interactive(show_logs=show_logs)
 
     elif args.command == "ai":
         asyncio.run(start_ai_client())
