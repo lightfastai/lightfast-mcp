@@ -260,7 +260,7 @@ async def main():
         print("   1. Run: python lightfast_mcp_manager.py init")
         print("   2. Run: python lightfast_mcp_manager.py start")
         print("   3. Run: python lightfast_mcp_manager.py ai")
-        print("   4. Create your own server following README_MODULAR.md")
+        print("   4. Create your own server following DEV.md")
 
     except KeyboardInterrupt:
         print("\n👋 Demo interrupted. Cleaning up...")
