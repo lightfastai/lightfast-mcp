@@ -30,13 +30,13 @@ jobs:
 
     - name: Check for outdated dependencies
       run: |
-        uv pip list --outdated
+        uv sync --extra dev
         echo "Consider updating dependencies if major versions are available"
 
     - name: Test with latest dependencies
       run: |
         # Install with latest compatible versions
-        uv pip install -e ".[dev]" --upgrade
+        uv sync --extra dev --upgrade
         uv run python scripts/test_working_system.py
         uv run python scripts/run_tests.py fast
 
