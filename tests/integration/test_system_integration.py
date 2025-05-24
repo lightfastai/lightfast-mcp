@@ -48,6 +48,8 @@ class TestSystemIntegration:
                 from lightfast_mcp.servers.mock.server import MockMCPServer
 
                 mock_server = MockMCPServer(config)
+                # Set the server as running for the test
+                mock_server.info.is_running = True
 
                 mock_validate.return_value = (True, "Valid configuration")
                 mock_create.return_value = mock_server

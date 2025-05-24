@@ -323,6 +323,8 @@ class TestMultiServerManager:
             config={"type": "mock_test"},
         )
         server = MockTestServer(config)
+        # Set the server as running
+        server.info.is_running = True
         from lightfast_mcp.core.multi_server_manager import ServerProcess
 
         manager._running_servers["running-check"] = ServerProcess(server=server)
