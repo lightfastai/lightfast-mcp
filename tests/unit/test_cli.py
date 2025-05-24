@@ -46,7 +46,7 @@ class TestCLI:
 
         mock_print.assert_any_call("❌ Failed to create sample configuration")
 
-    @patch("lightfast_mcp.cli.get_registry")
+    @patch("lightfast_mcp.core.server_registry.get_registry")
     @patch("lightfast_mcp.cli.ConfigLoader")
     def test_list_available_servers(self, mock_config_loader, mock_get_registry):
         """Test listing available servers."""
@@ -178,14 +178,14 @@ class TestCLI:
         assert any("API key" in str(call) for call in mock_print.call_args_list)
 
     @pytest.mark.asyncio
-    @patch("lightfast_mcp.cli.socket")
+    @patch("socket.socket")
     @patch("lightfast_mcp.cli.MultiServerAIClient")
     async def test_start_ai_client_no_servers(self, mock_client_class, mock_socket):
         """Test AI client start with no running servers."""
         # Mock socket to simulate no servers running
         mock_sock = MagicMock()
         mock_sock.connect_ex.return_value = 1  # Connection failed
-        mock_socket.socket.return_value = mock_sock
+        mock_socket.return_value = mock_sock
 
         mock_client = MagicMock()
         mock_client_class.return_value = mock_client

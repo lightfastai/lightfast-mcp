@@ -131,8 +131,10 @@ class TestFullSystemWorkflow:
             client.add_server("test-server", "http://localhost:8001/mcp", "Test server")
             assert "test-server" in client.servers
 
-            # Test tool listing
-            client.servers["test-server"]["tools"] = ["test_tool"]
+            # Test tool listing - need to mock the server connection properly
+            server_conn = client.servers["test-server"]
+            server_conn.is_connected = True
+            server_conn.tools = ["test_tool"]
             tools = client.get_all_tools()
             assert "test-server" in tools
             assert tools["test-server"] == ["test_tool"]
@@ -306,6 +308,7 @@ class TestSystemIntegrationScenarios:
         # 1. Try to start server with conflicting port
         config1 = ServerConfig(
             name="conflict-server-1",
+            description="Conflict test server 1",
             port=8094,
             transport="streamable-http",
             config={"type": "mock"},
@@ -313,6 +316,7 @@ class TestSystemIntegrationScenarios:
 
         config2 = ServerConfig(
             name="conflict-server-2",
+            description="Conflict test server 2",
             port=8094,  # Same port
             transport="streamable-http",
             config={"type": "mock"},
@@ -345,6 +349,7 @@ class TestSystemPerformance:
         # Measure server startup time
         config = ServerConfig(
             name="perf-test-server",
+            description="Performance test server",
             port=8093,
             transport="streamable-http",
             config={"type": "mock", "delay_seconds": 0.01},
@@ -370,6 +375,7 @@ class TestSystemPerformance:
             configs.append(
                 ServerConfig(
                     name=f"concurrent-server-{i}",
+                    description=f"Concurrent test server {i}",
                     port=8090 + i,
                     transport="streamable-http",
                     config={"type": "mock", "delay_seconds": 0.01},
