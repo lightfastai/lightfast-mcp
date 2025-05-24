@@ -106,9 +106,9 @@ fix = "uv run ruff check . --fix && uv run ruff format ."
 mock_server = "uv run python -m lightfast_mcp.servers.mock_server"
 blender_server = "uv run python -m lightfast_mcp.servers.blender_mcp_server"
 test = "uv run pytest"
-test_fast = "uv run python run_tests.py fast"
-test_coverage = "uv run python run_tests.py coverage"
-demo = "uv run python test_working_system.py"
+test_fast = "uv run python scripts/run_tests.py fast"
+test_coverage = "uv run python scripts/run_tests.py coverage"
+demo = "uv run python scripts/test_working_system.py"
 
 [dependency-groups]
 dev = [

@@ -56,10 +56,10 @@ AI_PROVIDER=openai uv run python lightfast_mcp_manager.py ai
 ### Development Tasks
 ```bash
 # Testing
-uv run python run_tests.py              # All tests
-uv run python run_tests.py fast         # Fast tests only
-uv run python run_tests.py coverage     # With coverage
-uv run python test_working_system.py    # Quick system verification
+uv run python scripts/run_tests.py              # All tests
+uv run python scripts/run_tests.py fast         # Fast tests only
+uv run python scripts/run_tests.py coverage     # With coverage
+uv run python scripts/test_working_system.py    # Quick system verification
 
 # Code quality
 uv run ruff check .                      # Lint
@@ -305,14 +305,14 @@ tests/
 ### Running Tests
 ```bash
 # Quick verification
-uv run python test_working_system.py
+uv run python scripts/test_working_system.py
 
 # Test categories
-uv run python run_tests.py fast         # Fast tests (< 1s each)
-uv run python run_tests.py slow         # Slow tests
-uv run python run_tests.py unit         # Unit tests only
-uv run python run_tests.py integration  # Integration tests only
-uv run python run_tests.py coverage     # With coverage report
+uv run python scripts/run_tests.py fast         # Fast tests (< 1s each)
+uv run python scripts/run_tests.py slow         # Slow tests
+uv run python scripts/run_tests.py unit         # Unit tests only
+uv run python scripts/run_tests.py integration  # Integration tests only
+uv run python scripts/run_tests.py coverage     # With coverage report
 
 # Direct pytest usage
 uv run pytest tests/unit/test_mock_server_tools.py -v
@@ -401,11 +401,31 @@ select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM"]
 # List available sessions
 uv run nox --list
 
-# Run specific sessions
-uv run nox -s lint                  # Linting
-uv run nox -s typecheck             # Type checking
-uv run nox -s test                  # Tests
-uv run nox -s build                 # Build package
+# Core development sessions
+uv run nox -s lint                  # Linting with ruff
+uv run nox -s typecheck             # Type checking with mypy
+uv run nox -s test_fast             # Fast tests via scripts/run_tests.py
+uv run nox -s verify_system         # System verification
+
+# Testing across Python versions
+uv run nox -s test-3.10             # Tests on Python 3.10
+uv run nox -s test-3.11             # Tests on Python 3.11
+uv run nox -s test-3.12             # Tests on Python 3.12
+uv run nox -s test-3.13             # Tests on Python 3.13
+
+# Specialized testing
+uv run nox -s test_integration      # Integration tests
+uv run nox -s test_coverage         # Coverage reporting
+uv run nox -s cli_test              # CLI functionality testing
+
+# Package and security
+uv run nox -s build                 # Build and verify package
+uv run nox -s security              # Security scanning
+uv run nox -s format                # Format code
+
+# Utility sessions
+uv run nox -s demo                  # Run system demo
+uv run nox -s dev                   # Setup dev environment
 ```
 
 ## 📊 Example Workflows
@@ -418,7 +438,7 @@ uv venv && source .venv/bin/activate
 uv pip install -e ".[dev]"
 
 # 2. Verify setup
-uv run python test_working_system.py
+uv run python scripts/test_working_system.py
 
 # 3. Start development server
 uv run python lightfast_mcp_manager.py init
@@ -427,7 +447,7 @@ uv run python lightfast_mcp_manager.py start mock-server
 # 4. Make changes, test, iterate
 uv run task fix                     # Format & lint
 uv run task test_fast               # Quick tests
-uv run python run_tests.py coverage # Full test suite
+uv run python scripts/run_tests.py coverage # Full test suite
 
 # 5. Test AI integration
 export ANTHROPIC_API_KEY=your_key
@@ -556,7 +576,7 @@ The new system maintains backward compatibility while providing much more flexib
 ```bash
 # Setup & verification
 uv pip install -e ".[dev]"
-uv run python test_working_system.py
+uv run python scripts/test_working_system.py
 
 # Development
 uv run task fix && uv run task test_fast
@@ -578,9 +598,10 @@ lightfast-mcp/
 ├── examples/                   # Examples & demos
 ├── config/                     # Configuration
 ├── scripts/                    # Utility scripts
+│   ├── test_blender.sh          # Blender testing utilities
+│   ├── run_tests.py             # Test runner
+│   └── test_working_system.py   # Quick verification
 ├── lightfast_mcp_manager.py    # Main CLI
-├── run_tests.py               # Test runner
-└── test_working_system.py     # Quick verification
 ```
 
 This modular architecture scales from simple single-server setups to complex multi-application creative workflows, all managed through a unified interface with powerful AI integration. 

@@ -6,45 +6,100 @@ nox.options.sessions = ["lint", "typecheck", "test"]
 PYTHON_VERSIONS = ["3.10", "3.11", "3.12", "3.13"]
 
 
-@nox.session(python="3.12")  # Only use one version for linting
+@nox.session(python="3.13")  # Use latest Python for linting
 def lint(session):
     """Run linting with ruff."""
     session.install("ruff")
-    session.run("ruff", "check", "src", "tests")
-    session.run("ruff", "format", "--check", "src", "tests")
+    session.run("ruff", "check", ".")
+    session.run("ruff", "format", "--check", ".")
 
 
-@nox.session(python="3.12")  # Only use one version for type checking
+@nox.session(python="3.13")  # Use latest Python for type checking
 def typecheck(session):
     """Run type checking with mypy."""
-    session.install("mypy")
-    session.install("-e", ".")
+    session.install("mypy", "types-PyYAML")
+    session.install("-e", ".[dev]")
     session.run("mypy", "src")
 
 
 @nox.session(python=PYTHON_VERSIONS)
 def test(session):
-    """Run tests with pytest."""
-    session.install("pytest", "pytest-asyncio")
+    """Run comprehensive tests with pytest."""
     session.install("-e", ".[dev]")
-    session.run("pytest", "tests")
+    session.run("pytest", "tests", "-v")
 
 
-@nox.session(python="3.12")  # Only use one version for building
+@nox.session(python="3.13")
+def test_fast(session):
+    """Run fast tests using custom test runner."""
+    session.install("-e", ".[dev]")
+    session.run("python", "scripts/run_tests.py", "fast")
+
+
+@nox.session(python="3.13")
+def test_integration(session):
+    """Run integration tests."""
+    session.install("-e", ".[dev]")
+    session.run("python", "scripts/run_tests.py", "integration")
+
+
+@nox.session(python="3.13")
+def test_coverage(session):
+    """Run tests with coverage reporting."""
+    session.install("-e", ".[dev]")
+    session.run("python", "scripts/run_tests.py", "coverage")
+
+
+@nox.session(python="3.13")
+def verify_system(session):
+    """Run system verification test."""
+    session.install("-e", ".[dev]")
+    session.run("python", "scripts/test_working_system.py")
+
+
+@nox.session(python="3.13")
 def build(session):
     """Build the package."""
-    session.install("build")
+    session.install("build", "twine")
     session.run("python", "-m", "build")
+    session.run("twine", "check", "dist/*")
 
 
-@nox.session(python="3.12")  # Only use one version for formatting
+@nox.session(python="3.13")
 def format(session):
     """Format code with ruff."""
     session.install("ruff")
-    session.run("ruff", "format", "src", "tests")
+    session.run("ruff", "format", ".")
+
+
+@nox.session(python="3.13")
+def security(session):
+    """Run security scanning."""
+    session.install("bandit[toml]", "safety")
+    session.run("bandit", "-r", "src/", "-f", "json", "-o", "bandit-report.json", success_codes=[0, 1])
+    # Safety output options: 'screen', 'text', 'json', 'bare', 'html'
+    session.run("safety", "check", "--output", "json", success_codes=[0, 1])
 
 
 @nox.session(python=PYTHON_VERSIONS)
 def dev(session):
     """Set up a development environment."""
     session.install("-e", ".[dev]")
+    session.notify("verify_system")
+
+
+@nox.session(python="3.13")
+def demo(session):
+    """Run the system demo."""
+    session.install("-e", ".[dev]")
+    session.run("python", "scripts/test_working_system.py")
+
+
+@nox.session(python="3.13")
+def cli_test(session):
+    """Test CLI functionality."""
+    session.install("-e", ".[dev]")
+    # Test basic CLI commands
+    session.run("python", "lightfast_mcp_manager.py", "--help")
+    session.run("python", "lightfast_mcp_manager.py", "init")
+    session.run("python", "lightfast_mcp_manager.py", "list")
