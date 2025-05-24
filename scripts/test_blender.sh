@@ -69,7 +69,7 @@ check_blender_running()
 run_tests() {
     echo -e "${BLUE}🧪 Running Blender MCP tests...${NC}"
     echo -e "${GREEN}Running connection demo...${NC}"
-    uv run python demo_ai_integration.py
+    uv run python examples/demo_ai_integration.py
 }
 
 run_interactive() {
@@ -95,7 +95,28 @@ run_inspector_cli() {
 
 run_http_server() {
     echo -e "${BLUE}🌐 Starting Blender MCP HTTP server for AI APIs...${NC}"
-    uv run python run_blender_http.py
+    echo -e "${YELLOW}Note: Use 'uv run python lightfast_mcp_manager.py start' for the new modular system${NC}"
+    # Legacy HTTP server functionality - consider using the manager instead
+    uv run python -c "
+from lightfast_mcp.servers.blender.server import BlenderMCPServer
+from lightfast_mcp.core.base_server import ServerConfig
+
+config = ServerConfig(
+    name='BlenderMCP-HTTP',
+    description='Blender MCP server for AI integration',
+    host='127.0.0.1',
+    port=8000,
+    transport='streamable-http',
+    path='/mcp',
+    config={'type': 'blender'}
+)
+
+server = BlenderMCPServer(config)
+print('🚀 Starting Blender MCP server as HTTP service...')
+print('📡 Server will be available at: http://localhost:8000/mcp')
+print('🔧 Make sure Blender is running with the addon active!')
+server.run()
+"
 }
 
 run_ai_client() {
@@ -106,8 +127,9 @@ run_ai_client() {
         echo "# Then edit .env with your actual API keys"
         return 1
     fi
-    echo -e "${GREEN}Using official SDKs (anthropic/openai)${NC}"
-    uv run python ai_blender_client.py
+    echo -e "${GREEN}Using multi-server AI client (recommended)${NC}"
+    echo -e "${YELLOW}Note: Using examples/ai_blender_client.py for single-server demo${NC}"
+    uv run python examples/ai_blender_client.py
 }
 
 
