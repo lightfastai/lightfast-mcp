@@ -20,7 +20,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: "3.12" # Use a single version for linting
+        python-version: "3.13" # Use a single version for linting
 
     - name: Install nox
       run: |
@@ -67,7 +67,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: "3.12" # Use a single version for building
+        python-version: "3.13" # Use a single version for building
 
     - name: Install nox
       run: |
