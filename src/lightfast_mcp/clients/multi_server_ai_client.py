@@ -504,7 +504,7 @@ You can use the available tools to interact with the connected servers. When you
             return "No connected servers or tools available."
 
         tools_desc = []
-        tools_by_server = {}
+        tools_by_server: dict[str, list[mcp_types.Tool]] = {}
 
         # Group tools by server
         for tool_name, (mcp_tool, server_name) in self.tools.items():
@@ -571,16 +571,15 @@ You can use the available tools to interact with the connected servers. When you
 
                     # Add tool use blocks
                     for tc in step.tool_calls:
-                        content_blocks.append(
-                            {
-                                "type": "tool_use",
-                                "id": tc.id,
-                                "name": tc.tool_name,
-                                "input": tc.arguments,
-                            }
-                        )
+                        tool_use_block: dict[str, Any] = {
+                            "type": "tool_use",
+                            "id": tc.id,
+                            "name": tc.tool_name,
+                            "input": tc.arguments,
+                        }
+                        content_blocks.append(tool_use_block)
 
-                    assistant_message = {
+                    assistant_message: dict[str, Any] = {
                         "role": "assistant",
                         "content": content_blocks,
                     }
@@ -705,7 +704,7 @@ You can use the available tools to interact with the connected servers. When you
 
     def get_all_tools(self) -> dict[str, list[str]]:
         """Get all available tools organized by server."""
-        tools_by_server = {}
+        tools_by_server: dict[str, list[str]] = {}
         for tool_name, (mcp_tool, server_name) in self.tools.items():
             if server_name not in tools_by_server:
                 tools_by_server[server_name] = []
