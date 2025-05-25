@@ -185,9 +185,7 @@ class TestCLI:
 
     def test_main_start_command_no_servers(self):
         """Test main function with start command and no server names."""
-        with patch(
-            "internal.management.cli.start_servers_interactive"
-        ) as mock_start:
+        with patch("internal.management.cli.start_servers_interactive") as mock_start:
             with patch("sys.argv", ["cli.py", "start"]):
                 main()
 
@@ -231,9 +229,7 @@ class TestCLIIntegration:
             with patch("sys.argv", ["cli.py"] + args):
                 with patch("internal.management.cli.create_sample_config"):
                     with patch("internal.management.cli.list_available_servers"):
-                        with patch(
-                            "internal.management.cli.start_servers_interactive"
-                        ):
+                        with patch("internal.management.cli.start_servers_interactive"):
                             with patch(
                                 "internal.management.cli.start_servers_by_names"
                             ):
