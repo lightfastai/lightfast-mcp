@@ -13,6 +13,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from lightfast_mcp.cli import main as cli_main
+from lightfast_mcp.clients.multi_server_ai_client import MultiServerAIClient
 from lightfast_mcp.core import ConfigLoader, get_manager, get_registry
 from lightfast_mcp.core.base_server import ServerConfig
 
@@ -120,32 +121,17 @@ class TestFullSystemWorkflow:
 
             mock_loader.create_sample_config.assert_called_once()
 
-    @pytest.mark.asyncio
+    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
     async def test_ai_client_workflow_simulation(self):
-        """Test AI client workflow simulation."""
-        # This test simulates the AI client workflow without requiring API keys
-        from lightfast_mcp.clients.multi_server_ai_client import MultiServerAIClient
-
-        # Test client initialization without API key (should fail)
+        """Test AI client workflow integration with mock environment."""
+        # Test AI client initialization with no API key should fail gracefully
         with patch.dict(os.environ, {}, clear=True):
             with pytest.raises(ValueError):
-                MultiServerAIClient(ai_provider="claude")
+                MultiServerAIClient(servers={}, ai_provider="claude")
 
-        # Test client with mock API key
-        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
-            client = MultiServerAIClient(ai_provider="claude")
-
-            # Add mock server
-            client.add_server("test-server", "http://localhost:8001/mcp", "Test server")
-            assert "test-server" in client.servers
-
-            # Test tool listing - need to mock the server connection properly
-            server_conn = client.servers["test-server"]
-            server_conn.is_connected = True
-            server_conn.tools = ["test_tool"]
-            tools = client.get_all_tools()
-            assert "test-server" in tools
-            assert tools["test-server"] == ["test_tool"]
+        # Test successful initialization
+        client = MultiServerAIClient(servers={}, ai_provider="claude")
+        assert client.ai_provider == "claude"
 
     def test_error_handling_workflows(self):
         """Test error handling in various workflows."""

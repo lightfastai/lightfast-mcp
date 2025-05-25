@@ -296,3 +296,53 @@ def load_config_from_env() -> list[ServerConfig]:
             logger.error(f"Error parsing environment configuration: {e}")
 
     return configs
+
+
+def load_server_configs(
+    config_path: str | Path | None = None,
+) -> dict[str, dict[str, Any]]:
+    """Convenience function to load server configs in the format expected by MultiServerAIClient."""
+    # If config_path is provided and starts with 'config/', treat it as relative to project root
+    if config_path and str(config_path).startswith("config/"):
+        # Don't create a ConfigLoader with config_dir, let it be relative to current directory
+        loader = ConfigLoader(config_dir=Path.cwd())
+        server_configs = loader.load_servers_config(config_path)
+    else:
+        # Use default behavior
+        loader = ConfigLoader()
+        server_configs = loader.load_servers_config(config_path)
+
+    # Convert ServerConfig objects to dictionary format expected by MultiServerAIClient
+    servers = {}
+    for config in server_configs:
+        server_dict = {
+            "name": config.name,
+            "version": config.version,
+            "type": config.transport,  # Use transport type for connection
+            "host": config.host,
+            "port": config.port,
+            "path": config.path,
+        }
+
+        # For stdio transport, we need command and args
+        if config.transport == "stdio":
+            # Try to get from config, otherwise use defaults
+            server_dict["command"] = config.config.get(
+                "command", f"lightfast-{config.name.replace('-', '_')}"
+            )
+            server_dict["args"] = config.config.get("args", [])
+        elif config.transport in ["sse", "streamable-http"]:
+            # For HTTP-based transports, construct URL
+            server_dict["url"] = f"http://{config.host}:{config.port}{config.path}"
+            # Map streamable-http to sse for MCP client
+            if config.transport == "streamable-http":
+                server_dict["type"] = "sse"
+
+        # Add any additional config (but don't override the type we set above)
+        for key, value in config.config.items():
+            if key != "type":  # Don't override the transport type
+                server_dict[key] = value
+
+        servers[config.name] = server_dict
+
+    return servers
