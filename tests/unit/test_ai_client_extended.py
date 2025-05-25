@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from lightfast_mcp.clients.multi_server_ai_client import (
+from internal.clients.multi_server_ai_client import (
     MultiServerAIClient,
     ToolCall,
     ToolCallState,

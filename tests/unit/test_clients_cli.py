@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from typer.testing import CliRunner
 
-from lightfast_mcp.clients.cli import app, async_chat, async_test, print_step_info
-from lightfast_mcp.clients.multi_server_ai_client import Step, ToolCall, ToolResult
+from internal.clients.cli import app, async_chat, async_test, print_step_info
+from internal.clients.multi_server_ai_client import Step, ToolCall, ToolResult
 
 
 class TestClientsCLI:
@@ -16,8 +16,8 @@ class TestClientsCLI:
         """Set up test fixtures."""
         self.runner = CliRunner()
 
-    @patch("lightfast_mcp.clients.cli.load_server_configs")
-    @patch("lightfast_mcp.clients.cli.create_multi_server_client_from_config")
+    @patch("internal.clients.cli.load_server_configs")
+    @patch("internal.clients.cli.create_multi_server_client_from_config")
     def test_chat_command_no_servers(self, mock_create_client, mock_load_configs):
         """Test chat command when no servers are configured."""
         mock_load_configs.return_value = {}
@@ -28,8 +28,8 @@ class TestClientsCLI:
         mock_load_configs.assert_called_once()
         mock_create_client.assert_not_called()
 
-    @patch("lightfast_mcp.clients.cli.load_server_configs")
-    @patch("lightfast_mcp.clients.cli.create_multi_server_client_from_config")
+    @patch("internal.clients.cli.load_server_configs")
+    @patch("internal.clients.cli.create_multi_server_client_from_config")
     def test_test_command_no_servers(self, mock_create_client, mock_load_configs):
         """Test test command when no servers are configured."""
         mock_load_configs.return_value = {}
@@ -100,8 +100,8 @@ class TestClientsCLI:
         capsys.readouterr()  # Clear captured output
 
     @pytest.mark.asyncio
-    @patch("lightfast_mcp.clients.cli.load_server_configs")
-    @patch("lightfast_mcp.clients.cli.create_multi_server_client_from_config")
+    @patch("internal.clients.cli.load_server_configs")
+    @patch("internal.clients.cli.create_multi_server_client_from_config")
     async def test_async_chat_with_servers(self, mock_create_client, mock_load_configs):
         """Test async chat with configured servers."""
         # Mock server configs
@@ -115,7 +115,7 @@ class TestClientsCLI:
         mock_create_client.return_value = mock_client
 
         # Mock input to exit immediately
-        with patch("lightfast_mcp.clients.cli.console.input", return_value="quit"):
+        with patch("internal.clients.cli.console.input", return_value="quit"):
             await async_chat("config.yaml", "claude", 5, None)
 
         mock_load_configs.assert_called_once_with("config.yaml")
@@ -123,8 +123,8 @@ class TestClientsCLI:
         mock_client.disconnect_from_servers.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch("lightfast_mcp.clients.cli.load_server_configs")
-    @patch("lightfast_mcp.clients.cli.create_multi_server_client_from_config")
+    @patch("internal.clients.cli.load_server_configs")
+    @patch("internal.clients.cli.create_multi_server_client_from_config")
     async def test_async_test_with_servers(self, mock_create_client, mock_load_configs):
         """Test async test with configured servers."""
         # Mock server configs
@@ -148,7 +148,7 @@ class TestClientsCLI:
         mock_client.disconnect_from_servers.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch("lightfast_mcp.clients.cli.load_server_configs")
+    @patch("internal.clients.cli.load_server_configs")
     async def test_async_chat_no_servers(self, mock_load_configs):
         """Test async chat with no servers configured."""
         mock_load_configs.return_value = {}
@@ -158,7 +158,7 @@ class TestClientsCLI:
         mock_load_configs.assert_called_once_with("config.yaml")
 
     @pytest.mark.asyncio
-    @patch("lightfast_mcp.clients.cli.load_server_configs")
+    @patch("internal.clients.cli.load_server_configs")
     async def test_async_test_no_servers(self, mock_load_configs):
         """Test async test with no servers configured."""
         mock_load_configs.return_value = {}

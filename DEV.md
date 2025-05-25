@@ -73,7 +73,31 @@ uv run python -m lightfast_mcp.servers.blender_mcp_server
 
 ## 🏗️ Architecture Overview
 
-### Core Components
+Lightfast MCP is designed with **strict separation of concerns** to emphasize that the core value is in the **MCP server implementations**, while management and AI client features are optional conveniences.
+
+### 🎯 Core Value: MCP Server Implementations
+
+The primary purpose of this repository is to provide production-ready MCP server implementations for creative applications.
+
+#### Core Components (Always Available)
+
+```
+src/lightfast_mcp/
+├── core/                      # 🎯 Core MCP infrastructure
+│   └── base_server.py         # BaseServer, ServerConfig, ServerInfo
+├── servers/                   # 🎯 MCP server implementations  
+│   ├── blender/              # Blender MCP server
+│   ├── mock/                 # Mock MCP server for testing
+│   └── {future_apps}/        # Future server implementations
+└── utils/                     # 🎯 Shared utilities
+    └── logging_utils.py       # Logging infrastructure
+```
+
+**Dependencies**: Only `fastmcp` and `rich` (for logging)
+
+**Entry Points**:
+- `lightfast-blender-server` - Direct Blender MCP server
+- `lightfast-mock-server` - Direct Mock MCP server
 
 #### **BaseServer** (`src/lightfast_mcp/core/base_server.py`)
 Common interface for all MCP servers with:
@@ -82,21 +106,47 @@ Common interface for all MCP servers with:
 - Health checks and monitoring
 - Standardized tool registration
 
-#### **ServerRegistry** (`src/lightfast_mcp/core/server_registry.py`)  
+### 🔧 Internal Tools (Separate Package)
+
+All management and AI client features are completely separated into the `internal` package for maximum separation of concerns.
+
+#### Internal Package Structure
+
+```
+src/internal/
+├── management/                # Multi-server management
+│   ├── multi_server_manager.py   # Run multiple servers
+│   ├── server_registry.py        # Auto-discover servers
+│   ├── config_loader.py          # YAML/JSON configuration
+│   ├── server_selector.py        # Interactive server selection
+│   └── cli.py                    # Management CLI
+├── clients/                   # AI client tools
+│   ├── multi_server_ai_client.py # Connect to multiple servers
+│   └── cli.py                    # AI client CLI
+└── __init__.py                # Internal package exports
+```
+
+**Additional Dependencies**: `pyyaml`, `anthropic`, `openai`, `typer`
+
+**Entry Points**:
+- `lightfast-mcp-manager` - Multi-server management CLI
+- `lightfast-mcp-ai` - AI client CLI
+
+#### **ServerRegistry** (`src/internal/management/server_registry.py`)  
 Auto-discovery and management system:
 - Discovers available server classes automatically
 - Manages server type registration
 - Validates configurations
 - Creates server instances
 
-#### **MultiServerManager** (`src/lightfast_mcp/core/multi_server_manager.py`)
+#### **MultiServerManager** (`src/internal/management/multi_server_manager.py`)
 Multi-server orchestration:
 - Manages multiple server instances
 - Handles concurrent startup/shutdown
 - Provides health monitoring
 - Background execution support
 
-#### **MultiServerAIClient** (`src/lightfast_mcp/clients/multi_server_ai_client.py`)
+#### **MultiServerAIClient** (`src/internal/clients/multi_server_ai_client.py`)
 AI integration layer:
 - Connects to multiple MCP servers simultaneously
 - Routes AI tool calls to appropriate servers
@@ -117,6 +167,110 @@ src/lightfast_mcp/servers/
     ├── tools.py        # Tool implementations
     └── __init__.py
 ```
+
+### Installation Options
+
+#### 🎯 Core Only (Recommended for Production)
+```bash
+pip install lightfast-mcp
+# Only installs: fastmcp, rich
+# Available: lightfast-blender-server, lightfast-mock-server
+```
+
+#### 🔧 With Internal Tools
+```bash
+pip install lightfast-mcp[internal]
+# Adds: pyyaml, anthropic, openai, typer
+# Available: lightfast-mcp-manager, lightfast-mcp-ai
+```
+
+#### 🔧 Everything
+```bash
+pip install lightfast-mcp[all]
+# All features available
+```
+
+### Usage Patterns
+
+#### 🎯 Primary: Individual MCP Servers
+
+```bash
+# Direct server usage (core functionality)
+lightfast-blender-server     # Start Blender MCP server
+lightfast-mock-server        # Start Mock MCP server
+
+# Use with any MCP client (Claude Desktop, etc.)
+```
+
+#### 🔧 Secondary: Internal Tools
+
+```bash
+# Optional convenience for development/testing
+lightfast-mcp-manager init   # Create configuration
+lightfast-mcp-manager start  # Start multiple servers
+
+# Optional tool for testing servers
+lightfast-mcp-ai chat        # Interactive AI chat
+lightfast-mcp-ai test        # Quick testing
+```
+
+### Design Principles
+
+1. **Core First**: MCP server implementations are the primary value
+2. **Optional Convenience**: Management and AI features are helpful but not essential
+3. **Minimal Dependencies**: Core functionality has minimal dependencies
+4. **Graceful Degradation**: Features gracefully unavailable if dependencies missing
+5. **Clear Entry Points**: Each component has clear, purpose-specific entry points
+
+### Architecture Changes: Strict Separation of Concerns
+
+#### Key Changes Made
+
+**Package Restructuring:**
+
+**Before:**
+```
+src/lightfast_mcp/
+├── core/                    # Core infrastructure
+├── servers/                 # MCP server implementations
+├── management/              # Multi-server management
+├── clients/                 # AI client tools
+└── utils/                   # Shared utilities
+```
+
+**After:**
+```
+src/lightfast_mcp/          # 🎯 PURE MCP SERVERS
+├── core/                    # Core infrastructure
+├── servers/                 # MCP server implementations
+└── utils/                   # Shared utilities
+
+src/internal/                # 🔧 INTERNAL TOOLS
+├── management/              # Multi-server management
+├── clients/                 # AI client tools
+└── __init__.py              # Internal package exports
+```
+
+**Import Path Changes:**
+
+**Before:**
+```python
+from lightfast_mcp.management import ConfigLoader, get_manager
+from lightfast_mcp.clients import MultiServerAIClient
+```
+
+**After:**
+```python
+from internal.management import ConfigLoader, get_manager
+from internal.clients import MultiServerAIClient
+```
+
+**Benefits Achieved:**
+
+1. **Clearer Value Proposition**: Core package is obviously about MCP servers
+2. **Better Dependency Management**: Core servers have minimal dependencies
+3. **Improved Developer Experience**: Users can install just what they need
+4. **Maintainability**: Clear boundaries between core and optional features
 
 ## 📝 Configuration
 
@@ -252,7 +406,7 @@ servers:
 
 ### Multi-Server AI Client Usage
 ```python
-from lightfast_mcp.clients import MultiServerAIClient
+from internal.clients import MultiServerAIClient
 
 # Setup
 client = MultiServerAIClient(ai_provider="claude")

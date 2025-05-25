@@ -1,7 +1,7 @@
 [project]
 name = "lightfast-mcp"
 version = "0.0.1"
-description = "Lightfast integration through the Model Context Protocol"
+description = "MCP server implementations for creative applications (Blender, etc.)"
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [
@@ -16,15 +16,31 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Operating System :: OS Independent",
 ]
+
+# 🎯 CORE: Only dependencies needed for MCP server implementations
 dependencies = [
     "fastmcp>=2.0.0",
-    "rich",
-    "anthropic",
-    "openai",
-    "pyyaml",  # For YAML configuration support
+    "rich",  # For logging and CLI output
 ]
 
 [project.optional-dependencies]
+# 🔧 INTERNAL: Internal tools (management + AI client)
+internal = [
+    "pyyaml",  # For YAML configuration support
+    "anthropic",  # Claude AI integration
+    "openai",  # OpenAI integration
+    "typer",  # For AI client CLI
+]
+
+# 🔧 ALL: Everything (for convenience)
+all = [
+    "pyyaml",
+    "anthropic", 
+    "openai",
+    "typer",
+]
+
+# 🧪 DEV: Development dependencies
 dev = [
     "ruff",
     "taskipy",
@@ -35,15 +51,21 @@ dev = [
     "nox",
     "mypy",
     "build",
+    # Include internal tools for development
+    "pyyaml",
+    "anthropic",
+    "openai", 
+    "typer",
 ]
 
 [project.scripts]
-# Main manager CLI
-lightfast-mcp-manager = "lightfast_mcp.cli:main"
-
-# Individual server scripts  
-lightfast-mock-server = "lightfast_mcp.servers.mock_server:main"
+# 🎯 PRIMARY: Individual MCP server entry points (core functionality)
 lightfast-blender-server = "lightfast_mcp.servers.blender_mcp_server:main"
+lightfast-mock-server = "lightfast_mcp.servers.mock_server:main"
+
+# 🔧 SECONDARY: Management and AI client tools (optional features)
+lightfast-mcp-manager = "internal.management.cli:main"
+lightfast-mcp-ai = "internal.clients.cli:app"
 
 # Direct modular server access
 lightfast-mock = "lightfast_mcp.servers.mock.server:main"
@@ -61,8 +83,10 @@ packages = [
     "lightfast_mcp.servers",
     "lightfast_mcp.servers.blender",
     "lightfast_mcp.servers.mock",
-    "lightfast_mcp.clients",
-    "lightfast_mcp.utils"
+    "lightfast_mcp.utils",
+    "internal",
+    "internal.management",
+    "internal.clients",
 ]
 
 [project.urls]
@@ -117,26 +141,18 @@ test_e2e = "nox -s test_e2e"
 test_coverage = "nox -s test_coverage"
 demo = "uv run pytest tests/e2e/test_full_system.py::TestFullSystemWorkflow::test_system_startup_and_discovery -v"
 
-# MCP Manager (Recommended approach)
+# 🎯 PRIMARY: Individual MCP servers (core functionality)
+blender_server = "uv run lightfast-blender-server"
+mock_server = "uv run lightfast-mock-server"
+
+# 🔧 SECONDARY: Multi-server management (optional)
 manager = "uv run lightfast-mcp-manager"
 start_servers = "uv run lightfast-mcp-manager start"
 list_servers = "uv run lightfast-mcp-manager list"
 
-# AI Client (Direct access - recommended for AI interactions)
-ai_client = "uv run python -m lightfast_mcp.clients.cli chat"  # Focused AI chat interface
-ai_test = "uv run python -m lightfast_mcp.clients.cli test"     # Quick AI testing
-
-# Individual servers via CLI scripts (Clean entry points)
-mock_server = "uv run lightfast-mock-server"
-blender_server = "uv run lightfast-blender-server"
-
-# Direct server access (Implementation layer)
-mock_direct = "uv run lightfast-mock"
-blender_direct = "uv run lightfast-blender"
-
-# Development server access (Module-based)
-mock_dev = "uv run python -m lightfast_mcp.servers.mock_server"
-blender_dev = "uv run python -m lightfast_mcp.servers.blender_mcp_server"
+# 🔧 SECONDARY: AI Client (optional)
+ai_client = "uv run lightfast-mcp-ai chat"
+ai_test = "uv run lightfast-mcp-ai test"
 
 [dependency-groups]
 dev = [
