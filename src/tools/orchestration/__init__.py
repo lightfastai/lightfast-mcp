@@ -2,12 +2,15 @@
 
 from .config_loader import ConfigLoader
 from .multi_server_manager import MultiServerManager, get_manager
+from .server_orchestrator import ServerOrchestrator, get_orchestrator
 from .server_registry import ServerRegistry, get_registry
 from .server_selector import ServerSelector
 
 __all__ = [
     "MultiServerManager",
     "get_manager",
+    "ServerOrchestrator",
+    "get_orchestrator",
     "ServerRegistry",
     "get_registry",
     "ConfigLoader",
