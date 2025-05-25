@@ -39,10 +39,14 @@ jobs:
       run: uv run ruff format --check .
 
     - name: Fast tests
-      run: uv run python scripts/run_tests.py fast
+      run: |
+        pip install nox
+        nox -s test_fast
 
     - name: System verification
-      run: uv run python scripts/test_working_system.py
+      run: |
+        pip install nox
+        nox -s verify_system
 
   # Comprehensive testing across Python versions using nox
   comprehensive-tests:
@@ -112,17 +116,20 @@ jobs:
         uv run task demo
         
     - name: Integration test suite
-      run: uv run python scripts/run_tests.py integration
+      run: |
+        pip install nox
+        nox -s test_integration
 
     - name: Coverage report
       run: |
-        uv run python scripts/run_tests.py coverage
+        pip install nox
+        nox -s test_coverage
         uv run coverage xml
 
     - name: Upload coverage reports
       uses: codecov/codecov-action@v5
       with:
-        file: ./coverage.xml
+        files: ./coverage.xml
         token: ${{ secrets.CODECOV_TOKEN }}
         fail_ci_if_error: false
 
@@ -261,7 +268,9 @@ jobs:
       run: uv sync --extra dev
 
     - name: Run core tests
-      run: uv run python scripts/test_working_system.py
+      run: |
+        pip install nox
+        nox -s verify_system
 
     - name: Test CLI on ${{ matrix.os }}
       run: |

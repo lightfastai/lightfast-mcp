@@ -38,7 +38,8 @@ jobs:
         # Install with latest compatible versions
         uv sync --extra dev --upgrade
         uv run python scripts/test_working_system.py
-        uv run python scripts/run_tests.py fast
+        pip install nox
+        nox -s test_fast
 
   security-scan:
     name: Security Scanning

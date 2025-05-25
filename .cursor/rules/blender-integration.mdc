@@ -22,7 +22,7 @@ When editing Blender MCP files, follow this specific workflow:
 pkill -f lightfast-blender-server
 
 # Run fast tests
-uv run python scripts/run_tests.py fast
+nox -s test_fast
 
 # Start Blender server in background for testing
 uv run lightfast-blender-server &

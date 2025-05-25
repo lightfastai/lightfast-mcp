@@ -110,11 +110,11 @@ fix = "uv run ruff check . --fix && uv run ruff format ."
 
 # Testing (Simplified - direct pytest commands)
 test = "uv run pytest"
-test_fast = "uv run pytest tests/ -v --tb=short -m 'not slow'"
+test_fast = "nox -s test_fast"
 test_unit = "uv run pytest tests/unit -v --tb=short"
-test_integration = "uv run pytest tests/integration -v --tb=short"
-test_e2e = "uv run pytest tests/e2e -v --tb=short"
-test_coverage = "uv run pytest --cov=lightfast_mcp --cov-report=html --cov-report=term -v"
+test_integration = "nox -s test_integration"
+test_e2e = "nox -s test_e2e"
+test_coverage = "nox -s test_coverage"
 demo = "uv run pytest tests/e2e/test_full_system.py::TestFullSystemWorkflow::test_system_startup_and_discovery -v"
 
 # MCP Manager (Recommended approach)

@@ -1,5 +1,6 @@
 ---
 description: Development workflow commands and tooling for lightfast-mcp
+globs: 
 alwaysApply: true
 ---
 
@@ -40,15 +41,18 @@ uv run lightfast-mock-server        # Start mock server directly
 ### Testing Commands
 ```bash
 # Fast feedback
-uv run python scripts/run_tests.py fast
+nox -s test_fast         # Fast tests (excluding slow)
 
 # Full test suite
 nox
 
 # Specific test types
 nox -s test_e2e          # End-to-end tests
+nox -s test_integration  # Integration tests
+nox -s test_coverage     # Tests with coverage
 nox -s test-3.13         # Python 3.13 tests
 nox -s typecheck         # MyPy type checking
+nox -s verify_system     # System verification
 ```
 
 ## Development Guidelines

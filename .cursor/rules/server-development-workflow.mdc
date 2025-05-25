@@ -10,7 +10,7 @@ When editing MCP server files, follow this workflow:
 
 ## Immediate Actions After Code Changes
 
-1. **Run Fast Tests**: Execute `uv run python scripts/run_tests.py fast` to get immediate feedback
+1. **Run Fast Tests**: Execute `nox -s test_fast` to get immediate feedback
 2. **Lint Check**: Run `uv run task lint` to catch style issues
 3. **Format Code**: Run `uv run task format` to ensure consistent formatting
 
@@ -38,7 +38,7 @@ When editing server implementation files:
 ```bash
 # After any server file edit
 uv run task lint && uv run task format
-uv run python scripts/run_tests.py fast
+nox -s test_fast
 
 # After adding new tools
 uv run pytest tests/unit/test_*server*.py -v

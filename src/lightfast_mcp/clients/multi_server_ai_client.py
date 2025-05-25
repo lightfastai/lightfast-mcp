@@ -237,7 +237,7 @@ class MultiServerAIClient:
                     # For stdio, we need to use the command and args
                     # This might need a different approach - let's handle it separately
                     command = server_config.get("command", "")
-                    args = server_config.get("args", [])
+                    # args = server_config.get("args", [])  # TODO: Use args when implementing proper stdio support
                     client = Client(f"stdio://{command}")  # This might need adjustment
                 elif server_config.get("type") == "sse":
                     # For HTTP/SSE, use the URL directly

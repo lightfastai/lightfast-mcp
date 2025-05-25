@@ -56,7 +56,7 @@ uv run lightfast-mcp-manager start
 # Development (from DEV.md Development Tasks)
 uv run task lint
 uv run task format
-uv run python scripts/run_tests.py fast
+nox -s test_fast
 
 # Testing (from DEV.md Testing section)
 nox
