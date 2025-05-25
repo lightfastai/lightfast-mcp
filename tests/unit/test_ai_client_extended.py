@@ -29,7 +29,9 @@ class TestMultiServerAIClientExtended:
             }
         }
 
-        client = MultiServerAIClient(servers=servers, ai_provider="claude")
+        client = MultiServerAIClient(
+            servers=servers, ai_provider="claude", api_key="test-key"
+        )
 
         # Should handle the error gracefully
         await client.connect_to_servers()
@@ -47,7 +49,9 @@ class TestMultiServerAIClientExtended:
             }
         }
 
-        client = MultiServerAIClient(servers=servers, ai_provider="claude")
+        client = MultiServerAIClient(
+            servers=servers, ai_provider="claude", api_key="test-key"
+        )
         await client.connect_to_servers()
 
         # Server should not be in clients due to unsupported transport
@@ -56,7 +60,9 @@ class TestMultiServerAIClientExtended:
     @pytest.mark.asyncio
     async def test_get_available_tools_error(self):
         """Test error handling in _get_available_tools."""
-        client = MultiServerAIClient(servers={}, ai_provider="claude")
+        client = MultiServerAIClient(
+            servers={}, ai_provider="claude", api_key="test-key"
+        )
 
         # Add a mock client that raises an exception
         mock_client = AsyncMock()
@@ -72,7 +78,9 @@ class TestMultiServerAIClientExtended:
     @pytest.mark.asyncio
     async def test_execute_tool_call_tool_not_found(self):
         """Test executing tool call when tool is not found."""
-        client = MultiServerAIClient(servers={}, ai_provider="claude")
+        client = MultiServerAIClient(
+            servers={}, ai_provider="claude", api_key="test-key"
+        )
 
         tool_call = ToolCall(
             id="test-id", tool_name="nonexistent_tool", arguments={"param": "value"}
@@ -85,7 +93,9 @@ class TestMultiServerAIClientExtended:
 
     def test_get_server_status(self):
         """Test get_server_status method."""
-        client = MultiServerAIClient(servers={}, ai_provider="claude")
+        client = MultiServerAIClient(
+            servers={}, ai_provider="claude", api_key="test-key"
+        )
 
         # Add mock clients
         client.clients["server1"] = MagicMock()
@@ -101,7 +111,9 @@ class TestMultiServerAIClientExtended:
 
     def test_find_tool_server(self):
         """Test find_tool_server method."""
-        client = MultiServerAIClient(servers={}, ai_provider="claude")
+        client = MultiServerAIClient(
+            servers={}, ai_provider="claude", api_key="test-key"
+        )
 
         # Add tools
         mock_tool = MagicMock()
@@ -116,7 +128,9 @@ class TestMultiServerAIClientExtended:
 
     def test_get_all_tools(self):
         """Test get_all_tools method."""
-        client = MultiServerAIClient(servers={}, ai_provider="claude")
+        client = MultiServerAIClient(
+            servers={}, ai_provider="claude", api_key="test-key"
+        )
 
         # Add tools
         mock_tool1 = MagicMock()
@@ -141,7 +155,9 @@ class TestMultiServerAIClientExtended:
 
     def test_get_connected_servers(self):
         """Test get_connected_servers method."""
-        client = MultiServerAIClient(servers={}, ai_provider="claude")
+        client = MultiServerAIClient(
+            servers={}, ai_provider="claude", api_key="test-key"
+        )
 
         client.clients["server1"] = MagicMock()
         client.clients["server2"] = MagicMock()
@@ -155,7 +171,9 @@ class TestMultiServerAIClientExtended:
     @pytest.mark.asyncio
     async def test_disconnect_from_servers(self):
         """Test disconnecting from servers."""
-        client = MultiServerAIClient(servers={}, ai_provider="claude")
+        client = MultiServerAIClient(
+            servers={}, ai_provider="claude", api_key="test-key"
+        )
 
         # Add mock clients
         mock_client1 = AsyncMock()
