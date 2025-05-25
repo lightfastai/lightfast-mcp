@@ -2,7 +2,6 @@
 Pytest configuration and shared fixtures for lightfast-mcp tests.
 """
 
-import asyncio
 import sys
 from pathlib import Path
 
@@ -14,12 +13,8 @@ if src_path.exists() and str(src_path) not in sys.path:
     sys.path.insert(0, str(src_path))
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    """Create an event loop for the test session."""
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
+# Use pytest-asyncio's built-in event loop management
+# Remove custom event_loop fixture to avoid deprecation warnings
 
 
 @pytest.fixture
@@ -107,3 +102,7 @@ def pytest_configure(config):
     )
     config.addinivalue_line("markers", "integration: marks tests as integration tests")
     config.addinivalue_line("markers", "unit: marks tests as unit tests")
+
+
+# Configure pytest-asyncio
+pytest_plugins = ("pytest_asyncio",)

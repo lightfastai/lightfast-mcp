@@ -1,5 +1,6 @@
 ---
 description: Pre-commit workflow ensuring comprehensive validation before committing changes
+globs: 
 alwaysApply: false
 ---
 
@@ -31,7 +32,7 @@ uv run task lint
 
 # Step 2: Fast tests for immediate feedback
 echo "⚡ Step 2: Running fast tests..."
-uv run python scripts/run_tests.py fast
+nox -s test_fast
 
 # Step 3: Configuration validation
 echo "⚙️  Step 3: Validating configurations..."
@@ -49,7 +50,7 @@ echo "✅ Mock server startup tested"
 
 # Step 5: System integration test
 echo "🧪 Step 5: System integration test..."
-uv run python scripts/test_working_system.py
+nox -s verify_system
 
 # Step 6: Type checking
 echo "🔍 Step 6: Type checking..."
@@ -128,8 +129,8 @@ pkill -f lightfast-mcp-manager
 
 - [ ] All files formatted with `uv run task format`
 - [ ] No linting errors from `uv run task lint`
-- [ ] Fast tests pass: `uv run python scripts/run_tests.py fast`
-- [ ] System test passes: `uv run python scripts/test_working_system.py`
+- [ ] Fast tests pass: `nox -s test_fast`
+- [ ] System test passes: `nox -s verify_system`
 - [ ] Type checking passes: `nox -s typecheck`
 - [ ] Configuration files are valid
 - [ ] Servers can start without errors
@@ -157,7 +158,7 @@ For urgent fixes that need to bypass some checks:
 # Minimal checks for emergency commits
 uv run task format
 uv run task lint
-uv run python scripts/run_tests.py fast
+nox -s test_fast
 
 # Add "EMERGENCY:" prefix to commit message
 git commit -m "EMERGENCY: fix critical server crash issue"

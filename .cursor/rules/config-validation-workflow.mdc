@@ -120,7 +120,7 @@ find config -name "*.yaml" -exec python -c "import yaml; yaml.safe_load(open('{}
 find . -name "*.json" -exec python -c "import json; json.load(open('{}'))" \;
 
 # Test full system with new configuration
-uv run python scripts/test_working_system.py
+nox -s verify_system
 
 # Run configuration-related tests
 uv run pytest tests/unit/test_config* -v

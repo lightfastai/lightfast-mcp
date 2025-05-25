@@ -31,16 +31,16 @@ def test(session):
 
 @nox.session(python="3.13")
 def test_fast(session):
-    """Run fast tests using custom test runner."""
+    """Run fast tests (excluding slow tests)."""
     session.install("-e", ".[dev]")
-    session.run("python", "scripts/run_tests.py", "fast")
+    session.run("pytest", "tests/", "-v", "--tb=short", "-m", "not slow")
 
 
 @nox.session(python="3.13")
 def test_integration(session):
     """Run integration tests."""
     session.install("-e", ".[dev]")
-    session.run("python", "scripts/run_tests.py", "integration")
+    session.run("pytest", "tests/integration/", "-v", "--tb=short")
 
 
 @nox.session(python="3.13")
@@ -63,7 +63,9 @@ def test_all(session):
 def test_coverage(session):
     """Run tests with coverage reporting."""
     session.install("-e", ".[dev]")
-    session.run("python", "scripts/run_tests.py", "coverage")
+    session.run(
+        "pytest", "--cov=lightfast_mcp", "--cov-report=html", "--cov-report=term", "-v"
+    )
 
 
 @nox.session(python="3.13")

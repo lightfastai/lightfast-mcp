@@ -38,7 +38,8 @@ jobs:
 
     - name: Run final tests
       run: |
-        uv run python scripts/run_tests.py fast
+        pip install nox
+        nox -s test_fast
         uv run python scripts/test_working_system.py
 
     - name: Build package

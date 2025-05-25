@@ -3,15 +3,13 @@
 Lightfast MCP Manager - Multi-server management for creative applications.
 
 This is the main entry point for managing multiple MCP servers simultaneously.
-Users can select which servers to start, run them in the background, and use
-AI integration to control multiple creative applications at once.
+Users can select which servers to start, run them in the background, and then
+use the dedicated AI client to interact with them.
 """
 
 import argparse
-import asyncio
-import os
 
-from .clients import MultiServerAIClient, ServerSelector
+from .clients.server_selector import ServerSelector
 from .core import (
     ConfigLoader,
     get_manager,
@@ -147,10 +145,10 @@ def start_servers_interactive(show_logs: bool = True):
             for name, url in urls.items():
                 print(f"   • {name}: {url}")
 
-        print("\n🎯 Servers are running! Use the AI client to interact with them.")
         print(
-            "   Run 'lightfast-mcp-manager ai' (or 'uv run task ai_client') to start the AI client."
+            "\n🎯 Servers are running! Use the dedicated AI client to interact with them."
         )
+        print("   Run 'uv run task ai_client' to start the AI client.")
         print("   Press Ctrl+C to shutdown all servers.\n")
 
         try:
@@ -208,125 +206,6 @@ def start_servers_by_names(server_names: list[str], show_logs: bool = True):
             manager.shutdown_all()
 
 
-async def start_ai_client():
-    """Start the AI client for multi-server interaction."""
-    print("🤖 Lightfast MCP AI Client")
-    print("=" * 50)
-
-    # Check for API keys
-    ai_provider = os.getenv("AI_PROVIDER", "claude").lower()
-
-    try:
-        client = MultiServerAIClient(ai_provider=ai_provider)
-    except ValueError as e:
-        print(f"❌ {e}")
-        print("   Set your API key in the environment:")
-        if ai_provider == "claude":
-            print("   export ANTHROPIC_API_KEY=your_key_here")
-        elif ai_provider == "openai":
-            print("   export OPENAI_API_KEY=your_key_here")
-        return
-
-    # Auto-discover running servers (look for common ports)
-    common_ports = [8001, 8002, 8003, 8004, 8005]
-    print("🔍 Auto-discovering running servers...")
-    print("   Waiting a moment for servers to fully start up...")
-
-    # Give servers time to fully start up
-    await asyncio.sleep(2)
-
-    discovered_servers = {}
-    for port in common_ports:
-        url = f"http://localhost:{port}/mcp"
-        try:
-            # Quick check if server is responding
-            import socket
-
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(2.0)  # Increased timeout
-            result = sock.connect_ex(("localhost", port))
-            sock.close()
-
-            if result == 0:
-                server_name = f"server-{port}"
-                discovered_servers[server_name] = url
-                print(f"   ✅ Found server at {url}")
-            else:
-                print(f"   ⚪ No server found at port {port}")
-        except Exception as e:
-            print(f"   ❌ Error checking port {port}: {e}")
-
-    if not discovered_servers:
-        print("❌ No running MCP servers found.")
-        print("   Start some servers first with 'lightfast-mcp-manager start'")
-        print("   Make sure to wait a few seconds for servers to fully start.")
-        return
-
-    # Add discovered servers to client
-    for name, url in discovered_servers.items():
-        client.add_server(name, url)
-
-    # Connect to servers
-    print(f"\n📡 Connecting to {len(discovered_servers)} servers...")
-    try:
-        connection_results = await client.connect_to_servers()
-    except Exception as e:
-        print(f"❌ Error connecting to servers: {e}")
-        print(
-            "   This might be due to server startup timing. Try again in a few seconds."
-        )
-        return
-
-    successful_connections = sum(
-        1 for success in connection_results.values() if success
-    )
-    print(f"✅ Connected to {successful_connections}/{len(discovered_servers)} servers")
-
-    if successful_connections == 0:
-        print("❌ Could not connect to any servers.")
-        print("   Servers might still be starting up. Try again in a few seconds.")
-        return
-
-    # Show available tools
-    tools_by_server = client.get_all_tools()
-    print("\n🛠️  Available Tools:")
-    for server_name, tools in tools_by_server.items():
-        print(f"   {server_name}: {', '.join(tools)}")
-
-    print(f"\n🤖 AI Client ready! (Using {ai_provider.upper()})")
-    print("Ask questions about your creative applications or request actions...")
-    print("Type 'quit' to exit\n")
-
-    try:
-        while True:
-            user_input = input("You: ").strip()
-
-            if user_input.lower() in ["quit", "exit", "q"]:
-                break
-
-            if not user_input:
-                continue
-
-            try:
-                # Get AI response
-                print("🤔 AI is thinking...")
-                ai_response = await client.chat_with_ai(user_input)
-
-                # Process any tool calls
-                final_response = await client.process_ai_response(ai_response)
-
-                print(f"🤖 AI: {final_response}\n")
-
-            except Exception as e:
-                print(f"❌ Error: {e}\n")
-
-    except KeyboardInterrupt:
-        print("\n👋 Goodbye!")
-
-    finally:
-        await client.disconnect_from_servers()
-
-
 def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
@@ -340,12 +219,15 @@ Examples:
   lightfast-mcp-manager start blender-server        # Start specific server
   lightfast-mcp-manager start --hide-logs           # Start servers without showing logs
   lightfast-mcp-manager start --verbose             # Start with debug logging and server logs
-  lightfast-mcp-manager ai                          # Start AI client
+
+AI Client (use after starting servers):
+  uv run task ai_client                             # Start interactive AI chat
+  uv run task ai_test --message "Hello"             # Quick AI test
         """,
     )
 
     parser.add_argument(
-        "command", choices=["init", "list", "start", "ai"], help="Command to run"
+        "command", choices=["init", "list", "start"], help="Command to run"
     )
 
     parser.add_argument(
@@ -393,9 +275,6 @@ Examples:
             start_servers_by_names(args.servers, show_logs=show_logs)
         else:
             start_servers_interactive(show_logs=show_logs)
-
-    elif args.command == "ai":
-        asyncio.run(start_ai_client())
 
 
 if __name__ == "__main__":

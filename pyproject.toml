@@ -108,17 +108,23 @@ format = "uv run ruff format ."
 check_format = "uv run ruff format --check ."
 fix = "uv run ruff check . --fix && uv run ruff format ."
 
-# Testing
+# Testing (Simplified - direct pytest commands)
 test = "uv run pytest"
-test_fast = "uv run python scripts/run_tests.py fast"
-test_coverage = "uv run python scripts/run_tests.py coverage"
-demo = "uv run python scripts/test_working_system.py"
+test_fast = "nox -s test_fast"
+test_unit = "uv run pytest tests/unit -v --tb=short"
+test_integration = "nox -s test_integration"
+test_e2e = "nox -s test_e2e"
+test_coverage = "nox -s test_coverage"
+demo = "uv run pytest tests/e2e/test_full_system.py::TestFullSystemWorkflow::test_system_startup_and_discovery -v"
 
 # MCP Manager (Recommended approach)
 manager = "uv run lightfast-mcp-manager"
 start_servers = "uv run lightfast-mcp-manager start"
 list_servers = "uv run lightfast-mcp-manager list"
-ai_client = "uv run lightfast-mcp-manager ai"
+
+# AI Client (Direct access - recommended for AI interactions)
+ai_client = "uv run python -m lightfast_mcp.clients.cli chat"  # Focused AI chat interface
+ai_test = "uv run python -m lightfast_mcp.clients.cli test"     # Quick AI testing
 
 # Individual servers via CLI scripts (Clean entry points)
 mock_server = "uv run lightfast-mock-server"

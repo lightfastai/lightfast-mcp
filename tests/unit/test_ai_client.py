@@ -1,295 +1,498 @@
-"""
-Test cases for the AI client modules.
-"""
+"""Tests for the multi-server AI client."""
 
-import os
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import mcp.types as mcp_types
 import pytest
 
-from lightfast_mcp.clients.multi_server_ai_client import MultiServerAIClient
-from lightfast_mcp.clients.server_selector import ServerSelector
-from lightfast_mcp.core.base_server import ServerConfig
+from lightfast_mcp.clients.multi_server_ai_client import (
+    ConversationState,
+    MultiServerAIClient,
+    Step,
+    ToolCall,
+    ToolCallState,
+    ToolResult,
+    create_multi_server_client_from_config,
+    mcp_result_to_our_result,
+    mcp_tool_to_claude_tool,
+    mcp_tool_to_openai_tool,
+)
+
+
+class TestDataClasses:
+    """Test the data classes and their methods."""
+
+    def test_tool_call_creation(self):
+        """Test ToolCall creation."""
+        tool_call = ToolCall(
+            id="test_id",
+            tool_name="test_tool",
+            arguments={"param": "value"},
+            server_name="test_server",
+        )
+        assert tool_call.id == "test_id"
+        assert tool_call.tool_name == "test_tool"
+        assert tool_call.arguments == {"param": "value"}
+        assert tool_call.server_name == "test_server"
+
+    def test_tool_result_states(self):
+        """Test ToolResult state property."""
+        # Test CALL state (no result or error)
+        result = ToolResult(id="test_id", tool_name="test_tool", arguments={})
+        assert result.state == ToolCallState.CALL
+
+        # Test RESULT state
+        result.result = "success"
+        assert result.state == ToolCallState.RESULT
+
+        # Test ERROR state
+        result.result = None
+        result.error = "test error"
+        assert result.state == ToolCallState.ERROR
+
+    def test_step_functionality(self):
+        """Test Step class functionality."""
+        step = Step(step_number=1)
+
+        # Test adding tool calls
+        tool_call = ToolCall(id="call_1", tool_name="test_tool", arguments={})
+        step.add_tool_call(tool_call)
+        assert len(step.tool_calls) == 1
+        assert step.has_pending_tool_calls()
+
+        # Test adding tool results
+        tool_result = ToolResult(
+            id="call_1", tool_name="test_tool", arguments={}, result="success"
+        )
+        step.add_tool_result(tool_result)
+        assert len(step.tool_results) == 1
+        assert not step.has_pending_tool_calls()  # No longer pending
+
+    def test_conversation_state(self):
+        """Test ConversationState functionality."""
+        state = ConversationState(max_steps=3)
+
+        # Test creating new steps
+        step1 = state.create_new_step()
+        assert step1.step_number == 0
+        assert len(state.steps) == 1
+
+        step2 = state.create_new_step()
+        assert step2.step_number == 1
+        assert len(state.steps) == 2
+
+        # Test current step
+        current = state.get_current_step()
+        assert current == step1
+
+        # Test can_continue
+        assert state.can_continue()
+        state.current_step = 2  # At max
+        assert not state.can_continue()
+
+
+class TestMCPConversion:
+    """Test MCP type conversion functions."""
+
+    def test_mcp_tool_to_claude_tool(self):
+        """Test converting MCP Tool to Claude format."""
+        mcp_tool = mcp_types.Tool(
+            name="test_tool",
+            description="Test tool description",
+            inputSchema={
+                "type": "object",
+                "properties": {"param": {"type": "string"}},
+            },
+        )
+
+        claude_tool = mcp_tool_to_claude_tool(mcp_tool, "test_server")
+
+        assert claude_tool["name"] == "test_tool"
+        assert claude_tool["description"] == "Test tool description"
+        assert claude_tool["input_schema"] == mcp_tool.inputSchema
+
+    def test_mcp_tool_to_openai_tool(self):
+        """Test converting MCP Tool to OpenAI format."""
+        mcp_tool = mcp_types.Tool(
+            name="test_tool",
+            description="Test tool description",
+            inputSchema={
+                "type": "object",
+                "properties": {"param": {"type": "string"}},
+            },
+        )
+
+        openai_tool = mcp_tool_to_openai_tool(mcp_tool, "test_server")
+
+        assert openai_tool["type"] == "function"
+        assert openai_tool["function"]["name"] == "test_tool"
+        assert openai_tool["function"]["description"] == "Test tool description"
+        assert openai_tool["function"]["parameters"] == mcp_tool.inputSchema
+
+    def test_mcp_result_to_our_result(self):
+        """Test converting MCP result to our ToolResult format."""
+        tool_call = ToolCall(id="test_id", tool_name="test_tool", arguments={})
+
+        # Test with text content
+        text_content = mcp_types.TextContent(type="text", text="Hello world")
+        mcp_result = [text_content]
+
+        result = mcp_result_to_our_result(mcp_result, tool_call)
+        assert result.result == "Hello world"
+        assert result.error is None
+
+        # Test with JSON content
+        json_content = mcp_types.TextContent(type="text", text='{"key": "value"}')
+        mcp_result = [json_content]
+
+        result = mcp_result_to_our_result(mcp_result, tool_call)
+        assert result.result == {"key": "value"}
+
+        # Test with empty result
+        result = mcp_result_to_our_result([], tool_call)
+        assert result.error == "No result returned"
 
 
 class TestMultiServerAIClient:
-    """Test MultiServerAIClient functionality."""
+    """Test the MultiServerAIClient class."""
 
-    def test_init_claude_provider(self):
-        """Test initialization with Claude provider."""
-        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
-            client = MultiServerAIClient(ai_provider="claude")
-            assert client.ai_provider == "claude"
+    @pytest.fixture
+    def mock_servers(self):
+        """Mock server configuration."""
+        return {
+            "test_server": {
+                "type": "stdio",
+                "command": "test-command",
+                "args": [],
+                "name": "Test Server",
+            }
+        }
 
-    def test_init_openai_provider(self):
-        """Test initialization with OpenAI provider."""
-        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
-            client = MultiServerAIClient(ai_provider="openai")
-            assert client.ai_provider == "openai"
+    @pytest.fixture
+    def client(self, mock_servers):
+        """Create a test client."""
+        with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "test_key"}):
+            return MultiServerAIClient(
+                servers=mock_servers,
+                ai_provider="claude",
+                max_steps=3,
+            )
 
-    def test_init_no_api_key(self):
-        """Test initialization without API key raises ValueError."""
-        with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(
-                ValueError, match="ANTHROPIC_API_KEY environment variable required"
-            ):
-                MultiServerAIClient(ai_provider="claude")
+    def test_client_initialization(self, client):
+        """Test client initialization."""
+        assert client.ai_provider == "claude"
+        assert client.conversation_state.max_steps == 3
+        assert len(client.servers) == 1
+        assert len(client.clients) == 0  # Not connected yet
+        assert len(client.tools) == 0  # No tools yet
 
-    def test_add_server(self):
-        """Test adding a server to the client."""
-        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
-            client = MultiServerAIClient(ai_provider="claude")
-            client.add_server("test-server", "http://localhost:8001/mcp", "Test server")
+    def test_get_api_key_claude(self):
+        """Test API key retrieval for Claude."""
+        with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "test_claude_key"}):
+            client = MultiServerAIClient(servers={}, ai_provider="claude")
+            assert client.api_key == "test_claude_key"
 
-            assert "test-server" in client.servers
-            assert client.servers["test-server"].url == "http://localhost:8001/mcp"
-            assert client.servers["test-server"].description == "Test server"
+    def test_get_api_key_openai(self):
+        """Test API key retrieval for OpenAI."""
+        with patch.dict("os.environ", {"OPENAI_API_KEY": "test_openai_key"}):
+            client = MultiServerAIClient(servers={}, ai_provider="openai")
+            assert client.api_key == "test_openai_key"
 
-    @pytest.mark.asyncio
-    async def test_connect_to_servers_success(self):
-        """Test successful connection to servers."""
-        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
-            client = MultiServerAIClient(ai_provider="claude")
-            client.add_server("test-server", "http://localhost:8001/mcp")
-
-            # Mock the connection method directly
-            server_conn = client.servers["test-server"]
-            with patch.object(
-                server_conn, "connect", new_callable=AsyncMock
-            ) as mock_connect:
-                mock_connect.return_value = True
-
-                results = await client.connect_to_servers()
-
-                assert results["test-server"] is True
-                mock_connect.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_connect_to_servers_failure(self):
-        """Test connection failure to servers."""
-        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
-            client = MultiServerAIClient(ai_provider="claude")
-            client.add_server("test-server", "http://localhost:8001/mcp")
-
-            # Mock connection failure
-            server_conn = client.servers["test-server"]
-            with patch.object(
-                server_conn, "connect", new_callable=AsyncMock
-            ) as mock_connect:
-                mock_connect.return_value = False
-
-                results = await client.connect_to_servers()
-
-                assert results["test-server"] is False
-                mock_connect.assert_called_once()
-
-    def test_get_all_tools(self):
-        """Test getting all tools from connected servers."""
-        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
-            client = MultiServerAIClient(ai_provider="claude")
-            client.add_server("test-server", "http://localhost:8001/mcp")
-
-            # Mock connected server with tools
-            client.servers["test-server"].is_connected = True
-            client.servers["test-server"].tools = ["tool1", "tool2"]
-
-            tools = client.get_all_tools()
-
-            assert "test-server" in tools
-            assert tools["test-server"] == ["tool1", "tool2"]
+    def test_get_api_key_missing(self):
+        """Test API key retrieval when missing."""
+        with patch.dict("os.environ", {}, clear=True):
+            with pytest.raises(ValueError, match="ANTHROPIC_API_KEY"):
+                MultiServerAIClient(servers={}, ai_provider="claude")
 
     @pytest.mark.asyncio
-    async def test_execute_tool_success(self):
-        """Test successful tool execution."""
-        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
-            client = MultiServerAIClient(ai_provider="claude")
-            client.add_server("test-server", "http://localhost:8001/mcp")
+    async def test_connect_to_servers(self, client, mock_servers):
+        """Test connecting to servers."""
+        mock_client = AsyncMock()
+        mock_tools_result = MagicMock()
+        mock_tools_result.tools = [
+            mcp_types.Tool(
+                name="test_tool",
+                description="Test tool",
+                inputSchema={"type": "object"},
+            )
+        ]
+        mock_client.list_tools.return_value = mock_tools_result
 
-            # Mock server connection and tool execution
-            server_conn = client.servers["test-server"]
-            server_conn.is_connected = True
-            server_conn.tools = ["test_tool"]
+        with patch(
+            "lightfast_mcp.clients.multi_server_ai_client.Client"
+        ) as mock_client_class:
+            mock_client_class.return_value = mock_client
 
-            # Mock call_tool method
-            with patch.object(
-                server_conn, "call_tool", new_callable=AsyncMock
-            ) as mock_call:
-                mock_call.return_value = {"result": "success"}
+            await client.connect_to_servers()
 
-                result = await client.execute_tool(
-                    "test_tool", {"param": "value"}, "test-server"
-                )
+            # Verify client was created with stdio URL format
+            mock_client_class.assert_called_once_with("stdio://test-command")
 
-                assert result == {"result": "success"}
-                mock_call.assert_called_once_with("test_tool", {"param": "value"})
-
-    @pytest.mark.asyncio
-    @patch("anthropic.AsyncAnthropic")
-    async def test_chat_with_ai_claude(self, mock_anthropic):
-        """Test chat with Claude AI."""
-        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
-            # Mock Claude response
-            mock_client = MagicMock()
-            mock_message = MagicMock()
-            mock_message.content = [MagicMock(text="AI response")]
-            mock_client.messages.create = AsyncMock(return_value=mock_message)
-            mock_anthropic.return_value = mock_client
-
-            client = MultiServerAIClient(ai_provider="claude")
-            response = await client.chat_with_ai("Test message")
-
-            assert "AI response" in str(response)
+            # Verify tools were loaded
+            assert len(client.tools) == 1
+            assert "test_tool" in client.tools
 
     @pytest.mark.asyncio
-    @patch("openai.AsyncOpenAI")
-    async def test_chat_with_ai_openai(self, mock_openai):
-        """Test chat with OpenAI."""
-        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
-            # Mock OpenAI response
-            mock_client = MagicMock()
-            mock_response = MagicMock()
-            mock_response.choices = [
-                MagicMock(message=MagicMock(content="AI response"))
-            ]
-            mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
-            mock_openai.return_value = mock_client
-
-            client = MultiServerAIClient(ai_provider="openai")
-            response = await client.chat_with_ai("Test message")
-
-            assert "AI response" in str(response)
-
-    @pytest.mark.asyncio
-    async def test_process_ai_response_no_tool_calls(self):
-        """Test processing AI response without tool calls."""
-        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
-            client = MultiServerAIClient(ai_provider="claude")
-
-            # Test with plain string response (not JSON)
-            result = await client.process_ai_response("Simple response")
-
-            assert result == "Simple response"
-
-    @pytest.mark.asyncio
-    async def test_disconnect_from_servers(self):
-        """Test disconnecting from all servers."""
-        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
-            client = MultiServerAIClient(ai_provider="claude")
-            client.add_server("test-server", "http://localhost:8001/mcp")
-
-            # Mock connected server
-            server_conn = client.servers["test-server"]
-            server_conn.is_connected = True
-
-            # Mock disconnect method
-            with patch.object(
-                server_conn, "disconnect", new_callable=AsyncMock
-            ) as mock_disconnect:
-                await client.disconnect_from_servers()
-
-                mock_disconnect.assert_called_once()
-
-
-class TestServerSelector:
-    """Test ServerSelector functionality."""
-
-    @patch("lightfast_mcp.clients.server_selector.ConfigLoader")
-    def test_load_available_servers(self, mock_config_loader):
-        """Test loading available servers."""
-        mock_loader = MagicMock()
-        mock_config = ServerConfig(
-            name="test-server", description="Test server", config={"type": "mock"}
+    async def test_execute_tool_call(self, client):
+        """Test executing a tool call."""
+        # Setup mock tool and client
+        mock_tool = mcp_types.Tool(
+            name="test_tool",
+            description="Test tool",
+            inputSchema={"type": "object"},
         )
-        mock_loader.load_servers_config.return_value = [mock_config]
-        mock_config_loader.return_value = mock_loader
+        mock_client = AsyncMock()
+        mock_result = MagicMock()
+        mock_result.content = [mcp_types.TextContent(type="text", text="success")]
+        mock_client.call_tool.return_value = mock_result
 
-        selector = ServerSelector()
-        configs = selector.load_available_servers()
+        client.tools["test_tool"] = (mock_tool, "test_server")
+        client.clients["test_server"] = mock_client
 
-        assert len(configs) == 1
-        assert configs[0].name == "test-server"
-
-    @patch("builtins.input")
-    def test_select_servers_interactive(self, mock_input):
-        """Test interactive server selection."""
-        # Create a mock config
-        mock_config = ServerConfig(
-            name="test-server", description="Test server", config={"type": "mock"}
+        tool_call = ToolCall(
+            id="call_1", tool_name="test_tool", arguments={"param": "value"}
         )
 
-        # Mock user input to select server 1
-        mock_input.side_effect = ["1", ""]
+        result = await client._execute_tool_call(tool_call)
 
-        selector = ServerSelector()
-        # Directly set the available configs instead of loading from file
-        selector.available_configs = [mock_config]
+        assert result.result == "success"
+        assert result.error is None
+        assert result.server_name == "test_server"
+        mock_client.call_tool.assert_called_once_with("test_tool", {"param": "value"})
 
-        with patch("builtins.print"):
-            with patch.object(
-                selector, "_check_server_requirements", return_value=True
-            ):
-                selected = selector.select_servers_interactive()
+    @pytest.mark.asyncio
+    async def test_execute_tool_call_not_found(self, client):
+        """Test executing a tool call for non-existent tool."""
+        tool_call = ToolCall(id="call_1", tool_name="missing_tool", arguments={})
 
-        assert len(selected) == 1
-        assert selected[0].name == "test-server"
+        result = await client._execute_tool_call(tool_call)
 
-    @patch("builtins.input")
-    def test_select_servers_interactive_all(self, mock_input):
-        """Test selecting all servers interactively."""
-        mock_configs = [
-            ServerConfig(
-                name="server1", description="Server 1", config={"type": "mock"}
-            ),
-            ServerConfig(
-                name="server2", description="Server 2", config={"type": "mock"}
-            ),
+        assert result.error == "Tool missing_tool not found"
+        assert result.result is None
+
+    @pytest.mark.asyncio
+    async def test_execute_tool_calls_concurrently(self, client):
+        """Test executing multiple tool calls concurrently."""
+        # Setup mock tool and client
+        mock_tool = mcp_types.Tool(
+            name="test_tool",
+            description="Test tool",
+            inputSchema={"type": "object"},
+        )
+        mock_client = AsyncMock()
+        mock_result = MagicMock()
+        mock_result.content = [mcp_types.TextContent(type="text", text="success")]
+        mock_client.call_tool.return_value = mock_result
+
+        client.tools["test_tool"] = (mock_tool, "test_server")
+        client.clients["test_server"] = mock_client
+
+        tool_calls = [
+            ToolCall(id="call_1", tool_name="test_tool", arguments={"param": "1"}),
+            ToolCall(id="call_2", tool_name="test_tool", arguments={"param": "2"}),
         ]
 
-        # Mock user input to select all servers
-        mock_input.side_effect = ["all", ""]
+        results = await client._execute_tool_calls_concurrently(tool_calls)
 
-        selector = ServerSelector()
-        # Directly set the available configs
-        selector.available_configs = mock_configs
+        assert len(results) == 2
+        assert all(r.result == "success" for r in results)
+        assert mock_client.call_tool.call_count == 2
 
-        with patch("builtins.print"):
-            with patch.object(
-                selector, "_check_server_requirements", return_value=True
-            ):
-                selected = selector.select_servers_interactive()
+    def test_parse_claude_tool_calls(self, client):
+        """Test parsing tool calls from Claude response."""
+        message = {
+            "content": [
+                {
+                    "type": "tool_use",
+                    "id": "call_1",
+                    "name": "test_tool",
+                    "input": {"param": "value"},
+                },
+                {
+                    "type": "text",
+                    "text": "Some text",
+                },
+            ]
+        }
 
-        assert len(selected) == 2
+        tool_calls = client._parse_claude_tool_calls(message)
 
-    @patch("builtins.input")
-    def test_select_servers_interactive_invalid_input(self, mock_input):
-        """Test handling invalid input in interactive selection."""
-        mock_config = ServerConfig(
-            name="test-server", description="Test server", config={"type": "mock"}
+        assert len(tool_calls) == 1
+        assert tool_calls[0].id == "call_1"
+        assert tool_calls[0].tool_name == "test_tool"
+        assert tool_calls[0].arguments == {"param": "value"}
+
+    def test_parse_openai_tool_calls(self, client):
+        """Test parsing tool calls from OpenAI response."""
+        message = {
+            "tool_calls": [
+                {
+                    "id": "call_1",
+                    "function": {
+                        "name": "test_tool",
+                        "arguments": '{"param": "value"}',
+                    },
+                }
+            ]
+        }
+
+        tool_calls = client._parse_openai_tool_calls(message)
+
+        assert len(tool_calls) == 1
+        assert tool_calls[0].id == "call_1"
+        assert tool_calls[0].tool_name == "test_tool"
+        assert tool_calls[0].arguments == {"param": "value"}
+
+    def test_build_claude_tools(self, client):
+        """Test building tools list for Claude."""
+        mock_tool = mcp_types.Tool(
+            name="test_tool",
+            description="Test tool",
+            inputSchema={"type": "object"},
         )
+        client.tools["test_tool"] = (mock_tool, "test_server")
 
-        # Mock invalid input, then valid input
-        mock_input.side_effect = ["1", ""]
+        claude_tools = client._build_claude_tools()
 
-        selector = ServerSelector()
-        # Directly set the available configs
-        selector.available_configs = [mock_config]
+        assert len(claude_tools) == 1
+        assert claude_tools[0]["name"] == "test_tool"
+        assert claude_tools[0]["description"] == "Test tool"
 
-        with patch("builtins.print"):
+    def test_build_openai_tools(self, client):
+        """Test building tools list for OpenAI."""
+        mock_tool = mcp_types.Tool(
+            name="test_tool",
+            description="Test tool",
+            inputSchema={"type": "object"},
+        )
+        client.tools["test_tool"] = (mock_tool, "test_server")
+
+        openai_tools = client._build_openai_tools()
+
+        assert len(openai_tools) == 1
+        assert openai_tools[0]["type"] == "function"
+        assert openai_tools[0]["function"]["name"] == "test_tool"
+
+    def test_build_tools_context(self, client):
+        """Test building tools context description."""
+        mock_tool = mcp_types.Tool(
+            name="test_tool",
+            description="Test tool description",
+            inputSchema={"type": "object"},
+        )
+        client.tools["test_tool"] = (mock_tool, "test_server")
+
+        context = client._build_tools_context()
+
+        assert "test_server Server" in context
+        assert "test_tool: Test tool description" in context
+
+    def test_build_tools_context_empty(self, client):
+        """Test building tools context when no tools available."""
+        context = client._build_tools_context()
+        assert "No connected servers or tools available" in context
+
+    def test_get_connected_servers(self, client):
+        """Test getting connected servers."""
+        mock_client = AsyncMock()
+        client.clients["test_server"] = mock_client
+
+        servers = client.get_connected_servers()
+        assert servers == ["test_server"]
+
+    def test_get_all_tools(self, client):
+        """Test getting all tools organized by server."""
+        mock_tool1 = mcp_types.Tool(name="tool1", inputSchema={})
+        mock_tool2 = mcp_types.Tool(name="tool2", inputSchema={})
+
+        client.tools["tool1"] = (mock_tool1, "server1")
+        client.tools["tool2"] = (mock_tool2, "server2")
+
+        tools_by_server = client.get_all_tools()
+
+        assert "server1" in tools_by_server
+        assert "server2" in tools_by_server
+        assert "tool1" in tools_by_server["server1"]
+        assert "tool2" in tools_by_server["server2"]
+
+    def test_find_tool_server(self, client):
+        """Test finding which server has a tool."""
+        mock_tool = mcp_types.Tool(name="test_tool", inputSchema={})
+        client.tools["test_tool"] = (mock_tool, "test_server")
+
+        server = client.find_tool_server("test_tool")
+        assert server == "test_server"
+
+        # Test with non-existent tool
+        server = client.find_tool_server("missing_tool")
+        assert server is None
+
+    def test_get_server_status(self, client):
+        """Test getting server status information."""
+        mock_client = AsyncMock()
+        client.clients["test_server"] = mock_client
+
+        mock_tool = mcp_types.Tool(name="test_tool", inputSchema={})
+        client.tools["test_tool"] = (mock_tool, "test_server")
+
+        status = client.get_server_status()
+
+        assert "test_server" in status
+        assert status["test_server"]["connected"] is True
+        assert status["test_server"]["tools_count"] == 1
+        assert "test_tool" in status["test_server"]["tools"]
+
+    @pytest.mark.asyncio
+    async def test_chat_with_ai_legacy(self, client):
+        """Test legacy chat_with_ai method."""
+        with patch.object(client, "chat_with_steps") as mock_chat:
+            mock_step = Step(step_number=0, text="Hello")
+            mock_chat.return_value = [mock_step]
+
+            response = await client.chat_with_ai("test message")
+
+            assert response == "Hello"
+            mock_chat.assert_called_once_with("test message", True)
+
+    @pytest.mark.asyncio
+    async def test_disconnect_from_servers(self, client):
+        """Test disconnecting from servers."""
+        mock_client = AsyncMock()
+        client.clients["test_server"] = mock_client
+
+        mock_tool = mcp_types.Tool(name="test_tool", inputSchema={})
+        client.tools["test_tool"] = (mock_tool, "test_server")
+
+        await client.disconnect_from_servers()
+
+        mock_client.close.assert_called_once()
+        assert len(client.clients) == 0
+        assert len(client.tools) == 0
+
+
+class TestClientFactory:
+    """Test the client factory function."""
+
+    @pytest.mark.asyncio
+    async def test_create_multi_server_client_from_config(self):
+        """Test creating client from configuration."""
+        servers = {
+            "test_server": {
+                "type": "stdio",
+                "command": "test-command",
+                "args": [],
+            }
+        }
+
+        with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "test_key"}):
             with patch.object(
-                selector, "_check_server_requirements", return_value=True
-            ):
-                selected = selector.select_servers_interactive()
+                MultiServerAIClient, "connect_to_servers"
+            ) as mock_connect:
+                client = await create_multi_server_client_from_config(
+                    servers=servers,
+                    ai_provider="claude",
+                    max_steps=3,
+                )
 
-        assert len(selected) == 1
-
-    @patch("lightfast_mcp.clients.server_selector.ConfigLoader")
-    def test_load_available_servers_empty(self, mock_config_loader):
-        """Test loading servers when none are available."""
-        mock_loader = MagicMock()
-        mock_loader.load_servers_config.return_value = []
-        mock_config_loader.return_value = mock_loader
-
-        selector = ServerSelector()
-        configs = selector.load_available_servers()
-
-        assert len(configs) == 0
+                assert isinstance(client, MultiServerAIClient)
+                mock_connect.assert_called_once()

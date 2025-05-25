@@ -10,7 +10,6 @@ from lightfast_mcp.cli import (
     create_sample_config,
     list_available_servers,
     main,
-    start_ai_client,
     start_servers_by_names,
     start_servers_interactive,
 )
@@ -170,35 +169,6 @@ class TestCLI:
             except KeyboardInterrupt:
                 pass
 
-    @pytest.mark.asyncio
-    @patch("lightfast_mcp.cli.MultiServerAIClient")
-    async def test_start_ai_client_no_api_key(self, mock_client_class):
-        """Test AI client start without API key."""
-        mock_client_class.side_effect = ValueError("API key required")
-
-        with patch("builtins.print") as mock_print:
-            await start_ai_client()
-
-        assert any("API key" in str(call) for call in mock_print.call_args_list)
-
-    @pytest.mark.asyncio
-    @patch("socket.socket")
-    @patch("lightfast_mcp.cli.MultiServerAIClient")
-    async def test_start_ai_client_no_servers(self, mock_client_class, mock_socket):
-        """Test AI client start with no running servers."""
-        # Mock socket to simulate no servers running
-        mock_sock = MagicMock()
-        mock_sock.connect_ex.return_value = 1  # Connection failed
-        mock_socket.return_value = mock_sock
-
-        mock_client = MagicMock()
-        mock_client_class.return_value = mock_client
-
-        with patch("builtins.print") as mock_print:
-            await start_ai_client()
-
-        mock_print.assert_any_call("❌ No running MCP servers found.")
-
     def test_main_init_command(self):
         """Test main function with init command."""
         with patch("lightfast_mcp.cli.create_sample_config") as mock_create:
@@ -231,14 +201,6 @@ class TestCLI:
 
         mock_start.assert_called_once_with(["server1", "server2"], show_logs=True)
 
-    def test_main_ai_command(self):
-        """Test main function with ai command."""
-        with patch("lightfast_mcp.cli.asyncio.run") as mock_run:
-            with patch("sys.argv", ["cli.py", "ai"]):
-                main()
-
-        mock_run.assert_called_once()
-
     def test_main_verbose_flag(self):
         """Test main function with verbose flag."""
         with patch("lightfast_mcp.cli.configure_logging") as mock_config:
@@ -262,7 +224,6 @@ class TestCLIIntegration:
             ["list"],
             ["start"],
             ["start", "server1"],
-            ["ai"],
             ["init", "--verbose"],
         ]
 
@@ -272,8 +233,7 @@ class TestCLIIntegration:
                     with patch("lightfast_mcp.cli.list_available_servers"):
                         with patch("lightfast_mcp.cli.start_servers_interactive"):
                             with patch("lightfast_mcp.cli.start_servers_by_names"):
-                                with patch("lightfast_mcp.cli.asyncio.run"):
-                                    try:
-                                        main()
-                                    except SystemExit:
-                                        pass  # Expected for help/error cases
+                                try:
+                                    main()
+                                except SystemExit:
+                                    pass  # Expected for help/error cases
