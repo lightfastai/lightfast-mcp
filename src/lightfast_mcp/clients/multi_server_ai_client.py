@@ -3,6 +3,8 @@
 import asyncio
 import json
 import os
+import shlex
+import urllib.parse
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, AsyncIterator, Callable, Optional
@@ -234,11 +236,24 @@ class MultiServerAIClient:
                 logger.info(f"Connecting to {server_name}...")
 
                 if server_config.get("type") == "stdio":
-                    # For stdio, we need to use the command and args
-                    # This might need a different approach - let's handle it separately
+                    # For stdio, we need to use the command and args properly
                     command = server_config.get("command", "")
-                    # args = server_config.get("args", [])  # TODO: Use args when implementing proper stdio support
-                    client = Client(f"stdio://{command}")  # This might need adjustment
+                    args = server_config.get("args", [])
+
+                    if not command:
+                        raise ValueError(
+                            f"Missing command for stdio server {server_name}"
+                        )
+
+                    # Combine command and args properly
+                    if args:
+                        full_command = shlex.join([command] + args)
+                    else:
+                        full_command = command
+
+                    # URL-encode the command for the stdio URL
+                    encoded_command = urllib.parse.quote(full_command, safe="")
+                    client = Client(f"stdio://{encoded_command}")
                 elif server_config.get("type") == "sse":
                     # For HTTP/SSE, use the URL directly
                     url = server_config.get("url", "")
@@ -249,7 +264,7 @@ class MultiServerAIClient:
                     )
                     continue
 
-                # The Client should already be connected after initialization
+                # Store the client - connection will be managed per-operation
                 self.clients[server_name] = client
                 logger.info(f"Connected to {server_name}")
             except Exception as e:
@@ -450,13 +465,18 @@ You can use the available tools to interact with the connected servers. When you
             full_messages = [{"role": "system", "content": system_prompt}] + messages
             openai_tools = self._build_openai_tools()
 
-            response = await self.ai_client.chat.completions.create(
-                model="gpt-4o",
-                messages=full_messages,
-                max_tokens=4000,
-                tools=openai_tools if openai_tools else None,
-                tool_choice="auto" if openai_tools else None,
-            )
+            # Build API parameters, only including tools if we have any
+            api_params = {
+                "model": "gpt-4o",
+                "messages": full_messages,
+                "max_tokens": 4000,
+            }
+
+            if openai_tools:  # Only add tools if we have any
+                api_params["tools"] = openai_tools
+                api_params["tool_choice"] = "auto"
+
+            response = await self.ai_client.chat.completions.create(**api_params)
 
             message = response.choices[0].message
 
