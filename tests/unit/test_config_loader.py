@@ -10,7 +10,7 @@ from unittest.mock import patch
 import pytest
 import yaml
 
-from internal.management.config_loader import ConfigLoader
+from tools.orchestration.config_loader import ConfigLoader
 
 
 class TestConfigLoaderComprehensive:
@@ -143,7 +143,7 @@ class TestConfigLoaderComprehensive:
     )
     def test_load_from_environment(self):
         """Test loading configuration from environment variable."""
-        from internal.management.config_loader import load_config_from_env
+        from tools.orchestration.config_loader import load_config_from_env
 
         configs = load_config_from_env()
 
@@ -153,7 +153,7 @@ class TestConfigLoaderComprehensive:
     @patch.dict(os.environ, {"LIGHTFAST_MCP_SERVERS": "invalid json"})
     def test_load_from_environment_invalid_json(self):
         """Test handling invalid JSON in environment variable."""
-        from internal.management.config_loader import load_config_from_env
+        from tools.orchestration.config_loader import load_config_from_env
 
         configs = load_config_from_env()
         assert configs == []

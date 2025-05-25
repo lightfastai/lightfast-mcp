@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import mcp.types as mcp_types
 import pytest
 
-from internal.clients.multi_server_ai_client import (
+from tools.ai.multi_server_ai_client import (
     ConversationState,
     MultiServerAIClient,
     Step,
@@ -219,7 +219,7 @@ class TestMultiServerAIClient:
         mock_client.list_tools.return_value = mock_tools_result
 
         with patch(
-            "internal.clients.multi_server_ai_client.Client"
+            "tools.ai.multi_server_ai_client.Client"
         ) as mock_client_class:
             mock_client_class.return_value = mock_client
 

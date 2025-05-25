@@ -106,47 +106,47 @@ Common interface for all MCP servers with:
 - Health checks and monitoring
 - Standardized tool registration
 
-### 🔧 Internal Tools (Separate Package)
+### 🔧 Development Tools (Separate Package)
 
-All management and AI client features are completely separated into the `internal` package for maximum separation of concerns.
+All orchestration and AI integration features are completely separated into the `tools` package for maximum separation of concerns.
 
-#### Internal Package Structure
+#### Tools Package Structure
 
 ```
-src/internal/
-├── management/                # Multi-server management
+src/tools/
+├── orchestration/             # Multi-server orchestration
 │   ├── multi_server_manager.py   # Run multiple servers
 │   ├── server_registry.py        # Auto-discover servers
 │   ├── config_loader.py          # YAML/JSON configuration
 │   ├── server_selector.py        # Interactive server selection
-│   └── cli.py                    # Management CLI
-├── clients/                   # AI client tools
+│   └── cli.py                    # Orchestration CLI
+├── ai/                        # AI integration tools
 │   ├── multi_server_ai_client.py # Connect to multiple servers
 │   └── cli.py                    # AI client CLI
-└── __init__.py                # Internal package exports
+└── __init__.py                # Tools package exports
 ```
 
 **Additional Dependencies**: `pyyaml`, `anthropic`, `openai`, `typer`
 
 **Entry Points**:
-- `lightfast-mcp-manager` - Multi-server management CLI
-- `lightfast-mcp-ai` - AI client CLI
+- `lightfast-mcp-manager` - Multi-server orchestration CLI
+- `lightfast-mcp-ai` - AI integration CLI
 
-#### **ServerRegistry** (`src/internal/management/server_registry.py`)  
-Auto-discovery and management system:
+#### **ServerRegistry** (`src/tools/orchestration/server_registry.py`)  
+Auto-discovery and orchestration system:
 - Discovers available server classes automatically
 - Manages server type registration
 - Validates configurations
 - Creates server instances
 
-#### **MultiServerManager** (`src/internal/management/multi_server_manager.py`)
+#### **MultiServerManager** (`src/tools/orchestration/multi_server_manager.py`)
 Multi-server orchestration:
 - Manages multiple server instances
 - Handles concurrent startup/shutdown
 - Provides health monitoring
 - Background execution support
 
-#### **MultiServerAIClient** (`src/internal/clients/multi_server_ai_client.py`)
+#### **MultiServerAIClient** (`src/tools/ai/multi_server_ai_client.py`)
 AI integration layer:
 - Connects to multiple MCP servers simultaneously
 - Routes AI tool calls to appropriate servers
@@ -177,9 +177,9 @@ pip install lightfast-mcp
 # Available: lightfast-blender-server, lightfast-mock-server
 ```
 
-#### 🔧 With Internal Tools
+#### 🔧 With Development Tools
 ```bash
-pip install lightfast-mcp[internal]
+pip install lightfast-mcp[tools]
 # Adds: pyyaml, anthropic, openai, typer
 # Available: lightfast-mcp-manager, lightfast-mcp-ai
 ```
@@ -202,7 +202,7 @@ lightfast-mock-server        # Start Mock MCP server
 # Use with any MCP client (Claude Desktop, etc.)
 ```
 
-#### 🔧 Secondary: Internal Tools
+#### 🔧 Secondary: Development Tools
 
 ```bash
 # Optional convenience for development/testing
@@ -217,7 +217,7 @@ lightfast-mcp-ai test        # Quick testing
 ### Design Principles
 
 1. **Core First**: MCP server implementations are the primary value
-2. **Optional Convenience**: Management and AI features are helpful but not essential
+2. **Optional Convenience**: Orchestration and AI features are helpful but not essential
 3. **Minimal Dependencies**: Core functionality has minimal dependencies
 4. **Graceful Degradation**: Features gracefully unavailable if dependencies missing
 5. **Clear Entry Points**: Each component has clear, purpose-specific entry points
@@ -245,10 +245,10 @@ src/lightfast_mcp/          # 🎯 PURE MCP SERVERS
 ├── servers/                 # MCP server implementations
 └── utils/                   # Shared utilities
 
-src/internal/                # 🔧 INTERNAL TOOLS
-├── management/              # Multi-server management
-├── clients/                 # AI client tools
-└── __init__.py              # Internal package exports
+src/tools/                   # 🔧 DEVELOPMENT TOOLS
+├── orchestration/           # Multi-server orchestration
+├── ai/                      # AI integration tools
+└── __init__.py              # Tools package exports
 ```
 
 **Import Path Changes:**
@@ -261,8 +261,8 @@ from lightfast_mcp.clients import MultiServerAIClient
 
 **After:**
 ```python
-from internal.management import ConfigLoader, get_manager
-from internal.clients import MultiServerAIClient
+from tools.orchestration import ConfigLoader, get_manager
+from tools.ai import MultiServerAIClient
 ```
 
 **Benefits Achieved:**
@@ -406,7 +406,7 @@ servers:
 
 ### Multi-Server AI Client Usage
 ```python
-from internal.clients import MultiServerAIClient
+from tools.ai import MultiServerAIClient
 
 # Setup
 client = MultiServerAIClient(ai_provider="claude")

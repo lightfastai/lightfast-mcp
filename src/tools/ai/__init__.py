@@ -1,4 +1,4 @@
-"""Client components for connecting to multiple MCP servers."""
+"""AI integration tools for multi-server coordination."""
 
 from .multi_server_ai_client import MultiServerAIClient
 

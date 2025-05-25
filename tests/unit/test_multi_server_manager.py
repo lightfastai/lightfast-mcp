@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from lightfast_mcp.core.base_server import BaseServer, ServerConfig
-from internal.management.multi_server_manager import (
+from tools.orchestration.multi_server_manager import (
     MultiServerManager,
     get_manager,
 )
@@ -137,7 +137,7 @@ class TestMultiServerManager:
 
         # Manually add server to running servers
         server = MockTestServer(config)
-        from internal.management.multi_server_manager import ServerProcess
+        from tools.orchestration.multi_server_manager import ServerProcess
 
         manager._running_servers["existing"] = ServerProcess(server=server)
 
@@ -174,7 +174,7 @@ class TestMultiServerManager:
             name="stop-test", description="Stop test", config={"type": "mock_test"}
         )
         server = MockTestServer(config)
-        from internal.management.multi_server_manager import ServerProcess
+        from tools.orchestration.multi_server_manager import ServerProcess
 
         manager._running_servers["stop-test"] = ServerProcess(server=server)
 
@@ -203,7 +203,7 @@ class TestMultiServerManager:
             name="bg-stop", description="Background stop", config={"type": "mock_test"}
         )
         server = MockTestServer(config)
-        from internal.management.multi_server_manager import ServerProcess
+        from tools.orchestration.multi_server_manager import ServerProcess
 
         manager._running_servers["bg-stop"] = ServerProcess(
             server=server, thread=mock_thread, is_background=True
@@ -260,7 +260,7 @@ class TestMultiServerManager:
                 config={"type": "mock_test"},
             )
             server = MockTestServer(config)
-            from internal.management.multi_server_manager import ServerProcess
+            from tools.orchestration.multi_server_manager import ServerProcess
 
             manager._running_servers[f"stop-all-{i}"] = ServerProcess(server=server)
 
@@ -277,7 +277,7 @@ class TestMultiServerManager:
             name="info-server", description="Info server", config={"type": "mock_test"}
         )
         server = MockTestServer(config)
-        from internal.management.multi_server_manager import ServerProcess
+        from tools.orchestration.multi_server_manager import ServerProcess
 
         manager._running_servers["info-server"] = ServerProcess(server=server)
 
@@ -298,7 +298,7 @@ class TestMultiServerManager:
             config={"type": "mock_test"},
         )
         server = MockTestServer(config)
-        from internal.management.multi_server_manager import ServerProcess
+        from tools.orchestration.multi_server_manager import ServerProcess
 
         manager._running_servers["status-server"] = ServerProcess(server=server)
 
@@ -328,7 +328,7 @@ class TestMultiServerManager:
         server = MockTestServer(config)
         # Set the server as running
         server.info.is_running = True
-        from internal.management.multi_server_manager import ServerProcess
+        from tools.orchestration.multi_server_manager import ServerProcess
 
         manager._running_servers["running-check"] = ServerProcess(server=server)
 
@@ -349,7 +349,7 @@ class TestMultiServerManager:
                 config={"type": "mock_test"},
             )
             server = MockTestServer(config)
-            from internal.management.multi_server_manager import ServerProcess
+            from tools.orchestration.multi_server_manager import ServerProcess
 
             manager._running_servers[f"count-{i}"] = ServerProcess(server=server)
 
@@ -365,7 +365,7 @@ class TestMultiServerManager:
         )
         server = MockTestServer(config)
         server.info.url = "http://localhost:8000/mcp"
-        from internal.management.multi_server_manager import ServerProcess
+        from tools.orchestration.multi_server_manager import ServerProcess
 
         manager._running_servers["url-server"] = ServerProcess(server=server)
 
@@ -415,7 +415,7 @@ class TestMultiServerManager:
                 config={"type": "mock_test"},
             )
             server = MockTestServer(config)
-            from internal.management.multi_server_manager import ServerProcess
+            from tools.orchestration.multi_server_manager import ServerProcess
 
             manager._running_servers[f"health-{i}"] = ServerProcess(server=server)
 
@@ -488,7 +488,7 @@ class TestMultiServerManagerErrorHandling:
                 config={"type": "mock_test"},
             )
             server = MockTestServer(config)
-            from internal.management.multi_server_manager import ServerProcess
+            from tools.orchestration.multi_server_manager import ServerProcess
 
             manager._running_servers[f"shutdown-{i}"] = ServerProcess(server=server)
 

@@ -7,8 +7,8 @@ from unittest.mock import patch
 import pytest
 
 from lightfast_mcp.core.base_server import ServerConfig
-from internal.management import get_manager, get_registry
-from internal.management.config_loader import ConfigLoader
+from tools.orchestration import get_manager, get_registry
+from tools.orchestration.config_loader import ConfigLoader
 
 
 @pytest.mark.integration

@@ -1,4 +1,4 @@
-"""Management infrastructure for multiple MCP servers."""
+"""Multi-server orchestration tools."""
 
 from .config_loader import ConfigLoader
 from .multi_server_manager import MultiServerManager, get_manager

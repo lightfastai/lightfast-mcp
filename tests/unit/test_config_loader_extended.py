@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 import pytest
 
-from internal.management.config_loader import (
+from tools.orchestration.config_loader import (
     ConfigLoader,
     load_config_from_env,
     load_server_configs,
@@ -32,7 +32,7 @@ class TestConfigLoaderErrorPaths:
             loader = ConfigLoader(config_dir=config_dir)
 
             # Mock YAML_AVAILABLE to False
-            with patch("internal.management.config_loader.YAML_AVAILABLE", False):
+            with patch("tools.orchestration.config_loader.YAML_AVAILABLE", False):
                 configs = loader.load_servers_config("servers.yaml")
                 # Should return empty list due to error
                 assert configs == []
@@ -50,7 +50,7 @@ class TestConfigLoaderErrorPaths:
             ]
 
             # Mock YAML_AVAILABLE to False
-            with patch("internal.management.config_loader.YAML_AVAILABLE", False):
+            with patch("tools.orchestration.config_loader.YAML_AVAILABLE", False):
                 result = loader.save_servers_config(configs, "test.yaml")
                 assert result is False
 

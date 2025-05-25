@@ -24,8 +24,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# 🔧 INTERNAL: Internal tools (management + AI client)
-internal = [
+# 🔧 TOOLS: Development tools (orchestration + AI)
+tools = [
     "pyyaml",  # For YAML configuration support
     "anthropic",  # Claude AI integration
     "openai",  # OpenAI integration
@@ -51,7 +51,7 @@ dev = [
     "nox",
     "mypy",
     "build",
-    # Include internal tools for development
+    # Include development tools
     "pyyaml",
     "anthropic",
     "openai", 
@@ -63,9 +63,9 @@ dev = [
 lightfast-blender-server = "lightfast_mcp.servers.blender_mcp_server:main"
 lightfast-mock-server = "lightfast_mcp.servers.mock_server:main"
 
-# 🔧 SECONDARY: Management and AI client tools (optional features)
-lightfast-mcp-manager = "internal.management.cli:main"
-lightfast-mcp-ai = "internal.clients.cli:app"
+# 🔧 SECONDARY: Development tools (optional features)
+lightfast-mcp-manager = "tools.orchestration.cli:main"
+lightfast-mcp-ai = "tools.ai.cli:app"
 
 # Direct modular server access
 lightfast-mock = "lightfast_mcp.servers.mock.server:main"
@@ -84,9 +84,9 @@ packages = [
     "lightfast_mcp.servers.blender",
     "lightfast_mcp.servers.mock",
     "lightfast_mcp.utils",
-    "internal",
-    "internal.management",
-    "internal.clients",
+    "tools",
+    "tools.orchestration",
+    "tools.ai",
 ]
 
 [project.urls]
@@ -145,12 +145,12 @@ demo = "uv run pytest tests/e2e/test_full_system.py::TestFullSystemWorkflow::tes
 blender_server = "uv run lightfast-blender-server"
 mock_server = "uv run lightfast-mock-server"
 
-# 🔧 SECONDARY: Multi-server management (optional)
+# 🔧 SECONDARY: Multi-server orchestration (optional)
 manager = "uv run lightfast-mcp-manager"
 start_servers = "uv run lightfast-mcp-manager start"
 list_servers = "uv run lightfast-mcp-manager list"
 
-# 🔧 SECONDARY: AI Client (optional)
+# 🔧 SECONDARY: AI integration (optional)
 ai_client = "uv run lightfast-mcp-ai chat"
 ai_test = "uv run lightfast-mcp-ai test"
 

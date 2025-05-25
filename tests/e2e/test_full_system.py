@@ -12,10 +12,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from internal.clients.multi_server_ai_client import MultiServerAIClient
+from tools.ai.multi_server_ai_client import MultiServerAIClient
 from lightfast_mcp.core.base_server import ServerConfig
-from internal.management import ConfigLoader, get_manager, get_registry
-from internal.management.cli import main as cli_main
+from tools.orchestration import ConfigLoader, get_manager, get_registry
+from tools.orchestration.cli import main as cli_main
 
 
 class TestFullSystemWorkflow:
@@ -110,7 +110,7 @@ class TestFullSystemWorkflow:
 
     def test_cli_integration_workflow(self):
         """Test CLI integration workflow."""
-        with patch("internal.management.cli.ConfigLoader") as mock_config_loader:
+        with patch("tools.orchestration.cli.ConfigLoader") as mock_config_loader:
             mock_loader = MagicMock()
             mock_loader.create_sample_config.return_value = True
             mock_config_loader.return_value = mock_loader
@@ -302,7 +302,7 @@ class TestSystemIntegrationScenarios:
                 os.environ, {"LIGHTFAST_MCP_SERVERS": str(env_config).replace("'", '"')}
             ):
                 # Use the environment-specific loader function
-                from internal.management.config_loader import load_config_from_env
+                from tools.orchestration.config_loader import load_config_from_env
 
                 env_configs = load_config_from_env()
                 # Should load from environment instead of file

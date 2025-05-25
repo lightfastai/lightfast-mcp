@@ -37,7 +37,7 @@ def test_imports():
         return False
 
     try:
-        from internal.clients.multi_server_ai_client import (
+        from tools.ai.multi_server_ai_client import (
             MultiServerAIClient,  # noqa: F401
         )
 
@@ -120,8 +120,8 @@ def test_basic_functionality():
     print("\n=== Testing Basic Functionality ===")
 
     try:
-        from internal.management.config_loader import ConfigLoader
-        from internal.management.server_registry import ServerRegistry
+        from tools.orchestration.config_loader import ConfigLoader
+        from tools.orchestration.server_registry import ServerRegistry
 
         # Test config loader
         ConfigLoader()  # Just test that it can be instantiated

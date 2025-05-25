@@ -9,9 +9,9 @@ implementations themselves.
 - Blender MCP Server: Control Blender through MCP protocol
 - Mock MCP Server: Testing and development server
 
-🔧 Management & AI Client Tools:
-- Available separately in the `internal` package
-- Use `from internal import get_manager, MultiServerAIClient` for development tools
+🔧 Development Tools:
+- Available separately in the `tools` package
+- Use `from tools import get_manager, MultiServerAIClient` for development tools
 
 Example Usage:
 ```python
@@ -23,8 +23,8 @@ config = ServerConfig(name="my-blender", config={"type": "blender"})
 server = BlenderMCPServer(config)
 await server.run()
 
-# Management tools (optional)
-from internal import get_manager
+# Development tools (optional)
+from tools import get_manager
 manager = get_manager()
 manager.start_server(config)
 ```

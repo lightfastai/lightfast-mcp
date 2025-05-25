@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from internal.clients.multi_server_ai_client import (
+from tools.ai.multi_server_ai_client import (
     MultiServerAIClient,
     ToolCall,
     ToolCallState,

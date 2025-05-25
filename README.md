@@ -11,8 +11,8 @@ Lightfast MCP provides reliable, well-tested MCP server implementations for crea
 
 ## 🔧 Optional Features
 
-- **Multi-Server Management**: Run and manage multiple MCP servers simultaneously
-- **AI Client Integration**: Built-in AI client for testing and interacting with servers  
+- **Multi-Server Orchestration**: Run and coordinate multiple MCP servers simultaneously
+- **AI Integration**: Built-in AI tools for testing and interacting with servers  
 - **Configuration-Driven**: YAML/JSON configuration for easy server management
 - **Flexible Transport**: Support for both stdio and HTTP-based transports
 
@@ -77,17 +77,17 @@ lightfast-blender-server    # Blender MCP server
 lightfast-mock-server       # Mock MCP server for testing
 ```
 
-### 🔧 Internal Tools (Management + AI Client)
+### 🔧 Development Tools (Orchestration + AI)
 
 ```bash
-# Install with internal tools
-pip install lightfast-mcp[internal]
+# Install with development tools
+pip install lightfast-mcp[tools]
 
-# Multi-server management
+# Multi-server orchestration
 lightfast-mcp-manager init
 lightfast-mcp-manager start
 
-# AI client for testing
+# AI integration for testing
 lightfast-mcp-ai chat
 ```
 
