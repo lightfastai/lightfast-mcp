@@ -12,8 +12,8 @@ try:
 except ImportError:
     YAML_AVAILABLE = False
 
+from ..core.base_server import ServerConfig
 from ..utils.logging_utils import get_logger
-from .base_server import ServerConfig
 
 logger = get_logger("ConfigLoader")
 

@@ -6,8 +6,8 @@ import pkgutil
 from pathlib import Path
 from typing import Any
 
+from ..core.base_server import BaseServer, ServerConfig
 from ..utils.logging_utils import get_logger
-from .base_server import BaseServer, ServerConfig
 
 logger = get_logger("ServerRegistry")
 

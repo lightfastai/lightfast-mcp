@@ -6,9 +6,9 @@ from unittest.mock import patch
 
 import pytest
 
-from lightfast_mcp.core import get_manager, get_registry
 from lightfast_mcp.core.base_server import ServerConfig
-from lightfast_mcp.core.config_loader import ConfigLoader
+from lightfast_mcp.management import get_manager, get_registry
+from lightfast_mcp.management.config_loader import ConfigLoader
 
 
 @pytest.mark.integration

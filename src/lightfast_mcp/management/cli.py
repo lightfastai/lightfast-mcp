@@ -9,12 +9,10 @@ use the dedicated AI client to interact with them.
 
 import argparse
 
-from .clients.server_selector import ServerSelector
-from .core import (
-    ConfigLoader,
-    get_manager,
-)
-from .utils.logging_utils import configure_logging, get_logger
+from ..utils.logging_utils import configure_logging, get_logger
+from .config_loader import ConfigLoader
+from .multi_server_manager import get_manager
+from .server_selector import ServerSelector
 
 # Configure logging
 configure_logging(level="INFO")
@@ -41,7 +39,7 @@ def list_available_servers():
     print("🔍 Available Server Types:")
     print("=" * 50)
 
-    from .core.server_registry import get_registry
+    from .server_registry import get_registry
 
     registry = get_registry()
     server_info = registry.get_server_info()

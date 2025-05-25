@@ -7,7 +7,7 @@ from unittest.mock import patch
 import pytest
 
 from lightfast_mcp.core.base_server import ServerConfig
-from lightfast_mcp.core.server_registry import get_registry
+from lightfast_mcp.management.server_registry import get_registry
 from lightfast_mcp.servers.blender.server import BlenderMCPServer
 from lightfast_mcp.servers.mock.server import MockMCPServer
 

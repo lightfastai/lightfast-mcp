@@ -3,9 +3,9 @@
 from typing import Any
 
 from ..core.base_server import ServerConfig
-from ..core.config_loader import ConfigLoader
-from ..core.server_registry import get_registry
 from ..utils.logging_utils import get_logger
+from .config_loader import ConfigLoader
+from .server_registry import get_registry
 
 logger = get_logger("ServerSelector")
 

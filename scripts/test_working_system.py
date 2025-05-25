@@ -120,8 +120,8 @@ def test_basic_functionality():
     print("\n=== Testing Basic Functionality ===")
 
     try:
-        from lightfast_mcp.core.config_loader import ConfigLoader
-        from lightfast_mcp.core.server_registry import ServerRegistry
+        from lightfast_mcp.management.config_loader import ConfigLoader
+        from lightfast_mcp.management.server_registry import ServerRegistry
 
         # Test config loader
         ConfigLoader()  # Just test that it can be instantiated
