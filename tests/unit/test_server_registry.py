@@ -7,7 +7,7 @@ from unittest.mock import patch
 import pytest
 
 from lightfast_mcp.core.base_server import BaseServer, ServerConfig
-from lightfast_mcp.management.server_registry import ServerRegistry, get_registry
+from internal.management.server_registry import ServerRegistry, get_registry
 
 
 class MockServerA(BaseServer):

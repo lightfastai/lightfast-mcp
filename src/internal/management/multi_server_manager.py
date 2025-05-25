@@ -10,8 +10,9 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
-from ..core.base_server import BaseServer, ServerConfig, ServerInfo
-from ..utils.logging_utils import get_logger
+from lightfast_mcp.core.base_server import BaseServer, ServerConfig, ServerInfo
+from lightfast_mcp.utils.logging_utils import get_logger
+
 from .server_registry import get_registry
 
 logger = get_logger("MultiServerManager")

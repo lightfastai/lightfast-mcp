@@ -9,7 +9,8 @@ use the dedicated AI client to interact with them.
 
 import argparse
 
-from ..utils.logging_utils import configure_logging, get_logger
+from lightfast_mcp.utils.logging_utils import configure_logging, get_logger
+
 from .config_loader import ConfigLoader
 from .multi_server_manager import get_manager
 from .server_selector import ServerSelector

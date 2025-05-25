@@ -418,11 +418,6 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
-ai-client = [
-    { name = "anthropic" },
-    { name = "openai" },
-    { name = "typer" },
-]
 all = [
     { name = "anthropic" },
     { name = "openai" },
@@ -444,8 +439,11 @@ dev = [
     { name = "taskipy" },
     { name = "typer" },
 ]
-management = [
+internal = [
+    { name = "anthropic" },
+    { name = "openai" },
     { name = "pyyaml" },
+    { name = "typer" },
 ]
 
 [package.dev-dependencies]
@@ -458,31 +456,31 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "anthropic", marker = "extra == 'ai-client'" },
     { name = "anthropic", marker = "extra == 'all'" },
     { name = "anthropic", marker = "extra == 'dev'" },
+    { name = "anthropic", marker = "extra == 'internal'" },
     { name = "build", marker = "extra == 'dev'" },
     { name = "coverage", marker = "extra == 'dev'" },
     { name = "fastmcp", specifier = ">=2.0.0" },
     { name = "mypy", marker = "extra == 'dev'" },
     { name = "nox", marker = "extra == 'dev'" },
-    { name = "openai", marker = "extra == 'ai-client'" },
     { name = "openai", marker = "extra == 'all'" },
     { name = "openai", marker = "extra == 'dev'" },
+    { name = "openai", marker = "extra == 'internal'" },
     { name = "pytest", marker = "extra == 'dev'" },
     { name = "pytest-asyncio", marker = "extra == 'dev'" },
     { name = "pytest-cov", marker = "extra == 'dev'" },
     { name = "pyyaml", marker = "extra == 'all'" },
     { name = "pyyaml", marker = "extra == 'dev'" },
-    { name = "pyyaml", marker = "extra == 'management'" },
+    { name = "pyyaml", marker = "extra == 'internal'" },
     { name = "rich" },
     { name = "ruff", marker = "extra == 'dev'" },
     { name = "taskipy", marker = "extra == 'dev'" },
-    { name = "typer", marker = "extra == 'ai-client'" },
     { name = "typer", marker = "extra == 'all'" },
     { name = "typer", marker = "extra == 'dev'" },
+    { name = "typer", marker = "extra == 'internal'" },
 ]
-provides-extras = ["management", "ai-client", "all", "dev"]
+provides-extras = ["internal", "all", "dev"]
 
 [package.metadata.requires-dev]
 dev = [

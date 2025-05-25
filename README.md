@@ -77,11 +77,11 @@ lightfast-blender-server    # Blender MCP server
 lightfast-mock-server       # Mock MCP server for testing
 ```
 
-### 🔧 Full Features (Management + AI Client)
+### 🔧 Internal Tools (Management + AI Client)
 
 ```bash
-# Install with all features
-pip install lightfast-mcp[all]
+# Install with internal tools
+pip install lightfast-mcp[internal]
 
 # Multi-server management
 lightfast-mcp-manager init

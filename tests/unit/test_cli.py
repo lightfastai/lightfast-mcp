@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from lightfast_mcp.management.cli import (
+from internal.management.cli import (
     create_sample_config,
     list_available_servers,
     main,
@@ -18,7 +18,7 @@ from lightfast_mcp.management.cli import (
 class TestCLI:
     """Test CLI functionality."""
 
-    @patch("lightfast_mcp.management.cli.ConfigLoader")
+    @patch("internal.management.cli.ConfigLoader")
     def test_create_sample_config_success(self, mock_config_loader):
         """Test successful configuration creation."""
         mock_loader = MagicMock()
@@ -33,7 +33,7 @@ class TestCLI:
             "✅ Sample configuration created at: config/servers.yaml"
         )
 
-    @patch("lightfast_mcp.management.cli.ConfigLoader")
+    @patch("internal.management.cli.ConfigLoader")
     def test_create_sample_config_failure(self, mock_config_loader):
         """Test configuration creation failure."""
         mock_loader = MagicMock()
@@ -45,8 +45,8 @@ class TestCLI:
 
         mock_print.assert_any_call("❌ Failed to create sample configuration")
 
-    @patch("lightfast_mcp.management.server_registry.get_registry")
-    @patch("lightfast_mcp.management.cli.ConfigLoader")
+    @patch("internal.management.server_registry.get_registry")
+    @patch("internal.management.cli.ConfigLoader")
     def test_list_available_servers(self, mock_config_loader, mock_get_registry):
         """Test listing available servers."""
         # Mock registry
@@ -83,8 +83,8 @@ class TestCLI:
     @pytest.mark.xfail(
         reason="stdin handling in pytest environment - known test infrastructure issue"
     )
-    @patch("lightfast_mcp.management.cli.get_manager")
-    @patch("lightfast_mcp.management.cli.ServerSelector")
+    @patch("internal.management.cli.get_manager")
+    @patch("internal.management.cli.ServerSelector")
     def test_start_servers_interactive_no_configs(
         self, mock_selector, mock_get_manager
     ):
@@ -98,8 +98,8 @@ class TestCLI:
 
         mock_print.assert_any_call("❌ No server configurations found.")
 
-    @patch("lightfast_mcp.management.cli.get_manager")
-    @patch("lightfast_mcp.management.cli.ServerSelector")
+    @patch("internal.management.cli.get_manager")
+    @patch("internal.management.cli.ServerSelector")
     def test_start_servers_interactive_success(self, mock_selector, mock_get_manager):
         """Test successful interactive server start."""
         # Mock selector
@@ -129,7 +129,7 @@ class TestCLI:
         # Check that start_multiple_servers was called with the expected arguments
         mock_manager.start_multiple_servers.assert_called_once()
 
-    @patch("lightfast_mcp.management.cli.ConfigLoader")
+    @patch("internal.management.cli.ConfigLoader")
     def test_start_servers_by_names_no_configs(self, mock_config_loader):
         """Test starting servers by name when no configs exist."""
         mock_loader = MagicMock()
@@ -141,8 +141,8 @@ class TestCLI:
 
         mock_print.assert_any_call("❌ No server configurations found.")
 
-    @patch("lightfast_mcp.management.cli.get_manager")
-    @patch("lightfast_mcp.management.cli.ConfigLoader")
+    @patch("internal.management.cli.get_manager")
+    @patch("internal.management.cli.ConfigLoader")
     def test_start_servers_by_names_success(self, mock_config_loader, mock_get_manager):
         """Test successfully starting servers by name."""
         # Mock config
@@ -169,7 +169,7 @@ class TestCLI:
 
     def test_main_init_command(self):
         """Test main function with init command."""
-        with patch("lightfast_mcp.management.cli.create_sample_config") as mock_create:
+        with patch("internal.management.cli.create_sample_config") as mock_create:
             with patch("sys.argv", ["cli.py", "init"]):
                 main()
 
@@ -177,7 +177,7 @@ class TestCLI:
 
     def test_main_list_command(self):
         """Test main function with list command."""
-        with patch("lightfast_mcp.management.cli.list_available_servers") as mock_list:
+        with patch("internal.management.cli.list_available_servers") as mock_list:
             with patch("sys.argv", ["cli.py", "list"]):
                 main()
 
@@ -186,7 +186,7 @@ class TestCLI:
     def test_main_start_command_no_servers(self):
         """Test main function with start command and no server names."""
         with patch(
-            "lightfast_mcp.management.cli.start_servers_interactive"
+            "internal.management.cli.start_servers_interactive"
         ) as mock_start:
             with patch("sys.argv", ["cli.py", "start"]):
                 main()
@@ -195,7 +195,7 @@ class TestCLI:
 
     def test_main_start_command_with_servers(self):
         """Test main function with start command and server names."""
-        with patch("lightfast_mcp.management.cli.start_servers_by_names") as mock_start:
+        with patch("internal.management.cli.start_servers_by_names") as mock_start:
             with patch("sys.argv", ["cli.py", "start", "server1", "server2"]):
                 main()
 
@@ -203,8 +203,8 @@ class TestCLI:
 
     def test_main_verbose_flag(self):
         """Test main function with verbose flag."""
-        with patch("lightfast_mcp.management.cli.configure_logging") as mock_config:
-            with patch("lightfast_mcp.management.cli.create_sample_config"):
+        with patch("internal.management.cli.configure_logging") as mock_config:
+            with patch("internal.management.cli.create_sample_config"):
                 with patch("sys.argv", ["cli.py", "init", "--verbose"]):
                     main()
 
@@ -216,7 +216,7 @@ class TestCLIIntegration:
 
     def test_argument_parsing(self):
         """Test that arguments are parsed correctly."""
-        from lightfast_mcp.management.cli import main
+        from internal.management.cli import main
 
         # Test that main can handle different argument combinations
         test_cases = [
@@ -229,13 +229,13 @@ class TestCLIIntegration:
 
         for args in test_cases:
             with patch("sys.argv", ["cli.py"] + args):
-                with patch("lightfast_mcp.management.cli.create_sample_config"):
-                    with patch("lightfast_mcp.management.cli.list_available_servers"):
+                with patch("internal.management.cli.create_sample_config"):
+                    with patch("internal.management.cli.list_available_servers"):
                         with patch(
-                            "lightfast_mcp.management.cli.start_servers_interactive"
+                            "internal.management.cli.start_servers_interactive"
                         ):
                             with patch(
-                                "lightfast_mcp.management.cli.start_servers_by_names"
+                                "internal.management.cli.start_servers_by_names"
                             ):
                                 try:
                                     main()

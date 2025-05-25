@@ -14,7 +14,7 @@ import mcp.types as mcp_types
 import openai
 from fastmcp import Client
 
-from ..utils.logging_utils import get_logger
+from lightfast_mcp.utils.logging_utils import get_logger
 
 logger = get_logger("MultiServerAIClient")
 

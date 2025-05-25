@@ -2,8 +2,9 @@
 
 from typing import Any
 
-from ..core.base_server import ServerConfig
-from ..utils.logging_utils import get_logger
+from lightfast_mcp.core.base_server import ServerConfig
+from lightfast_mcp.utils.logging_utils import get_logger
+
 from .config_loader import ConfigLoader
 from .server_registry import get_registry
 

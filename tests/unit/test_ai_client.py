@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import mcp.types as mcp_types
 import pytest
 
-from lightfast_mcp.clients.multi_server_ai_client import (
+from internal.clients.multi_server_ai_client import (
     ConversationState,
     MultiServerAIClient,
     Step,
@@ -219,7 +219,7 @@ class TestMultiServerAIClient:
         mock_client.list_tools.return_value = mock_tools_result
 
         with patch(
-            "lightfast_mcp.clients.multi_server_ai_client.Client"
+            "internal.clients.multi_server_ai_client.Client"
         ) as mock_client_class:
             mock_client_class.return_value = mock_client
 

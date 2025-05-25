@@ -12,8 +12,9 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
-from ..management.config_loader import load_server_configs
-from ..utils.logging_utils import get_logger
+from internal.management.config_loader import load_server_configs
+from lightfast_mcp.utils.logging_utils import get_logger
+
 from .multi_server_ai_client import (
     MultiServerAIClient,
     Step,

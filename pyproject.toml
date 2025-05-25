@@ -24,15 +24,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# 🔧 MANAGEMENT: Multi-server management infrastructure
-management = [
+# 🔧 INTERNAL: Internal tools (management + AI client)
+internal = [
     "pyyaml",  # For YAML configuration support
-]
-
-# 🔧 AI_CLIENT: AI client functionality
-ai-client = [
-    "anthropic",
-    "openai",
+    "anthropic",  # Claude AI integration
+    "openai",  # OpenAI integration
     "typer",  # For AI client CLI
 ]
 
@@ -55,7 +51,7 @@ dev = [
     "nox",
     "mypy",
     "build",
-    # Include all optional dependencies for development
+    # Include internal tools for development
     "pyyaml",
     "anthropic",
     "openai", 
@@ -68,8 +64,8 @@ lightfast-blender-server = "lightfast_mcp.servers.blender_mcp_server:main"
 lightfast-mock-server = "lightfast_mcp.servers.mock_server:main"
 
 # 🔧 SECONDARY: Management and AI client tools (optional features)
-lightfast-mcp-manager = "lightfast_mcp.management.cli:main"
-lightfast-mcp-ai = "lightfast_mcp.clients.cli:app"
+lightfast-mcp-manager = "internal.management.cli:main"
+lightfast-mcp-ai = "internal.clients.cli:app"
 
 # Direct modular server access
 lightfast-mock = "lightfast_mcp.servers.mock.server:main"
@@ -87,8 +83,10 @@ packages = [
     "lightfast_mcp.servers",
     "lightfast_mcp.servers.blender",
     "lightfast_mcp.servers.mock",
-    "lightfast_mcp.clients",
-    "lightfast_mcp.utils"
+    "lightfast_mcp.utils",
+    "internal",
+    "internal.management",
+    "internal.clients",
 ]
 
 [project.urls]

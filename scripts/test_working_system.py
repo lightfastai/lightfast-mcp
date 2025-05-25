@@ -37,7 +37,7 @@ def test_imports():
         return False
 
     try:
-        from lightfast_mcp.clients.multi_server_ai_client import (
+        from internal.clients.multi_server_ai_client import (
             MultiServerAIClient,  # noqa: F401
         )
 
@@ -120,8 +120,8 @@ def test_basic_functionality():
     print("\n=== Testing Basic Functionality ===")
 
     try:
-        from lightfast_mcp.management.config_loader import ConfigLoader
-        from lightfast_mcp.management.server_registry import ServerRegistry
+        from internal.management.config_loader import ConfigLoader
+        from internal.management.server_registry import ServerRegistry
 
         # Test config loader
         ConfigLoader()  # Just test that it can be instantiated
