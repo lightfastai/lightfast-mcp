@@ -47,7 +47,7 @@ class TestClientsCLI:
         print_step_info(step)
 
         # Just verify it doesn't crash - output testing is complex with Rich
-        captured = capsys.readouterr()
+        capsys.readouterr()  # Clear captured output
         # Rich output is complex, just ensure no exceptions
 
     def test_print_step_info_with_tool_calls(self, capsys):
@@ -77,7 +77,7 @@ class TestClientsCLI:
         print_step_info(step)
 
         # Just verify it doesn't crash
-        captured = capsys.readouterr()
+        capsys.readouterr()  # Clear captured output
 
     def test_print_step_info_with_error(self, capsys):
         """Test printing step info with tool error."""
@@ -97,7 +97,7 @@ class TestClientsCLI:
         print_step_info(step)
 
         # Just verify it doesn't crash
-        captured = capsys.readouterr()
+        capsys.readouterr()  # Clear captured output
 
     @pytest.mark.asyncio
     @patch("lightfast_mcp.clients.cli.load_server_configs")
