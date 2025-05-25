@@ -9,7 +9,7 @@ use the dedicated AI client to interact with them.
 
 import argparse
 
-from .clients import ServerSelector
+from .clients.server_selector import ServerSelector
 from .core import (
     ConfigLoader,
     get_manager,
