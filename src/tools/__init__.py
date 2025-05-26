@@ -14,6 +14,9 @@ Development tools are in this tools package.
 - tools.common: Shared utilities, types, and error handling
 """
 
+# Import submodules to make them available for patching in tests
+from . import ai, common, orchestration
+
 # New architecture
 from .ai import ConversationClient, create_conversation_client
 from .orchestration import (
@@ -26,6 +29,10 @@ from .orchestration import (
 )
 
 __all__ = [
+    # Submodules (for test patching)
+    "ai",
+    "common",
+    "orchestration",
     # Orchestration
     "ConfigLoader",
     "ServerOrchestrator",
