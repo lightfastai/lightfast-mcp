@@ -50,8 +50,8 @@ Always use these commands from DEV.md:
 ```bash
 # Setup (from DEV.md Quick Start)
 uv pip install -e ".[dev]"
-uv run lightfast-mcp-manager init
-uv run lightfast-mcp-manager start
+uv run lightfast-mcp-orchestrator init
+uv run lightfast-mcp-orchestrator start
 
 # Development (from DEV.md Development Tasks)
 uv run task lint
@@ -107,8 +107,8 @@ For complete setup instructions, see @DEV.md Quick Start section.
 
 ```bash
 # Essential commands (from DEV.md)
-uv run lightfast-mcp-manager init
-uv run lightfast-mcp-manager start
+uv run lightfast-mcp-orchestrator init
+uv run lightfast-mcp-orchestrator start
 ```
 
 ## Architecture

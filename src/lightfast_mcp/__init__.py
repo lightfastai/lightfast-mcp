@@ -11,7 +11,7 @@ implementations themselves.
 
 🔧 Development Tools:
 - Available separately in the `tools` package
-- Use `from tools import get_manager, MultiServerAIClient` for development tools
+- Use `from tools.orchestration import get_orchestrator` for development tools
 
 Example Usage:
 ```python
@@ -24,9 +24,9 @@ server = BlenderMCPServer(config)
 await server.run()
 
 # Development tools (optional)
-from tools import get_manager
-manager = get_manager()
-manager.start_server(config)
+from tools.orchestration import get_orchestrator
+orchestrator = get_orchestrator()
+# orchestrator.start_server(config) # Example usage
 ```
 """
 

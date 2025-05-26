@@ -1,5 +1,6 @@
 ---
 description: Lightfast MCP project architecture, structure, and file organization patterns
+globs: 
 alwaysApply: true
 ---
 
@@ -19,7 +20,7 @@ src/lightfast_mcp/
 ```
 
 ## Entry Points
-- `lightfast-mcp-manager`: Main CLI for managing multiple servers
+- `lightfast-mcp-orchestrator`: Main CLI for orchestrating multiple servers
 - `lightfast-blender-server`: Direct Blender server entry point
 - `lightfast-mock-server`: Direct mock server entry point
 

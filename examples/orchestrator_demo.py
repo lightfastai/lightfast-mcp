@@ -27,7 +27,7 @@ async def demo_basic_usage():
 
     if not server_configs:
         print("❌ No server configurations found!")
-        print("   Run: uv run lightfast-mcp-manager init")
+        print("   Run: uv run lightfast-mcp-orchestrator init")
         return
 
     print(f"📋 Found {len(server_configs)} server configurations:")

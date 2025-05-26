@@ -139,9 +139,6 @@ jobs:
         ORCHESTRATOR_PID=$!
         sleep 5  # Let server start
         kill $ORCHESTRATOR_PID || true
-        
-        # Test legacy manager alias still works
-        uv run lightfast-mcp-manager --help
 
     - name: Test development workflows
       run: |
@@ -292,9 +289,8 @@ jobs:
         uv pip install dist/*.whl --system
         python -c "import lightfast_mcp; print('Package imported successfully')"
         
-        # Test CLI script works (both new and legacy)
+        # Test CLI script works
         lightfast-mcp-orchestrator --help
-        lightfast-mcp-manager --help
         
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4

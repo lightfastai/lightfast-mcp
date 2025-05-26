@@ -64,17 +64,6 @@ def test_cli_commands():
         print(f"✗ lightfast-mcp-orchestrator CLI failed: {stderr}")
         return False
 
-    # Test legacy manager CLI alias still works
-    exit_code, stdout, stderr = run_command(
-        ["uv", "run", "lightfast-mcp-manager", "--help"], timeout=10
-    )
-
-    if exit_code == 0:
-        print("✓ lightfast-mcp-manager (legacy) CLI works")
-    else:
-        print(f"✗ lightfast-mcp-manager (legacy) CLI failed: {stderr}")
-        return False
-
     # Test mock server CLI (just check if it's available, don't run it)
     exit_code, stdout, stderr = run_command(
         [

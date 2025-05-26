@@ -253,13 +253,7 @@ Examples:
   lightfast-mcp-orchestrator start --hide-logs           # Start servers without showing logs
   lightfast-mcp-orchestrator start --verbose             # Start with debug logging and server logs
 
-Legacy Commands (deprecated, use lightfast-mcp-orchestrator instead):
-  lightfast-mcp-manager init                        # Create sample configuration
-  lightfast-mcp-manager list                        # List available servers
-  lightfast-mcp-manager start                       # Interactive server selection
-  lightfast-mcp-manager start blender-server        # Start specific server
-  lightfast-mcp-manager start --hide-logs           # Start servers without showing logs
-  lightfast-mcp-manager start --verbose             # Start with debug logging and server logs
+
 
 AI Client (use after starting servers):
   uv run task conversation_client                   # Start interactive AI chat

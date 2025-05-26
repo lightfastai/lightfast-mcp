@@ -104,12 +104,12 @@ uv run pytest --durations=10 tests/unit/
 echo "⚙️  Configuration-specific validations..."
 
 # Test configuration loading
-uv run lightfast-mcp-manager list
+uv run lightfast-mcp-orchestrator list
 
 # Test server startup with new config
-uv run lightfast-mcp-manager start --hide-logs &
+uv run lightfast-mcp-orchestrator start --hide-logs &
 sleep 5
-pkill -f lightfast-mcp-manager
+pkill -f lightfast-mcp-orchestrator
 ```
 
 ## Quality Gates

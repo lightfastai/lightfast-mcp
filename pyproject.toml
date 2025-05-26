@@ -53,9 +53,6 @@ lightfast-blender = "lightfast_mcp.servers.blender.server:main"
 # 🤖 Orchestration: Multi-server management CLI
 lightfast-mcp-orchestrator = "tools.orchestration.cli:main"
 
-# Legacy alias for backward compatibility (will be deprecated)
-lightfast-mcp-manager = "tools.orchestration.cli:main"
-
 # 🤖 AI: Conversation client CLI
 lightfast-conversation-client = "tools.ai.conversation_cli:app"
 

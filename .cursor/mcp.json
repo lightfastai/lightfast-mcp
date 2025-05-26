@@ -33,18 +33,6 @@
       "env": {
         "LIGHTFAST_MCP_LOG_LEVEL": "WARNING"
       }
-    },
-    "lightfast-manager": {
-      "command": "uv",
-      "args": [
-        "run",
-        "lightfast-mcp-manager",
-        "start",
-        "--hide-logs"
-      ],
-      "env": {
-        "LIGHTFAST_MCP_LOG_LEVEL": "WARNING"
-      }
     }
   }
 }

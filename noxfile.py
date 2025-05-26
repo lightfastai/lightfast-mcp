@@ -126,9 +126,7 @@ def demo(session):
 def cli_test(session):
     """Test CLI functionality."""
     session.install("-e", ".[dev]")
-    # Test basic CLI commands (new orchestrator)
+    # Test basic CLI commands
     session.run("lightfast-mcp-orchestrator", "--help")
     session.run("lightfast-mcp-orchestrator", "init")
     session.run("lightfast-mcp-orchestrator", "list")
-    # Test legacy manager alias still works
-    session.run("lightfast-mcp-manager", "--help")
