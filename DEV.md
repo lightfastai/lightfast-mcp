@@ -1263,11 +1263,14 @@ export ANTHROPIC_API_KEY=key && uv run lightfast-mcp-orchestrator ai
 ### File Structure
 ```
 lightfast-mcp/
-├── src/lightfast_mcp/          # Main library
-│   ├── core/                   # Core architecture  
-│   ├── servers/                # Server implementations
-│   ├── clients/                # AI clients
-│   └── utils/                  # Utilities
+├── src/lightfast_mcp/          # Main library - Core MCP server implementations
+│   ├── core/                   # Base classes (BaseServer, ServerConfig), shared server utilities
+│   ├── servers/                # MCP server implementations (e.g., blender/, mock/)
+│   └── utils/                  # Shared utilities for MCP servers
+├── src/tools/                  # Development and orchestration tools
+│   ├── orchestration/          # Multi-server orchestration
+│   ├── ai/                     # AI integration tools
+│   └── common/                 # Utilities specific to the tools package
 ├── tests/                      # Test suite
 ├── examples/                   # Examples & demos
 ├── config/                     # Configuration

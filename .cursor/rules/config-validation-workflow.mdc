@@ -3,7 +3,6 @@ description: Configuration file validation workflow with automatic checks
 globs: ["config/**/*.yaml", "config/**/*.json", "*.yaml", "*.json", ".cursor/**/*.json"]
 alwaysApply: false
 ---
-
 # Configuration Validation Workflow
 
 When editing configuration files, execute these validation steps immediately:
@@ -23,10 +22,10 @@ When editing configuration files, execute these validation steps immediately:
 python -c "import yaml; yaml.safe_load(open('{current_file}'))"
 
 # Test configuration loading
-uv run python -c "from lightfast_mcp.core import ConfigLoader; ConfigLoader().load_servers_config('{current_file}')"
+uv run python -c "from tools.orchestration.config_loader import ConfigLoader; ConfigLoader().load_servers_config('{current_file}')"
 
 # Test server startup with new config
-uv run lightfast-mcp-manager list
+uv run lightfast-mcp-orchestrator list
 ```
 
 ### JSON Configuration Files
@@ -60,12 +59,12 @@ fi
 ### After Editing Server Config
 ```bash
 # Test configuration loading
-uv run lightfast-mcp-manager list
+uv run lightfast-mcp-orchestrator list
 
 # Test server startup
-uv run lightfast-mcp-manager start --hide-logs &
+uv run lightfast-mcp-orchestrator start --hide-logs &
 sleep 5
-pkill -f lightfast-mcp-manager
+pkill -f lightfast-mcp-orchestrator
 
 # Validate no port conflicts
 netstat -an | grep -E ':(8001|8002|8003|8004|8005)\s'

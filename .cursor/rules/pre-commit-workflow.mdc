@@ -3,7 +3,6 @@ description: Pre-commit workflow ensuring comprehensive validation before commit
 globs: 
 alwaysApply: false
 ---
-
 # Pre-Commit Workflow
 
 Before committing any changes to lightfast-mcp, execute this comprehensive validation workflow:
@@ -92,7 +91,7 @@ for file in glob.glob('src/lightfast_mcp/servers/**/*.py', recursive=True):
 echo "🧪 Test-specific validations..."
 
 # Run affected tests with coverage
-uv run pytest --cov=src/lightfast_mcp --cov-report=term-missing tests/
+uv run pytest --cov=src tests/
 
 # Ensure test performance
 uv run pytest --durations=10 tests/unit/
