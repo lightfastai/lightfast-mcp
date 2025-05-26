@@ -59,15 +59,9 @@ dev = [
 ]
 
 [project.scripts]
-# 🎯 PRIMARY: Individual MCP server entry points (core functionality)
+# 🎯 PRIMARY: Individual MCP server entry points (core functionality only)
 lightfast-blender-server = "lightfast_mcp.servers.blender_mcp_server:main"
 lightfast-mock-server = "lightfast_mcp.servers.mock_server:main"
-
-# 🔧 ORCHESTRATION: Server management tools
-lightfast-mcp-manager = "tools.orchestration.cli:main"
-
-# 🤖 AI: Conversation client
-lightfast-conversation-client = "tools.ai.conversation_cli:app"
 
 # Direct modular server access
 lightfast-mock = "lightfast_mcp.servers.mock.server:main"
@@ -86,12 +80,7 @@ packages = [
     "lightfast_mcp.servers.blender",
     "lightfast_mcp.servers.mock",
     "lightfast_mcp.utils",
-    "common",
-    "tools",
-    "tools.common",
-    "tools.orchestration",
-    "tools.ai",
-    "tools.ai.providers",
+    "common",  # Required by lightfast_mcp.core
 ]
 
 [project.urls]

@@ -1,28 +1,19 @@
 """Base server interface for all MCP servers in the lightfast-mcp ecosystem."""
 
 # Import shared types from common module
-import sys
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
-from pathlib import Path
 from typing import Any, ClassVar
 
 from fastmcp import FastMCP
 
+# Import shared types from common module
+from common import HealthStatus, ServerInfo, ServerState
+
 from ..utils.logging_utils import get_logger
-
-# Import shared types from tools.common
-try:
-    from tools.common import HealthStatus, ServerInfo, ServerState
-except ImportError:
-    # Fallback for development/testing
-    import sys
-
-    sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-    from tools.common import HealthStatus, ServerInfo, ServerState
 
 
 @dataclass
