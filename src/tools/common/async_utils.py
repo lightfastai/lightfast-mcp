@@ -66,7 +66,9 @@ class ConnectionPool:
         connection = None
         try:
             connection = await self._acquire_connection(server_name)
-            yield connection
+            # Use the FastMCP client's context manager to ensure proper connection
+            async with connection as connected_client:
+                yield connected_client
         finally:
             if connection:
                 await self._release_connection(server_name, connection)
@@ -130,10 +132,8 @@ class ConnectionPool:
                 url = config.get("url", "")
                 client = Client(url)
 
-            # Test the connection
-            async with client:
-                await client.list_tools()  # Simple health check
-
+            # Don't test the connection here - let the context manager handle it
+            # The client will be connected when used in the context manager
             return client
 
         except Exception as e:
@@ -158,7 +158,10 @@ class ConnectionPool:
     async def _close_connection(self, server_name: str, connection: Client):
         """Close a connection and update counters."""
         try:
-            await connection.close()
+            # FastMCP clients don't have a direct close method
+            # They are managed through context managers
+            # Just clean up our tracking
+            pass
         except Exception as e:
             logger.warning(f"Error closing connection for {server_name}: {e}")
         finally:
