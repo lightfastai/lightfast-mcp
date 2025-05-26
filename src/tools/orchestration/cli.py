@@ -8,6 +8,7 @@ use the dedicated AI client to interact with them.
 """
 
 import argparse
+import asyncio
 
 from lightfast_mcp.utils.logging_utils import configure_logging, get_logger
 
@@ -20,43 +21,39 @@ configure_logging(level="INFO")
 logger = get_logger("LightfastMCPManager")
 
 
-# TODO: Update this CLI to use the new ServerOrchestrator async API
-# For now, we'll create a temporary compatibility layer
-class CompatibilityManager:
-    """Temporary compatibility wrapper for the old CLI."""
-
-    def __init__(self):
-        self.orchestrator = get_orchestrator()
-
-    def start_multiple_servers(self, configs, background=True, show_logs=True):
-        """Sync wrapper for async start_multiple_servers."""
-        import asyncio
-
-        async def _async_start():
-            result = await self.orchestrator.start_multiple_servers(
-                configs, background, show_logs
-            )
-            return result.data if result.is_success else {}
-
-        return asyncio.run(_async_start())
-
-    def get_server_urls(self):
-        """Get server URLs from orchestrator."""
-        servers = self.orchestrator.get_running_servers()
-        return {name: info.url for name, info in servers.items() if info.url}
-
-    def wait_for_shutdown(self):
-        """Wait for shutdown signal."""
-        self.orchestrator._shutdown_event.wait()
-
-    def shutdown_all(self):
-        """Shutdown all servers."""
-        self.orchestrator.shutdown_all()
+# Async wrapper functions for CLI
 
 
-def get_manager():
-    """Compatibility function that returns the wrapper."""
-    return CompatibilityManager()
+def start_multiple_servers_sync(configs, background=True, show_logs=True):
+    """Sync wrapper for async start_multiple_servers."""
+    orchestrator = get_orchestrator()
+
+    async def _async_start():
+        result = await orchestrator.start_multiple_servers(
+            configs, background, show_logs
+        )
+        return result.data if result.is_success else {}
+
+    return asyncio.run(_async_start())
+
+
+def get_server_urls_sync():
+    """Get server URLs from orchestrator."""
+    orchestrator = get_orchestrator()
+    servers = orchestrator.get_running_servers()
+    return {name: info.url for name, info in servers.items() if info.url}
+
+
+def wait_for_shutdown_sync():
+    """Wait for shutdown signal."""
+    orchestrator = get_orchestrator()
+    orchestrator._shutdown_event.wait()
+
+
+def shutdown_all_sync():
+    """Shutdown all servers."""
+    orchestrator = get_orchestrator()
+    orchestrator.shutdown_all()
 
 
 def create_sample_config():
@@ -156,13 +153,10 @@ def start_servers_interactive(show_logs: bool = True):
         print("👋 No servers selected. Goodbye!")
         return
 
-    # Start selected servers
-    manager = get_manager()
-
     print(f"\n🚀 Starting {len(selected_configs)} servers...")
     print("   This may take a few moments as servers initialize...")
 
-    results = manager.start_multiple_servers(
+    results = start_multiple_servers_sync(
         selected_configs, background=True, show_logs=show_logs
     )
 
@@ -177,7 +171,7 @@ def start_servers_interactive(show_logs: bool = True):
 
     if successful > 0:
         # Show server URLs
-        urls = manager.get_server_urls()
+        urls = get_server_urls_sync()
         if urls:
             print("\n📡 Server URLs:")
             for name, url in urls.items():
@@ -186,15 +180,15 @@ def start_servers_interactive(show_logs: bool = True):
         print(
             "\n🎯 Servers are running! Use the dedicated AI client to interact with them."
         )
-        print("   Run 'uv run task ai_client' to start the AI client.")
+        print("   Run 'uv run task conversation_client' to start the AI client.")
         print("   Press Ctrl+C to shutdown all servers.\n")
 
         try:
             # Wait for shutdown
-            manager.wait_for_shutdown()
+            wait_for_shutdown_sync()
         except KeyboardInterrupt:
             print("\n⏹️  Shutting down servers...")
-            manager.shutdown_all()
+            shutdown_all_sync()
             print("👋 All servers stopped. Goodbye!")
 
 
@@ -221,8 +215,7 @@ def start_servers_by_names(server_names: list[str], show_logs: bool = True):
         return
 
     # Start servers
-    manager = get_manager()
-    results = manager.start_multiple_servers(
+    results = start_multiple_servers_sync(
         selected_configs, background=True, show_logs=show_logs
     )
 
@@ -231,17 +224,17 @@ def start_servers_by_names(server_names: list[str], show_logs: bool = True):
     print(f"✅ Successfully started {successful}/{len(selected_configs)} servers")
 
     if successful > 0:
-        urls = manager.get_server_urls()
+        urls = get_server_urls_sync()
         if urls:
             print("\n📡 Server URLs:")
             for name, url in urls.items():
                 print(f"   • {name}: {url}")
 
         try:
-            manager.wait_for_shutdown()
+            wait_for_shutdown_sync()
         except KeyboardInterrupt:
             print("\n⏹️  Shutting down servers...")
-            manager.shutdown_all()
+            shutdown_all_sync()
 
 
 def main():
@@ -259,8 +252,8 @@ Examples:
   lightfast-mcp-manager start --verbose             # Start with debug logging and server logs
 
 AI Client (use after starting servers):
-  uv run task ai_client                             # Start interactive AI chat
-  uv run task ai_test --message "Hello"             # Quick AI test
+  uv run task conversation_client                   # Start interactive AI chat
+  uv run task conversation_test --message "Hello"   # Quick AI test
         """,
     )
 

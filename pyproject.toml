@@ -66,9 +66,8 @@ lightfast-mock-server = "lightfast_mcp.servers.mock_server:main"
 # 🔧 ORCHESTRATION: Server management tools
 lightfast-mcp-manager = "tools.orchestration.cli:main"
 
-# 🤖 AI: Conversation clients (new architecture)
+# 🤖 AI: Conversation client
 lightfast-conversation-client = "tools.ai.conversation_cli:app"
-lightfast-mcp-ai = "tools.ai.cli:app"  # Legacy CLI (will be deprecated)
 
 # Direct modular server access
 lightfast-mock = "lightfast_mcp.servers.mock.server:main"
@@ -155,11 +154,9 @@ manager = "uv run lightfast-mcp-manager"
 start_servers = "uv run lightfast-mcp-manager start"
 list_servers = "uv run lightfast-mcp-manager list"
 
-# 🤖 AI: Conversation clients
+# 🤖 AI: Conversation client
 conversation_client = "uv run lightfast-conversation-client chat"
 conversation_test = "uv run lightfast-conversation-client test"
-ai_client = "uv run lightfast-mcp-ai chat"  # Legacy (will be deprecated)
-ai_test = "uv run lightfast-mcp-ai test"    # Legacy (will be deprecated)
 
 [dependency-groups]
 dev = [

@@ -216,27 +216,28 @@ class TestSystemIntegrationScenarios:
             configs = loader.load_servers_config()
             assert len(configs) >= 2
 
-            # 3. Developer starts servers for testing (using compatibility layer)
-            from tools.orchestration.cli import get_manager
+            # 3. Developer starts servers for testing (using sync wrapper functions)
+            from tools.orchestration.cli import (
+                get_server_urls_sync,
+                shutdown_all_sync,
+                start_multiple_servers_sync,
+            )
 
-            manager = get_manager()
             mock_configs = [c for c in configs if c.config.get("type") == "mock"]
 
             if mock_configs:
                 # Modify port to avoid conflicts
                 mock_configs[0].port = 8096
 
-                results = manager.start_multiple_servers(
-                    mock_configs[:1], background=True
-                )
+                results = start_multiple_servers_sync(mock_configs[:1], background=True)
                 assert any(results.values())
 
                 # 4. Developer checks server status
-                urls = manager.get_server_urls()
+                urls = get_server_urls_sync()
                 assert len(urls) >= 1
 
                 # 5. Developer shuts down when done
-                manager.shutdown_all()
+                shutdown_all_sync()
 
     @pytest.mark.asyncio
     async def test_production_deployment_scenario(self):

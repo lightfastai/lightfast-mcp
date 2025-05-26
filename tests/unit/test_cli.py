@@ -83,10 +83,10 @@ class TestCLI:
     @pytest.mark.xfail(
         reason="stdin handling in pytest environment - known test infrastructure issue"
     )
-    @patch("tools.orchestration.cli.get_manager")
+    @patch("tools.orchestration.cli.start_multiple_servers_sync")
     @patch("tools.orchestration.cli.ServerSelector")
     def test_start_servers_interactive_no_configs(
-        self, mock_selector, mock_get_manager
+        self, mock_selector, mock_start_servers
     ):
         """Test interactive server start with no configurations."""
         mock_selector_instance = MagicMock()
@@ -98,9 +98,14 @@ class TestCLI:
 
         mock_print.assert_any_call("❌ No server configurations found.")
 
-    @patch("tools.orchestration.cli.get_manager")
+    @patch("tools.orchestration.cli.shutdown_all_sync")
+    @patch("tools.orchestration.cli.wait_for_shutdown_sync")
+    @patch("tools.orchestration.cli.get_server_urls_sync")
+    @patch("tools.orchestration.cli.start_multiple_servers_sync")
     @patch("tools.orchestration.cli.ServerSelector")
-    def test_start_servers_interactive_success(self, mock_selector, mock_get_manager):
+    def test_start_servers_interactive_success(
+        self, mock_selector, mock_start_servers, mock_get_urls, mock_wait, mock_shutdown
+    ):
         """Test successful interactive server start."""
         # Mock selector
         mock_selector_instance = MagicMock()
@@ -110,24 +115,19 @@ class TestCLI:
         mock_selector_instance.select_servers_interactive.return_value = [mock_config]
         mock_selector.return_value = mock_selector_instance
 
-        # Mock manager
-        mock_manager = MagicMock()
-        mock_manager.start_multiple_servers.return_value = {"test-server": True}
-        mock_manager.get_server_urls.return_value = {
-            "test-server": "http://localhost:8001"
-        }
-        mock_get_manager.return_value = mock_manager
+        # Mock sync functions
+        mock_start_servers.return_value = {"test-server": True}
+        mock_get_urls.return_value = {"test-server": "http://localhost:8001"}
+        mock_wait.side_effect = KeyboardInterrupt
 
         with patch("builtins.print"):
-            # Mock the manager.wait_for_shutdown to raise KeyboardInterrupt
-            mock_manager.wait_for_shutdown.side_effect = KeyboardInterrupt
             try:
                 start_servers_interactive()
             except KeyboardInterrupt:
                 pass
 
         # Check that start_multiple_servers was called with the expected arguments
-        mock_manager.start_multiple_servers.assert_called_once()
+        mock_start_servers.assert_called_once()
 
     @patch("tools.orchestration.cli.ConfigLoader")
     def test_start_servers_by_names_no_configs(self, mock_config_loader):
@@ -141,9 +141,19 @@ class TestCLI:
 
         mock_print.assert_any_call("❌ No server configurations found.")
 
-    @patch("tools.orchestration.cli.get_manager")
+    @patch("tools.orchestration.cli.shutdown_all_sync")
+    @patch("tools.orchestration.cli.wait_for_shutdown_sync")
+    @patch("tools.orchestration.cli.get_server_urls_sync")
+    @patch("tools.orchestration.cli.start_multiple_servers_sync")
     @patch("tools.orchestration.cli.ConfigLoader")
-    def test_start_servers_by_names_success(self, mock_config_loader, mock_get_manager):
+    def test_start_servers_by_names_success(
+        self,
+        mock_config_loader,
+        mock_start_servers,
+        mock_get_urls,
+        mock_wait,
+        mock_shutdown,
+    ):
         """Test successfully starting servers by name."""
         # Mock config
         mock_config = MagicMock()
@@ -152,16 +162,11 @@ class TestCLI:
         mock_loader.load_servers_config.return_value = [mock_config]
         mock_config_loader.return_value = mock_loader
 
-        # Mock manager
-        mock_manager = MagicMock()
-        mock_manager.start_multiple_servers.return_value = {"test-server": True}
-        mock_manager.get_server_urls.return_value = {
-            "test-server": "http://localhost:8001"
-        }
-        mock_get_manager.return_value = mock_manager
+        # Mock sync functions
+        mock_start_servers.return_value = {"test-server": True}
+        mock_get_urls.return_value = {"test-server": "http://localhost:8001"}
+        mock_wait.side_effect = KeyboardInterrupt
 
-        # Mock the manager.wait_for_shutdown to raise KeyboardInterrupt
-        mock_manager.wait_for_shutdown.side_effect = KeyboardInterrupt
         try:
             start_servers_by_names(["test-server"])
         except KeyboardInterrupt:
