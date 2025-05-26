@@ -456,3 +456,11 @@ def get_orchestrator() -> ServerOrchestrator:
     if _orchestrator is None:
         _orchestrator = ServerOrchestrator()
     return _orchestrator
+
+
+def reset_orchestrator():
+    """Reset the global orchestrator (mainly for testing)."""
+    global _orchestrator
+    if _orchestrator is not None:
+        _orchestrator.shutdown_all()
+    _orchestrator = None

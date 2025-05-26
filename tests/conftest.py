@@ -87,11 +87,9 @@ def clean_singletons():
 
     # Clean up orchestrator singleton
     try:
-        from tools.orchestration.server_orchestrator import _orchestrator
+        from tools.orchestration.server_orchestrator import reset_orchestrator
 
-        if _orchestrator:
-            _orchestrator.shutdown_all()
-            globals()["_orchestrator"] = None
+        reset_orchestrator()
     except ImportError:
         pass
 
