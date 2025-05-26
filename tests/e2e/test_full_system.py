@@ -386,7 +386,7 @@ class TestSystemIntegrationScenarios:
             await asyncio.sleep(0.3)
 
             # Try to start second server on same port (should fail gracefully)
-            result2 = await orchestrator.start_server(config2, background=True)
+            _result2 = await orchestrator.start_server(config2, background=True)
             # Note: This might succeed if the validation doesn't catch the conflict
             # The important thing is that the system handles it gracefully
 

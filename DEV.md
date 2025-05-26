@@ -568,6 +568,183 @@ async def test_myapp_tools(myapp_config):
     assert "test" in result
 ```
 
+## 🧪 Comprehensive Testing Strategy
+
+### Testing Philosophy
+
+The project maintains a three-tier testing strategy designed for both rapid development feedback and production confidence:
+
+#### **Unit Tests** - Fast Development Feedback
+- **Purpose**: Test individual components in isolation with mocks
+- **Speed**: < 10 seconds total execution
+- **Coverage**: Core business logic, configuration, utilities
+- **When to Run**: Every code change, pre-commit hooks
+
+#### **Integration Tests** - Component Interaction Validation  
+- **Purpose**: Test real component interactions without mocks
+- **Speed**: < 30 seconds total execution
+- **Coverage**: Server lifecycle, multi-server coordination, CLI workflows
+- **When to Run**: Before pull requests, CI pipeline
+
+#### **End-to-End Tests** - Production Readiness Validation
+- **Purpose**: Test complete user workflows and production scenarios
+- **Speed**: 1-3 minutes total execution
+- **Coverage**: Full system workflows, AI integration, performance testing
+- **When to Run**: Release validation, nightly builds
+
+### Key Testing Scenarios
+
+#### **Real AI Integration Testing**
+```python
+@pytest.mark.asyncio
+async def test_ai_conversation_with_multiple_servers():
+    """Test AI conversation workflow with multiple servers."""
+    # Tests AI client with multiple MCP servers
+    # Validates tool routing and execution across servers
+    # Uses mock AI providers for consistent testing
+```
+
+#### **Production Deployment Validation**
+```python
+@pytest.mark.asyncio  
+async def test_production_configuration_validation():
+    """Test production-ready configuration validation."""
+    # Tests production-like server configurations
+    # Validates multi-interface binding (0.0.0.0)
+    # Ensures security and performance settings
+```
+
+#### **System Performance Testing**
+```python
+@pytest.mark.asyncio
+async def test_system_load_testing():
+    """Test system under load with rapid operations."""
+    # Performs rapid startup/shutdown cycles (5 servers)
+    # Tests concurrent server operations
+    # Validates memory stability and resource cleanup
+```
+
+#### **MCP Protocol Compliance**
+```python
+@pytest.mark.asyncio
+async def test_mcp_client_server_communication():
+    """Test real MCP client-server communication."""
+    # Uses actual FastMCP client for protocol testing
+    # Validates MCP compliance and interoperability
+    # Tests tool discovery and execution
+```
+
+### Testing Best Practices
+
+#### **Async Testing Patterns**
+```python
+# ✅ Correct async test pattern
+@pytest.mark.asyncio
+async def test_server_lifecycle():
+    orchestrator = get_orchestrator()
+    result = await orchestrator.start_server(config)
+    assert result.is_success
+    await orchestrator.stop_all_servers()  # Cleanup
+
+# ❌ Avoid nested asyncio.run() calls
+def test_bad_pattern():
+    asyncio.run(some_async_function())  # Causes event loop conflicts
+```
+
+#### **Resource Management**
+```python
+@pytest.fixture
+async def clean_orchestrator():
+    """Fixture providing clean orchestrator with automatic cleanup."""
+    orchestrator = get_orchestrator()
+    yield orchestrator
+    # Automatic cleanup
+    await orchestrator.stop_all_servers()
+    await orchestrator.cleanup_resources()
+```
+
+#### **Error Testing**
+```python
+# Test both success and failure scenarios
+async def test_server_startup_failure():
+    result = await orchestrator.start_server(invalid_config)
+    assert result.status == OperationStatus.FAILED
+    assert "port already in use" in result.error
+    assert result.error_code == "SERVER_STARTUP_ERROR"
+```
+
+### Performance Testing Standards
+
+#### **Benchmarking Criteria**
+- **Server Startup**: < 5 seconds per server
+- **Memory Growth**: < 2.0x ratio during operations  
+- **Concurrent Operations**: Up to 5 servers simultaneously
+- **Load Testing**: 10 rapid startup/shutdown cycles
+
+#### **Memory Stability Testing**
+```python
+async def test_memory_usage_stability():
+    """Ensure system doesn't leak memory during operations."""
+    initial_memory = get_memory_usage()
+    
+    # Perform intensive operations
+    for _ in range(10):
+        await start_and_stop_servers()
+    
+    final_memory = get_memory_usage()
+    growth_ratio = final_memory / initial_memory
+    assert growth_ratio < 2.0, f"Memory growth too high: {growth_ratio}"
+```
+
+### Test Coverage Goals
+
+| Component | Unit Tests | Integration Tests | E2E Tests |
+|-----------|------------|-------------------|-----------|
+| **Core MCP Servers** | ✅ 95%+ | ✅ Key workflows | ✅ Full scenarios |
+| **Server Orchestration** | ✅ 90%+ | ✅ Multi-server | ✅ Production patterns |
+| **AI Integration** | ✅ 85%+ | ✅ Tool execution | ✅ Conversation flows |
+| **CLI Tools** | ✅ 80%+ | ✅ Real usage | ✅ User workflows |
+| **Configuration** | ✅ 95%+ | ✅ Loading/validation | ✅ Production configs |
+
+### Test Execution Commands
+
+```bash
+# Development workflow - fast feedback
+uv run pytest tests/unit/ -v --ff           # Unit tests with fail-fast
+uv run pytest tests/integration/ -v         # Integration tests
+
+# Comprehensive testing
+uv run pytest tests/e2e/ -v                 # End-to-end tests
+uv run pytest --cov=src --cov-report=html   # Coverage report
+
+# Specific test patterns
+uv run pytest -k "test_server_startup" -v   # Pattern matching
+uv run pytest tests/unit/test_config_loader.py::TestConfigLoader::test_load_valid_config -v
+
+# Performance and load testing
+uv run pytest tests/e2e/test_full_system.py::TestSystemPerformance -v
+```
+
+### Continuous Integration Strategy
+
+#### **Fast Feedback Pipeline** (< 2 minutes)
+1. **Linting & Formatting**: `ruff check` and `ruff format`
+2. **Type Checking**: `mypy` validation
+3. **Unit Tests**: Fast isolated tests
+4. **Integration Tests**: Component interaction tests
+
+#### **Comprehensive Validation** (5-10 minutes)
+1. **Multi-Python Testing**: Python 3.10, 3.11, 3.12, 3.13
+2. **End-to-End Tests**: Full system workflows
+3. **Performance Testing**: Load and memory stability
+4. **Security Scanning**: Dependency vulnerability checks
+
+#### **Release Validation** (15-20 minutes)
+1. **Production Scenarios**: Real deployment patterns
+2. **AI Integration**: Full conversation workflows
+3. **Cross-Platform**: Linux, macOS, Windows
+4. **Package Building**: Distribution validation
+
 ## 🛠️ Development Tools
 
 ### Taskipy Tasks
