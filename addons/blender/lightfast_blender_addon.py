@@ -1,5 +1,3 @@
-# Code created by Siddharth Ahuja: www.github.com/ahujasid © 2025
-
 import io
 import json
 import socket
@@ -282,6 +280,8 @@ class BlenderMCPServer:
             "get_scene_info": self.get_scene_info,
             "get_object_info": self.get_object_info,
             "execute_code": self.execute_code,
+            "import_obj": self.import_obj,
+            "export_obj": self.export_obj,
         }
         handler = handlers.get(cmd_type)
         if handler:
@@ -392,6 +392,136 @@ class BlenderMCPServer:
             raise Exception(
                 f"Code execution error: {str(e)}\nTraceback:\n{traceback.format_exc()}"
             ) from e
+
+    def import_obj(self, obj_content, object_name="ImportedObject"):
+        """Import OBJ content directly into Blender."""
+        try:
+            import os
+            import tempfile
+
+            # Validate inputs
+            if not obj_content or not obj_content.strip():
+                raise ValueError("OBJ content cannot be empty")
+
+            # Create a temporary file with the OBJ content
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".obj", delete=False
+            ) as temp_file:
+                temp_file.write(obj_content)
+                temp_file_path = temp_file.name
+
+            try:
+                # Store current object count for validation
+                initial_object_count = len(bpy.data.objects)
+
+                # Import the OBJ file
+                bpy.ops.wm.obj_import(filepath=temp_file_path)
+
+                # Check if objects were imported
+                final_object_count = len(bpy.data.objects)
+                imported_count = final_object_count - initial_object_count
+
+                if imported_count == 0:
+                    raise Exception("No objects were imported from OBJ content")
+
+                # Get the newly imported objects
+                imported_objects = []
+                for obj in bpy.context.selected_objects:
+                    if obj.name not in [
+                        o.name for o in bpy.data.objects[:initial_object_count]
+                    ]:
+                        imported_objects.append(obj.name)
+
+                # If a specific name was requested and only one object was imported, rename it
+                if len(imported_objects) == 1 and object_name != "ImportedObject":
+                    imported_obj = bpy.data.objects[imported_objects[0]]
+                    imported_obj.name = object_name
+                    imported_objects[0] = object_name
+
+                return {
+                    "imported": True,
+                    "object_count": imported_count,
+                    "object_names": imported_objects,
+                    "message": f"Successfully imported {imported_count} object(s) from OBJ content",
+                }
+
+            finally:
+                # Clean up temporary file
+                try:
+                    os.unlink(temp_file_path)
+                except:
+                    pass  # Ignore cleanup errors
+
+        except Exception as e:
+            traceback.print_exc()
+            raise Exception(f"OBJ import error: {str(e)}") from e
+
+    def export_obj(self, object_name=None):
+        """Export object(s) to OBJ format and return the content."""
+        try:
+            import os
+            import tempfile
+
+            # Determine which objects to export
+            if object_name:
+                # Export specific object
+                target_obj = bpy.data.objects.get(object_name)
+                if not target_obj:
+                    raise ValueError(f"Object '{object_name}' not found")
+
+                # Select only the target object
+                bpy.ops.object.select_all(action="DESELECT")
+                target_obj.select_set(True)
+                bpy.context.view_layer.objects.active = target_obj
+                export_objects = [object_name]
+            else:
+                # Export selected objects
+                selected_objects = [obj.name for obj in bpy.context.selected_objects]
+                if not selected_objects:
+                    raise ValueError("No objects selected for export")
+                export_objects = selected_objects
+
+            # Create temporary file for export
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".obj", delete=False
+            ) as temp_file:
+                temp_file_path = temp_file.name
+
+            try:
+                # Export to OBJ file
+                bpy.ops.wm.obj_export(
+                    filepath=temp_file_path,
+                    export_selected_objects=True,
+                    export_materials=False,  # Keep it simple for now
+                    export_normals=True,
+                    export_uv=True,
+                )
+
+                # Read the exported content
+                with open(temp_file_path, "r") as f:
+                    obj_content = f.read()
+
+                if not obj_content.strip():
+                    raise Exception("Export resulted in empty OBJ content")
+
+                return {
+                    "exported": True,
+                    "object_names": export_objects,
+                    "obj_content": obj_content,
+                    "content_size": len(obj_content),
+                    "message": f"Successfully exported {len(export_objects)} object(s) to OBJ format",
+                }
+
+            finally:
+                # Clean up temporary file
+                try:
+                    os.unlink(temp_file_path)
+                except:
+                    pass  # Ignore cleanup errors
+
+        except Exception as e:
+            traceback.print_exc()
+            raise Exception(f"OBJ export error: {str(e)}") from e
 
 
 class BLENDERMCP_PT_Panel(bpy.types.Panel):
