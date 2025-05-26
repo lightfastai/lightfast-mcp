@@ -35,27 +35,27 @@ class ServerSelector:
     def select_servers_interactive(self) -> list[ServerConfig]:
         """Interactive server selection via console."""
         if not self.available_configs:
-            print("❌ No server configurations available.")
+            print("[ERROR] No server configurations available.")
             print(
                 "   Create a configuration file first or check your config directory."
             )
             return []
 
-        print("🚀 Lightfast MCP Server Selection")
+        print("[SELECT] Lightfast MCP Server Selection")
         print("=" * 50)
         print("Available servers:")
 
         # Display available servers
         for i, config in enumerate(self.available_configs, 1):
             server_type = config.config.get("type", "unknown")
-            status = "✅" if self._check_server_requirements(config) else "⚠️ "
+            status = "[OK]" if self._check_server_requirements(config) else "[WARN]"
             print(
                 f"  {i}. {status} {config.name} ({server_type}) - {config.description}"
             )
             if not self._check_server_requirements(config):
                 issues = self._get_requirement_issues(config)
                 for issue in issues:
-                    print(f"      🔸 {issue}")
+                    print(f"      • {issue}")
 
         print()
         print(
@@ -79,25 +79,25 @@ class ServerSelector:
                         if 0 <= index < len(self.available_configs):
                             selected_indices.append(index)
                         else:
-                            print(f"⚠️  Invalid selection: {part.strip()}")
+                            print(f"[WARN] Invalid selection: {part.strip()}")
                     except ValueError:
-                        print(f"⚠️  Invalid number: {part.strip()}")
+                        print(f"[WARN] Invalid number: {part.strip()}")
 
                 self.selected_configs = [
                     self.available_configs[i] for i in selected_indices
                 ]
 
-            print(f"\n✅ Selected {len(self.selected_configs)} servers:")
+            print(f"\n[OK] Selected {len(self.selected_configs)} servers:")
             for config in self.selected_configs:
                 print(f"   • {config.name} ({config.config.get('type', 'unknown')})")
 
             return self.selected_configs
 
         except KeyboardInterrupt:
-            print("\n❌ Selection cancelled.")
+            print("\n[ERROR] Selection cancelled.")
             return []
         except Exception as e:
-            print(f"❌ Error during selection: {e}")
+            print(f"[ERROR] Error during selection: {e}")
             return []
 
     def select_servers_by_names(self, server_names: list[str]) -> list[ServerConfig]:
@@ -182,7 +182,7 @@ class ServerSelector:
             print("No servers selected.")
             return
 
-        print(f"\n📋 Selected Servers ({len(self.selected_configs)}):")
+        print(f"\n[SUMMARY] Selected Servers ({len(self.selected_configs)}):")
         print("-" * 40)
 
         for config in self.selected_configs:
@@ -209,10 +209,10 @@ class ServerSelector:
         """Create a sample configuration file."""
         success = self.config_loader.create_sample_config(filename)
         if success:
-            print(f"✅ Created sample configuration: {filename}")
+            print(f"[OK] Created sample configuration: {filename}")
             print("   Edit this file to customize your server settings.")
         else:
-            print(f"❌ Failed to create sample configuration: {filename}")
+            print(f"[ERROR] Failed to create sample configuration: {filename}")
         return success
 
 
@@ -224,7 +224,7 @@ def interactive_server_selection(config_file: str | None = None) -> list[ServerC
     configs = selector.load_available_servers(config_file)
 
     if not configs:
-        print("📝 Would you like to create a sample configuration file? (y/n)")
+        print("[CONFIG] Would you like to create a sample configuration file? (y/n)")
         try:
             create_sample = input().strip().lower()
             if create_sample in ["y", "yes"] and selector.create_sample_configuration():

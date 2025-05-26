@@ -23,17 +23,17 @@ def test_imports():
     try:
         import lightfast_mcp  # noqa: F401
 
-        print("✓ lightfast_mcp imported successfully")
+        print("[OK] lightfast_mcp imported successfully")
     except ImportError as e:
-        print(f"✗ Failed to import lightfast_mcp: {e}")
+        print(f"[FAIL] Failed to import lightfast_mcp: {e}")
         return False
 
     try:
         from lightfast_mcp.core import ServerConfig  # noqa: F401
 
-        print("✓ ServerConfig imported successfully")
+        print("[OK] ServerConfig imported successfully")
     except ImportError as e:
-        print(f"✗ Failed to import ServerConfig: {e}")
+        print(f"[FAIL] Failed to import ServerConfig: {e}")
         return False
 
     try:
@@ -41,9 +41,9 @@ def test_imports():
             ConversationClient,  # noqa: F401
         )
 
-        print("✓ ConversationClient imported successfully")
+        print("[OK] ConversationClient imported successfully")
     except ImportError as e:
-        print(f"✗ Failed to import ConversationClient: {e}")
+        print(f"[FAIL] Failed to import ConversationClient: {e}")
         return False
 
     return True
@@ -59,9 +59,9 @@ def test_cli_commands():
     )
 
     if exit_code == 0:
-        print("✓ lightfast-mcp-orchestrator CLI works")
+        print("[OK] lightfast-mcp-orchestrator CLI works")
     else:
-        print(f"✗ lightfast-mcp-orchestrator CLI failed: {stderr}")
+        print(f"[FAIL] lightfast-mcp-orchestrator CLI failed: {stderr}")
         return False
 
     # Test mock server CLI (just check if it's available, don't run it)
@@ -77,9 +77,9 @@ def test_cli_commands():
     )
 
     if exit_code == 0:
-        print("✓ lightfast-mock-server module available")
+        print("[OK] lightfast-mock-server module available")
     else:
-        print(f"✗ lightfast-mock-server module failed: {stderr}")
+        print(f"[FAIL] lightfast-mock-server module failed: {stderr}")
         return False
 
     return True
@@ -107,9 +107,9 @@ def test_server_startup():
     )
 
     if exit_code == 0:
-        print("✓ Mock server can be instantiated successfully")
+        print("[OK] Mock server can be instantiated successfully")
     else:
-        print(f"✗ Mock server instantiation failed - stderr: {stderr}")
+        print(f"[FAIL] Mock server instantiation failed - stderr: {stderr}")
         # Don't fail the test for this, as it might be environment-specific
 
     return True
@@ -125,16 +125,16 @@ def test_basic_functionality():
 
         # Test config loader
         ConfigLoader()  # Just test that it can be instantiated
-        print("✓ Config loader works")
+        print("[OK] Config loader works")
 
         # Test server registry
         registry = ServerRegistry()
         servers = registry.get_available_server_types()
-        print(f"✓ Server registry works, found {len(servers)} server types")
+        print(f"[OK] Server registry works, found {len(servers)} server types")
 
         return True
     except Exception as e:
-        print(f"✗ Basic functionality test failed: {e}")
+        print(f"[FAIL] Basic functionality test failed: {e}")
         return False
 
 
@@ -157,19 +157,19 @@ def main():
         try:
             if test_func():
                 passed += 1
-                print(f"✓ {test_name} test PASSED")
+                print(f"[PASS] {test_name} test PASSED")
             else:
-                print(f"✗ {test_name} test FAILED")
+                print(f"[FAIL] {test_name} test FAILED")
         except Exception as e:
-            print(f"✗ {test_name} test FAILED with exception: {e}")
+            print(f"[FAIL] {test_name} test FAILED with exception: {e}")
 
     print(f"\n=== Results: {passed}/{total} tests passed ===")
 
     if passed == total:
-        print("🎉 All system verification tests passed!")
+        print("[SUCCESS] All system verification tests passed!")
         sys.exit(0)
     else:
-        print("❌ Some system verification tests failed")
+        print("[ERROR] Some system verification tests failed")
         sys.exit(1)
 
 

@@ -169,7 +169,7 @@ async def async_chat(
             connected_servers = current_client.get_connected_servers()
             if connected_servers:
                 console.print(
-                    f"\n[green]✓ Connected to {len(connected_servers)} servers:[/green]"
+                    f"\n[green][OK] Connected to {len(connected_servers)} servers:[/green]"
                 )
                 tools_by_server = current_client.get_available_tools()
                 for server in connected_servers:

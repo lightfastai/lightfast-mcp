@@ -58,22 +58,22 @@ def shutdown_all_sync():
 
 def create_sample_config():
     """Create a sample configuration file."""
-    print("📝 Creating sample configuration...")
+    print("[CONFIG] Creating sample configuration...")
 
     config_loader = ConfigLoader()
     success = config_loader.create_sample_config("servers.yaml")
 
     if success:
-        print("✅ Sample configuration created at: config/servers.yaml")
-        print("📝 Edit this file to customize your server settings.")
-        print("🚀 Run 'lightfast-mcp-orchestrator start' to begin!")
+        print("[OK] Sample configuration created at: config/servers.yaml")
+        print("[INFO] Edit this file to customize your server settings.")
+        print("[START] Run 'lightfast-mcp-orchestrator start' to begin!")
     else:
-        print("❌ Failed to create sample configuration")
+        print("[ERROR] Failed to create sample configuration")
 
 
 def list_available_servers():
     """List all available server types and configurations."""
-    print("🔍 Available Server Types:")
+    print("[INFO] Available Server Types:")
     print("=" * 50)
 
     from .server_registry import get_registry
@@ -82,7 +82,7 @@ def list_available_servers():
     server_info = registry.get_server_info()
 
     for server_type, info in server_info.items():
-        print(f"📦 {server_type}")
+        print(f"[SERVER] {server_type}")
         print(f"   Version: {info['version']}")
         print(f"   Description: {info['description']}")
         if info["required_dependencies"]:
@@ -91,14 +91,14 @@ def list_available_servers():
             print(f"   Required Apps: {', '.join(info['required_apps'])}")
         print()
 
-    print("📋 Server Configurations:")
+    print("[CONFIG] Server Configurations:")
     print("=" * 50)
 
     config_loader = ConfigLoader()
     configs = config_loader.load_servers_config()
 
     if not configs:
-        print("❌ No server configurations found.")
+        print("[ERROR] No server configurations found.")
         print(
             "   Run 'lightfast-mcp-orchestrator init' to create a sample configuration."
         )
@@ -106,7 +106,7 @@ def list_available_servers():
 
     for config in configs:
         server_type = config.config.get("type", "unknown")
-        print(f"🚀 {config.name} ({server_type})")
+        print(f"[SERVER] {config.name} ({server_type})")
         print(f"   Description: {config.description}")
         print(f"   Transport: {config.transport}")
         if config.transport in ["http", "streamable-http"]:
@@ -116,7 +116,7 @@ def list_available_servers():
 
 def start_servers_interactive(show_logs: bool = True):
     """Start servers with interactive selection."""
-    print("🚀 Lightfast MCP Multi-Server Orchestrator")
+    print("[START] Lightfast MCP Multi-Server Orchestrator")
     print("=" * 50)
 
     # Interactive server selection
@@ -124,38 +124,38 @@ def start_servers_interactive(show_logs: bool = True):
     selected_configs = selector.load_available_servers()
 
     if not selected_configs:
-        print("❌ No server configurations found.")
+        print("[ERROR] No server configurations found.")
         print("   Would you like to create a sample configuration? (y/n)")
         try:
             create_sample = input().strip().lower()
             if create_sample in ["y", "yes"]:
                 config_loader = ConfigLoader()
                 if config_loader.create_sample_config("servers.yaml"):
-                    print("✅ Sample configuration created at: config/servers.yaml")
-                    print("🔄 Loading the new configuration...")
+                    print("[OK] Sample configuration created at: config/servers.yaml")
+                    print("[INFO] Loading the new configuration...")
                     selected_configs = selector.load_available_servers()
                 else:
-                    print("❌ Failed to create sample configuration")
+                    print("[ERROR] Failed to create sample configuration")
                     return
             else:
-                print("👋 No configuration created. Goodbye!")
+                print("[BYE] No configuration created. Goodbye!")
                 return
         except KeyboardInterrupt:
-            print("\n👋 Cancelled. Goodbye!")
+            print("\n[BYE] Cancelled. Goodbye!")
             return
 
     if not selected_configs:
-        print("❌ Still no server configurations available.")
+        print("[ERROR] Still no server configurations available.")
         return
 
     # Let user select servers
     selected_configs = selector.select_servers_interactive()
 
     if not selected_configs:
-        print("👋 No servers selected. Goodbye!")
+        print("[BYE] No servers selected. Goodbye!")
         return
 
-    print(f"\n🚀 Starting {len(selected_configs)} servers...")
+    print(f"\n[START] Starting {len(selected_configs)} servers...")
     print("   This may take a few moments as servers initialize...")
 
     results = start_multiple_servers_sync(
@@ -164,23 +164,23 @@ def start_servers_interactive(show_logs: bool = True):
 
     # Show results
     successful = sum(1 for success in results.values() if success)
-    print(f"✅ Successfully started {successful}/{len(selected_configs)} servers")
+    print(f"[OK] Successfully started {successful}/{len(selected_configs)} servers")
 
     # Show any failures
     failed_servers = [name for name, success in results.items() if not success]
     if failed_servers:
-        print(f"❌ Failed to start: {', '.join(failed_servers)}")
+        print(f"[ERROR] Failed to start: {', '.join(failed_servers)}")
 
     if successful > 0:
         # Show server URLs
         urls = get_server_urls_sync()
         if urls:
-            print("\n📡 Server URLs:")
+            print("\n[URLS] Server URLs:")
             for name, url in urls.items():
                 print(f"   • {name}: {url}")
 
         print(
-            "\n🎯 Servers are running! Use the dedicated AI client to interact with them."
+            "\n[INFO] Servers are running! Use the dedicated AI client to interact with them."
         )
         print(
             "   Run 'uv run lightfast-conversation-client chat' to start the AI client."
@@ -191,9 +191,9 @@ def start_servers_interactive(show_logs: bool = True):
             # Wait for shutdown
             wait_for_shutdown_sync()
         except KeyboardInterrupt:
-            print("\n⏹️  Shutting down servers...")
+            print("\n[STOP] Shutting down servers...")
             shutdown_all_sync()
-            print("👋 All servers stopped. Goodbye!")
+            print("[BYE] All servers stopped. Goodbye!")
 
 
 def start_servers_by_names(server_names: list[str], show_logs: bool = True):
@@ -202,7 +202,7 @@ def start_servers_by_names(server_names: list[str], show_logs: bool = True):
     all_configs = config_loader.load_servers_config()
 
     if not all_configs:
-        print("❌ No server configurations found.")
+        print("[ERROR] No server configurations found.")
         return
 
     # Find requested servers
@@ -212,10 +212,10 @@ def start_servers_by_names(server_names: list[str], show_logs: bool = True):
         if config:
             selected_configs.append(config)
         else:
-            print(f"⚠️  Server configuration not found: {name}")
+            print(f"[WARN] Server configuration not found: {name}")
 
     if not selected_configs:
-        print("❌ No valid servers to start.")
+        print("[ERROR] No valid servers to start.")
         return
 
     # Start servers
@@ -225,19 +225,19 @@ def start_servers_by_names(server_names: list[str], show_logs: bool = True):
 
     # Show results
     successful = sum(1 for success in results.values() if success)
-    print(f"✅ Successfully started {successful}/{len(selected_configs)} servers")
+    print(f"[OK] Successfully started {successful}/{len(selected_configs)} servers")
 
     if successful > 0:
         urls = get_server_urls_sync()
         if urls:
-            print("\n📡 Server URLs:")
+            print("\n[URLS] Server URLs:")
             for name, url in urls.items():
                 print(f"   • {name}: {url}")
 
         try:
             wait_for_shutdown_sync()
         except KeyboardInterrupt:
-            print("\n⏹️  Shutting down servers...")
+            print("\n[STOP] Shutting down servers...")
             shutdown_all_sync()
 
 
@@ -293,12 +293,14 @@ AI Client (use after starting servers):
     # Set logging level
     if args.verbose:
         configure_logging(level="DEBUG")
-        print("🔍 Debug logging enabled")
+        print("[DEBUG] Debug logging enabled")
 
     # Determine log visibility (--hide-logs takes precedence)
     show_logs = not args.hide_logs if args.hide_logs else args.show_logs
     if args.verbose:
-        print(f"📊 Server logs visibility: {'Enabled' if show_logs else 'Disabled'}")
+        print(
+            f"[INFO] Server logs visibility: {'Enabled' if show_logs else 'Disabled'}"
+        )
 
     # Handle commands
     if args.command == "init":

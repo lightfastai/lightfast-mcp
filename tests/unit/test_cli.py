@@ -30,7 +30,7 @@ class TestCLI:
 
         mock_loader.create_sample_config.assert_called_once_with("servers.yaml")
         mock_print.assert_any_call(
-            "✅ Sample configuration created at: config/servers.yaml"
+            "[OK] Sample configuration created at: config/servers.yaml"
         )
 
     @patch("tools.orchestration.cli.ConfigLoader")
@@ -43,7 +43,7 @@ class TestCLI:
         with patch("builtins.print") as mock_print:
             create_sample_config()
 
-        mock_print.assert_any_call("❌ Failed to create sample configuration")
+        mock_print.assert_any_call("[ERROR] Failed to create sample configuration")
 
     @patch("tools.orchestration.server_registry.get_registry")
     @patch("tools.orchestration.cli.ConfigLoader")
@@ -96,7 +96,7 @@ class TestCLI:
         with patch("builtins.print") as mock_print:
             start_servers_interactive()
 
-        mock_print.assert_any_call("❌ No server configurations found.")
+        mock_print.assert_any_call("[ERROR] No server configurations found.")
 
     @patch("tools.orchestration.cli.shutdown_all_sync")
     @patch("tools.orchestration.cli.wait_for_shutdown_sync")
@@ -139,7 +139,7 @@ class TestCLI:
         with patch("builtins.print") as mock_print:
             start_servers_by_names(["test-server"])
 
-        mock_print.assert_any_call("❌ No server configurations found.")
+        mock_print.assert_any_call("[ERROR] No server configurations found.")
 
     @patch("tools.orchestration.cli.shutdown_all_sync")
     @patch("tools.orchestration.cli.wait_for_shutdown_sync")
