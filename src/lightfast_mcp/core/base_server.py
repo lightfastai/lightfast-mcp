@@ -1,15 +1,21 @@
 """Base server interface for all MCP servers in the lightfast-mcp ecosystem."""
 
-import asyncio
+# Import shared types from common module
+import sys
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
+from datetime import datetime
+from pathlib import Path
 from typing import Any, ClassVar
 
 from fastmcp import FastMCP
 
 from ..utils.logging_utils import get_logger
+
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+from common import HealthStatus, ServerInfo, ServerState
 
 
 @dataclass
@@ -37,19 +43,6 @@ class ServerConfig:
     )  # e.g., ["Blender", "TouchDesigner"]
 
 
-@dataclass
-class ServerInfo:
-    """Runtime information about a server."""
-
-    config: ServerConfig
-    is_running: bool = False
-    is_healthy: bool = False
-    last_health_check: float = 0.0
-    error_message: str = ""
-    tools: list[str] = field(default_factory=list)
-    url: str = ""
-
-
 class BaseServer(ABC):
     """Base class for all MCP servers in the lightfast-mcp ecosystem."""
 
@@ -64,7 +57,7 @@ class BaseServer(ABC):
         self.config = config
         self.logger = get_logger(f"{self.__class__.__name__}")
         self.mcp: FastMCP | None = None
-        self.info = ServerInfo(config=config)
+        self.info = ServerInfo.from_core_config(config)
 
         # Initialize the FastMCP instance
         self._init_mcp()
@@ -97,21 +90,21 @@ class BaseServer(ABC):
             # Custom startup logic
             await self._on_startup()
 
-            self.info.is_running = True
-            self.info.is_healthy = True
+            self.info.state = ServerState.RUNNING
+            self.info.health_status = HealthStatus.HEALTHY
 
             yield {}
 
         except Exception as e:
             self.logger.error(f"Error during {self.config.name} startup: {e}")
             self.info.error_message = str(e)
-            self.info.is_healthy = False
+            self.info.health_status = HealthStatus.UNHEALTHY
             raise
         finally:
             # Custom shutdown logic
             await self._on_shutdown()
 
-            self.info.is_running = False
+            self.info.state = ServerState.STOPPED
             self.logger.info(f"{self.config.name} shutting down.")
 
     async def _startup_checks(self):
@@ -152,12 +145,15 @@ class BaseServer(ABC):
         """Perform a health check on the server."""
         try:
             # Basic health check - can be overridden by subclasses
-            self.info.is_healthy = await self._perform_health_check()
-            self.info.last_health_check = asyncio.get_event_loop().time()
-            return self.info.is_healthy
+            is_healthy = await self._perform_health_check()
+            self.info.health_status = (
+                HealthStatus.HEALTHY if is_healthy else HealthStatus.UNHEALTHY
+            )
+            self.info.last_health_check = datetime.utcnow()
+            return is_healthy
         except Exception as e:
             self.logger.error(f"Health check failed: {e}")
-            self.info.is_healthy = False
+            self.info.health_status = HealthStatus.UNHEALTHY
             self.info.error_message = str(e)
             return False
 

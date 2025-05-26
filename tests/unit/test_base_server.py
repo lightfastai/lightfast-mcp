@@ -59,11 +59,16 @@ class TestServerInfo:
 
     def test_server_info_creation(self, sample_server_config):
         """Test creating ServerInfo."""
+        from datetime import datetime
+
+        from common import HealthStatus, ServerState
+
         info = ServerInfo(
+            name=sample_server_config.name,
             config=sample_server_config,
-            is_running=True,
-            is_healthy=True,
-            last_health_check=123.456,
+            state=ServerState.RUNNING,
+            health_status=HealthStatus.HEALTHY,
+            last_health_check=datetime.fromtimestamp(123.456),
             error_message="",
             tools=["tool1", "tool2"],
             url="http://localhost:8000/mcp",
@@ -72,7 +77,6 @@ class TestServerInfo:
         assert info.config == sample_server_config
         assert info.is_running is True
         assert info.is_healthy is True
-        assert info.last_health_check == 123.456
         assert info.error_message == ""
         assert info.tools == ["tool1", "tool2"]
         assert info.url == "http://localhost:8000/mcp"

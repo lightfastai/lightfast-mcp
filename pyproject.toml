@@ -164,4 +164,5 @@ dev = [
     "pytest>=8.3.5",
     "pytest-asyncio>=0.26.0",
     "pytest-cov>=6.1.1",
+    "types-pyyaml>=6.0.12.20250516",
 ]

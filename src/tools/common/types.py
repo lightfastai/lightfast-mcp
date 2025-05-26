@@ -1,49 +1,17 @@
 """Common types and data structures for the tools package."""
 
+# Import shared types from common module
+import sys
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from pathlib import Path
 from typing import Any, Dict, Generic, List, Optional, TypeVar
 
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+from common import OperationStatus, ToolCall, ToolResult
+
 T = TypeVar("T")
-
-
-class OperationStatus(Enum):
-    """Standard operation status codes."""
-
-    SUCCESS = "success"
-    FAILED = "failed"
-    PENDING = "pending"
-    CANCELLED = "cancelled"
-    TIMEOUT = "timeout"
-
-
-class ServerState(Enum):
-    """Server lifecycle states."""
-
-    STOPPED = "stopped"
-    STARTING = "starting"
-    RUNNING = "running"
-    STOPPING = "stopping"
-    ERROR = "error"
-
-
-class ToolCallState(Enum):
-    """States of tool call execution."""
-
-    CALL = "call"
-    RESULT = "result"
-    ERROR = "error"
-
-
-class HealthStatus(Enum):
-    """Health check status."""
-
-    HEALTHY = "healthy"
-    UNHEALTHY = "unhealthy"
-    DEGRADED = "degraded"
-    UNKNOWN = "unknown"
 
 
 @dataclass
@@ -77,92 +45,7 @@ class Result(Generic[T]):
         return self.status == OperationStatus.PENDING
 
 
-@dataclass
-class ServerInfo:
-    """Enhanced server information."""
-
-    name: str
-    server_type: str
-    state: ServerState
-    host: str
-    port: int
-    transport: str
-    url: Optional[str] = None
-    pid: Optional[int] = None
-    start_time: Optional[datetime] = None
-    last_health_check: Optional[datetime] = None
-    health_status: HealthStatus = HealthStatus.UNKNOWN
-    error_count: int = 0
-    tool_count: int = 0
-    tools: List[str] = field(default_factory=list)
-
-    @property
-    def is_running(self) -> bool:
-        return self.state == ServerState.RUNNING
-
-    @property
-    def is_healthy(self) -> bool:
-        return self.health_status == HealthStatus.HEALTHY
-
-    @property
-    def uptime_seconds(self) -> Optional[float]:
-        if self.start_time:
-            return (datetime.utcnow() - self.start_time).total_seconds()
-        return None
-
-
-@dataclass
-class ToolCall:
-    """Represents a tool call at the application level."""
-
-    id: str
-    tool_name: str
-    arguments: Dict[str, Any]
-    server_name: Optional[str] = None
-    timestamp: Optional[datetime] = None
-
-    def __post_init__(self):
-        if self.timestamp is None:
-            self.timestamp = datetime.utcnow()
-        if not self.id:
-            self.id = str(uuid.uuid4())
-
-
-@dataclass
-class ToolResult:
-    """Represents a tool call result at the application level."""
-
-    id: str
-    tool_name: str
-    arguments: Dict[str, Any]
-    result: Any = None
-    error: Optional[str] = None
-    error_code: Optional[str] = None
-    server_name: Optional[str] = None
-    timestamp: Optional[datetime] = None
-    duration_ms: Optional[float] = None
-
-    def __post_init__(self):
-        if self.timestamp is None:
-            self.timestamp = datetime.utcnow()
-
-    @property
-    def state(self) -> ToolCallState:
-        """Get the current state of this tool result."""
-        if self.error:
-            return ToolCallState.ERROR
-        elif self.result is not None:
-            return ToolCallState.RESULT
-        else:
-            return ToolCallState.CALL
-
-    @property
-    def is_success(self) -> bool:
-        return self.state == ToolCallState.RESULT
-
-    @property
-    def is_error(self) -> bool:
-        return self.state == ToolCallState.ERROR
+# ServerInfo, ToolCall, and ToolResult are now imported from common module
 
 
 @dataclass

@@ -1,5 +1,20 @@
 """Common utilities and types for the tools package."""
 
+# Import shared types from common module
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+from common import (
+    HealthStatus,
+    OperationStatus,
+    ServerInfo,
+    ServerState,
+    ToolCall,
+    ToolCallState,
+    ToolResult,
+)
+
 from .async_utils import (
     ConnectionPool,
     RetryManager,
@@ -30,13 +45,7 @@ from .logging import (
 from .types import (
     ConversationResult,
     ConversationStep,
-    HealthStatus,
-    OperationStatus,
     Result,
-    ServerInfo,
-    ServerState,
-    ToolCall,
-    ToolResult,
 )
 
 __all__ = [
