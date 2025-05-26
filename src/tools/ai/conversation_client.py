@@ -19,6 +19,7 @@ from tools.common import (
     with_correlation_id,
     with_operation_context,
 )
+from tools.common.async_utils import ConnectionPool
 
 from .conversation_session import ConversationSession
 from .providers.base_provider import BaseAIProvider
@@ -50,7 +51,7 @@ class ConversationClient:
         # Initialize components
         self.ai_provider = self._create_ai_provider()
         self.tool_executor = ToolExecutor(max_concurrent=max_concurrent_tools)
-        self.connection_pool = None
+        self.connection_pool: Optional[ConnectionPool] = None
 
         # Server and tool tracking
         self.connected_servers: Dict[str, Dict[str, Any]] = {}
@@ -110,37 +111,51 @@ class ConversationClient:
                 logger.info(f"Connecting to {server_name}")
 
                 # Register server with connection pool
-                await self.connection_pool.register_server(server_name, server_config)
+                if self.connection_pool is not None:
+                    await self.connection_pool.register_server(
+                        server_name, server_config
+                    )
 
-                # Test connection by getting tools
-                async with self.connection_pool.get_connection(server_name) as client:
-                    tools_result = await client.list_tools()
+                    # Test connection by getting tools
+                    async with self.connection_pool.get_connection(
+                        server_name
+                    ) as client:
+                        tools_result = await client.list_tools()
 
-                    # Handle different response formats
-                    if hasattr(tools_result, "tools"):
-                        mcp_tools = tools_result.tools
-                    elif isinstance(tools_result, list):
-                        mcp_tools = tools_result
-                    else:
-                        mcp_tools = []
+                        # Handle different response formats
+                        if hasattr(tools_result, "tools"):
+                            mcp_tools = tools_result.tools
+                        elif isinstance(tools_result, list):
+                            mcp_tools = tools_result
+                        else:
+                            mcp_tools = []
 
-                    # Store tools
-                    for mcp_tool in mcp_tools:
-                        self.available_tools[mcp_tool.name] = (mcp_tool, server_name)
-                        logger.debug(f"Added tool {mcp_tool.name} from {server_name}")
+                        # Store tools
+                        for mcp_tool in mcp_tools:
+                            self.available_tools[mcp_tool.name] = (
+                                mcp_tool,
+                                server_name,
+                            )
+                            logger.debug(
+                                f"Added tool {mcp_tool.name} from {server_name}"
+                            )
 
-                self.connected_servers[server_name] = server_config
-                connection_results[server_name] = True
-                logger.info(f"Successfully connected to {server_name}")
+                    self.connected_servers[server_name] = server_config
+                    connection_results[server_name] = True
+                    logger.info(f"Successfully connected to {server_name}")
+                else:
+                    logger.error("Connection pool is None")
+                    connection_results[server_name] = False
 
             except Exception as e:
                 logger.error(f"Failed to connect to {server_name}", error=e)
                 connection_results[server_name] = False
 
         # Update tool executor with available tools
-        await self.tool_executor.update_tools(
-            self.available_tools, self.connection_pool
-        )
+        if self.connection_pool is not None:
+            await self.tool_executor.update_tools(
+                self.available_tools, self.connection_pool
+            )
 
         successful_connections = sum(
             1 for success in connection_results.values() if success

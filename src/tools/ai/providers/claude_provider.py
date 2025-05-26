@@ -59,20 +59,24 @@ You can use the available tools to interact with the connected servers. When you
                 claude_tool = self.format_tool_for_api(mcp_tool, server_name)
                 claude_tools.append(claude_tool)
 
-            # Prepare API parameters
-            api_params = {
-                "model": self.default_model,
-                "max_tokens": 4000,
-                "system": system_prompt,
-                "messages": self.format_messages_for_api(messages),
-            }
-
-            # Only add tools if we have any
-            if claude_tools:
-                api_params["tools"] = claude_tools
-
             logger.debug(f"Making Claude API call with {len(claude_tools)} tools")
-            response = await self.client.messages.create(**api_params)
+
+            # Make API call with explicit parameters
+            if claude_tools:
+                response = await self.client.messages.create(
+                    model=self.default_model,
+                    max_tokens=4000,
+                    system=system_prompt,
+                    messages=self.format_messages_for_api(messages),  # type: ignore
+                    tools=claude_tools,  # type: ignore
+                )
+            else:
+                response = await self.client.messages.create(
+                    model=self.default_model,
+                    max_tokens=4000,
+                    system=system_prompt,
+                    messages=self.format_messages_for_api(messages),  # type: ignore
+                )
 
             # Create conversation step
             step = ConversationStep(step_number=step_number)
@@ -84,10 +88,13 @@ You can use the available tools to interact with the connected servers. When you
                         step.text = content_block.text
                     elif content_block.type == "tool_use":
                         # Convert Claude's tool call to our format
+                        arguments = content_block.input
+                        if not isinstance(arguments, dict):
+                            arguments = {}
                         tool_call = ToolCall(
                             id=content_block.id,
                             tool_name=content_block.name,
-                            arguments=content_block.input,
+                            arguments=arguments,
                         )
                         step.add_tool_call(tool_call)
 

@@ -64,20 +64,23 @@ You can use the available tools to interact with the connected servers. When you
                 openai_tool = self.format_tool_for_api(mcp_tool, server_name)
                 openai_tools.append(openai_tool)
 
-            # Prepare API parameters
-            api_params = {
-                "model": self.default_model,
-                "messages": formatted_messages,
-                "max_tokens": 4000,
-            }
-
-            # Only add tools if we have any
-            if openai_tools:
-                api_params["tools"] = openai_tools
-                api_params["tool_choice"] = "auto"
-
             logger.debug(f"Making OpenAI API call with {len(openai_tools)} tools")
-            response = await self.client.chat.completions.create(**api_params)
+
+            # Make API call with explicit parameters
+            if openai_tools:
+                response = await self.client.chat.completions.create(
+                    model=self.default_model,
+                    messages=formatted_messages,  # type: ignore
+                    max_tokens=4000,
+                    tools=openai_tools,  # type: ignore
+                    tool_choice="auto",
+                )
+            else:
+                response = await self.client.chat.completions.create(
+                    model=self.default_model,
+                    messages=formatted_messages,  # type: ignore
+                    max_tokens=4000,
+                )
 
             # Create conversation step
             step = ConversationStep(step_number=step_number)

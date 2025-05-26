@@ -68,7 +68,7 @@ class ConversationSession:
             message_length=len(message),
         )
 
-        new_steps = []
+        new_steps: List[ConversationStep] = []
 
         try:
             # Generate steps until completion or max steps reached
@@ -85,6 +85,13 @@ class ConversationSession:
                     )
 
                 step = step_result.data
+                if step is None:
+                    return Result(
+                        status=OperationStatus.FAILED,
+                        error=f"Step {step_num} returned None data",
+                        error_code="NULL_STEP_DATA",
+                    )
+
                 self.steps.append(step)
                 new_steps.append(step)
                 self.current_step_number += 1
@@ -140,6 +147,12 @@ class ConversationSession:
                 return step_result
 
             step = step_result.data
+            if step is None:
+                return Result(
+                    status=OperationStatus.FAILED,
+                    error=f"AI provider returned None step data for step {step_number}",
+                    error_code="NULL_AI_STEP_DATA",
+                )
 
             # Execute any tool calls
             if step.tool_calls:
@@ -200,7 +213,7 @@ class ConversationSession:
         """Update messages in Claude format."""
         if step.tool_calls:
             # Claude format: tool calls and results in assistant message content
-            content_blocks = []
+            content_blocks: List[Dict[str, Any]] = []
 
             # Add text content if any
             if step.text:
@@ -223,7 +236,7 @@ class ConversationSession:
             self.messages.append(assistant_message)
 
             # Add user message with tool results
-            tool_result_blocks = []
+            tool_result_blocks: List[Dict[str, Any]] = []
             for result in step.tool_results:
                 tool_result_blocks.append(
                     {
