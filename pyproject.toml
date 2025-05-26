@@ -63,9 +63,12 @@ dev = [
 lightfast-blender-server = "lightfast_mcp.servers.blender_mcp_server:main"
 lightfast-mock-server = "lightfast_mcp.servers.mock_server:main"
 
-# 🔧 SECONDARY: Development tools (optional features)
+# 🔧 ORCHESTRATION: Server management tools
 lightfast-mcp-manager = "tools.orchestration.cli:main"
-lightfast-mcp-ai = "tools.ai.cli:app"
+
+# 🤖 AI: Conversation clients (new architecture)
+lightfast-conversation-client = "tools.ai.conversation_cli:app"
+lightfast-mcp-ai = "tools.ai.cli:app"  # Legacy CLI (will be deprecated)
 
 # Direct modular server access
 lightfast-mock = "lightfast_mcp.servers.mock.server:main"
@@ -85,8 +88,10 @@ packages = [
     "lightfast_mcp.servers.mock",
     "lightfast_mcp.utils",
     "tools",
+    "tools.common",
     "tools.orchestration",
     "tools.ai",
+    "tools.ai.providers",
 ]
 
 [project.urls]
@@ -145,14 +150,16 @@ demo = "uv run pytest tests/e2e/test_full_system.py::TestFullSystemWorkflow::tes
 blender_server = "uv run lightfast-blender-server"
 mock_server = "uv run lightfast-mock-server"
 
-# 🔧 SECONDARY: Multi-server orchestration (optional)
+# 🔧 ORCHESTRATION: Multi-server management
 manager = "uv run lightfast-mcp-manager"
 start_servers = "uv run lightfast-mcp-manager start"
 list_servers = "uv run lightfast-mcp-manager list"
 
-# 🔧 SECONDARY: AI integration (optional)
-ai_client = "uv run lightfast-mcp-ai chat"
-ai_test = "uv run lightfast-mcp-ai test"
+# 🤖 AI: Conversation clients
+conversation_client = "uv run lightfast-conversation-client chat"
+conversation_test = "uv run lightfast-conversation-client test"
+ai_client = "uv run lightfast-mcp-ai chat"  # Legacy (will be deprecated)
+ai_test = "uv run lightfast-mcp-ai test"    # Legacy (will be deprecated)
 
 [dependency-groups]
 dev = [

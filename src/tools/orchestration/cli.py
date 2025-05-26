@@ -12,12 +12,51 @@ import argparse
 from lightfast_mcp.utils.logging_utils import configure_logging, get_logger
 
 from .config_loader import ConfigLoader
-from .multi_server_manager import get_manager
+from .server_orchestrator import get_orchestrator
 from .server_selector import ServerSelector
 
 # Configure logging
 configure_logging(level="INFO")
 logger = get_logger("LightfastMCPManager")
+
+
+# TODO: Update this CLI to use the new ServerOrchestrator async API
+# For now, we'll create a temporary compatibility layer
+class CompatibilityManager:
+    """Temporary compatibility wrapper for the old CLI."""
+
+    def __init__(self):
+        self.orchestrator = get_orchestrator()
+
+    def start_multiple_servers(self, configs, background=True, show_logs=True):
+        """Sync wrapper for async start_multiple_servers."""
+        import asyncio
+
+        async def _async_start():
+            result = await self.orchestrator.start_multiple_servers(
+                configs, background, show_logs
+            )
+            return result.data if result.is_success else {}
+
+        return asyncio.run(_async_start())
+
+    def get_server_urls(self):
+        """Get server URLs from orchestrator."""
+        servers = self.orchestrator.get_running_servers()
+        return {name: info.url for name, info in servers.items() if info.url}
+
+    def wait_for_shutdown(self):
+        """Wait for shutdown signal."""
+        self.orchestrator._shutdown_event.wait()
+
+    def shutdown_all(self):
+        """Shutdown all servers."""
+        self.orchestrator.shutdown_all()
+
+
+def get_manager():
+    """Compatibility function that returns the wrapper."""
+    return CompatibilityManager()
 
 
 def create_sample_config():
