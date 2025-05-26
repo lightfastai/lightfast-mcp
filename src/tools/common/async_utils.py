@@ -115,12 +115,12 @@ class ConnectionPool:
         try:
             if config.get("type") == "stdio":
                 # For stdio connections
+                import shlex
+                import urllib.parse
+
                 command = config.get("command", "")
                 args = config.get("args", [])
                 if args:
-                    import shlex
-                    import urllib.parse
-
                     full_command = shlex.join([command] + args)
                     encoded_command = urllib.parse.quote(full_command, safe="")
                     client = Client(f"stdio://{encoded_command}")
@@ -339,6 +339,10 @@ async def run_concurrent_operations(
     if operation_names is None:
         operation_names = [f"operation_{i}" for i in range(len(operations))]
 
+    # Handle edge case where max_concurrent is 0 or negative - use unlimited concurrency
+    if max_concurrent <= 0:
+        max_concurrent = len(operations) or 1
+
     semaphore = asyncio.Semaphore(max_concurrent)
 
     async def run_single_operation(operation: Callable, name: str) -> Result[Any]:
@@ -366,7 +370,7 @@ async def run_concurrent_operations(
     results = await asyncio.gather(*tasks, return_exceptions=True)
 
     # Convert any exceptions to Result objects
-    final_results = []
+    final_results: List[Result[Any]] = []
     for i, result in enumerate(results):
         if isinstance(result, Exception):
             final_results.append(
