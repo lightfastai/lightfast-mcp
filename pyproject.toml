@@ -50,6 +50,9 @@ lightfast-mock-server = "lightfast_mcp.servers.mock_server:main"
 lightfast-mock = "lightfast_mcp.servers.mock.server:main"
 lightfast-blender = "lightfast_mcp.servers.blender.server:main"
 
+# 🤖 AI: Conversation client CLI
+lightfast-conversation-client = "tools.ai.conversation_cli:app"
+
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
