@@ -50,6 +50,9 @@ lightfast-mock-server = "lightfast_mcp.servers.mock_server:main"
 lightfast-mock = "lightfast_mcp.servers.mock.server:main"
 lightfast-blender = "lightfast_mcp.servers.blender.server:main"
 
+# 🤖 Orchestration: Multi-server management CLI
+lightfast-mcp-orchestrator = "tools.orchestration.cli:main"
+
 # 🤖 AI: Conversation client CLI
 lightfast-conversation-client = "tools.ai.conversation_cli:app"
 
@@ -127,9 +130,9 @@ blender_server = "uv run lightfast-blender-server"
 mock_server = "uv run lightfast-mock-server"
 
 # 🔧 ORCHESTRATION: Multi-server management
-manager = "uv run lightfast-mcp-manager"
-start_servers = "uv run lightfast-mcp-manager start"
-list_servers = "uv run lightfast-mcp-manager list"
+orchestrator = "uv run lightfast-mcp-orchestrator"
+start_servers = "uv run lightfast-mcp-orchestrator start"
+list_servers = "uv run lightfast-mcp-orchestrator list"
 
 # 🤖 AI: Conversation client
 conversation_client = "uv run lightfast-conversation-client chat"

@@ -20,14 +20,14 @@ source .venv/bin/activate  # macOS/Linux or .venv\Scripts\activate on Windows
 uv pip install -e ".[dev]"
 
 # 3. Initialize configuration
-uv run lightfast-mcp-manager init
+uv run lightfast-mcp-orchestrator init
 
 # 4. Start servers interactively
-uv run lightfast-mcp-manager start
+uv run lightfast-mcp-orchestrator start
 
 # 5. Connect AI client (set API key first)
 export ANTHROPIC_API_KEY=your_key_here
-uv run lightfast-mcp-manager ai
+uv run lightfast-mcp-orchestrator ai
 ```
 
 ## 📊 Commands & Usage
@@ -35,22 +35,22 @@ uv run lightfast-mcp-manager ai
 ### Server Management
 ```bash
 # List all available servers and configurations
-uv run lightfast-mcp-manager list
+uv run lightfast-mcp-orchestrator list
 
 # Start specific servers by name
-uv run lightfast-mcp-manager start blender-server mock-server
+uv run lightfast-mcp-orchestrator start blender-server mock-server
 
 # Start servers with verbose logging
-uv run lightfast-mcp-manager start --verbose
+uv run lightfast-mcp-orchestrator start --verbose
 ```
 
 ### AI Integration
 ```bash
 # Start AI client (auto-discovers running servers)
-uv run lightfast-mcp-manager ai
+uv run lightfast-mcp-orchestrator ai
 
 # Use a specific AI provider
-AI_PROVIDER=openai uv run lightfast-mcp-manager ai
+AI_PROVIDER=openai uv run lightfast-mcp-orchestrator ai
 ```
 
 ### Development Tasks
@@ -141,8 +141,8 @@ src/tools/
 **Additional Dependencies**: `pyyaml`, `anthropic`, `openai`, `typer`
 
 **Entry Points**:
-- `lightfast-mcp-manager` - Multi-server orchestration CLI
-- `lightfast-mcp-ai` - AI integration CLI
+- `lightfast-mcp-orchestrator` - Multi-server orchestration CLI
+- `lightfast-conversation-client` - AI integration CLI (Typer-based)
 
 #### **ServerRegistry** (`src/tools/orchestration/server_registry.py`)  
 Auto-discovery and orchestration system:
@@ -191,9 +191,9 @@ pip install lightfast-mcp
 
 #### 🔧 With Development Tools
 ```bash
-pip install lightfast-mcp[tools]
+pip install lightfast-mcp[dev]
 # Adds: pyyaml, anthropic, openai, typer
-# Available: lightfast-mcp-manager, lightfast-mcp-ai
+# Available: lightfast-mcp-orchestrator, lightfast-conversation-client
 ```
 
 #### 🔧 Everything
@@ -218,12 +218,12 @@ lightfast-mock-server        # Start Mock MCP server
 
 ```bash
 # Optional convenience for development/testing
-lightfast-mcp-manager init   # Create configuration
-lightfast-mcp-manager start  # Start multiple servers
+lightfast-mcp-orchestrator init   # Create configuration
+lightfast-mcp-orchestrator start  # Start multiple servers
 
 # Optional tool for testing servers
-lightfast-mcp-ai chat        # Interactive AI chat
-lightfast-mcp-ai test        # Quick testing
+lightfast-conversation-client chat        # Interactive AI chat
+lightfast-conversation-client test        # Quick testing
 ```
 
 ### Design Principles
@@ -234,6 +234,7 @@ lightfast-mcp-ai test        # Quick testing
 4. **Graceful Degradation**: Features gracefully unavailable if dependencies missing
 5. **Clear Entry Points**: Each component has clear, purpose-specific entry points
 6. **Shared Types**: Common types (ServerInfo, ServerState, ToolCall) are shared via `src/common/` to ensure consistency across core and tools packages
+7. **Development Tools Not Packaged**: The `tools` package and its CLIs are not included in the core deployable package, but are available in development mode.
 
 ### Architecture Changes: Strict Separation of Concerns
 
@@ -774,6 +775,9 @@ uv run task test                    # Run all tests
 uv run task test_fast               # Run fast tests
 uv run task test_coverage           # Tests with coverage
 uv run task demo                    # Run system demo
+uv run task orchestrator            # Multi-server orchestration CLI
+uv run task start_servers           # Start servers
+uv run task list_servers            # List available servers
 ```
 
 ### Ruff Configuration
@@ -853,8 +857,8 @@ uv pip install -e ".[dev]"
 uv run python scripts/test_working_system.py
 
 # 3. Start development server
-uv run lightfast-mcp-manager init
-uv run lightfast-mcp-manager start mock-server
+uv run lightfast-mcp-orchestrator init
+uv run lightfast-mcp-orchestrator start mock-server
 
 # 4. Development cycle
 # During development - fast feedback
@@ -874,16 +878,16 @@ nox -s lint typecheck test_coverage test_e2e build
 
 # 6. Test AI integration
 export ANTHROPIC_API_KEY=your_key
-uv run lightfast-mcp-manager ai
+uv run lightfast-mcp-orchestrator ai
 ```
 
 ### Multi-Application Creative Workflow
 ```bash
 # 1. Start multiple creative app servers
-uv run lightfast-mcp-manager start blender-server touchdesigner-server
+uv run lightfast-mcp-orchestrator start blender-server touchdesigner-server
 
 # 2. Connect AI to control both
-uv run lightfast-mcp-manager ai
+uv run lightfast-mcp-orchestrator ai
 
 # 3. AI can now coordinate between applications:
 # "Create a sphere in Blender and send its vertices to TouchDesigner"
@@ -905,8 +909,8 @@ print('Available servers:', registry.get_available_server_types())
 "
 
 # 4. Add configuration and test
-uv run lightfast-mcp-manager list
-uv run lightfast-mcp-manager start myapp-server
+uv run lightfast-mcp-orchestrator list
+uv run lightfast-mcp-orchestrator start myapp-server
 ```
 
 ## 🔍 Monitoring & Debugging
@@ -924,7 +928,7 @@ print(health_results)  # {"server-name": True/False, ...}
 ### Server Status
 ```bash
 # Check running servers
-uv run lightfast-mcp-manager list
+uv run lightfast-mcp-orchestrator list
 
 # Server URLs (when using HTTP transport)
 # 📡 Server URLs:
@@ -941,7 +945,7 @@ from lightfast_mcp.utils.logging_utils import configure_logging
 configure_logging(level="DEBUG")
 
 # Or via command line
-uv run lightfast-mcp-manager start --verbose
+uv run lightfast-mcp-orchestrator start --verbose
 ```
 
 ## 🚀 Benefits of Modular Architecture
@@ -977,9 +981,9 @@ python ai_blender_client.py
 ### New Modular Approach:
 ```bash
 # Unified management
-uv run lightfast-mcp-manager init    # Create config
-uv run lightfast-mcp-manager start   # Start servers
-uv run lightfast-mcp-manager ai      # Connect AI
+uv run lightfast-mcp-orchestrator init    # Create config
+uv run lightfast-mcp-orchestrator start   # Start servers
+uv run lightfast-mcp-orchestrator ai      # Connect AI
 ```
 
 The new system maintains backward compatibility while providing much more flexibility and power.
@@ -1039,6 +1043,11 @@ The project includes ready-to-use MCP server configurations for Cursor:
         "BLENDER_HOST": "localhost",
         "BLENDER_PORT": "9876"
       }
+    },
+    "lightfast-orchestrator": {
+      "command": "uv",
+      "args": ["run", "lightfast-mcp-orchestrator"],
+      "env": {"LIGHTFAST_MCP_LOG_LEVEL": "INFO"}
     }
   }
 }
@@ -1050,7 +1059,7 @@ The project includes ready-to-use MCP server configurations for Cursor:
 The `.cursor/mcp.json` file is pre-configured. Cursor's Composer Agent automatically has access to:
 - **lightfast-mock**: Mock MCP server for testing and development
 - **lightfast-blender**: Blender MCP server for 3D modeling/animation
-- **lightfast-manager**: Multi-server manager for complex workflows
+- **lightfast-orchestrator**: Multi-server manager for complex workflows
 
 #### **Global Integration** (Optional)
 To use lightfast-mcp across all Cursor projects:
@@ -1245,10 +1254,10 @@ uv run python scripts/test_working_system.py
 
 # Development
 uv run task fix && uv run task test_fast
-uv run lightfast-mcp-manager start
+uv run lightfast-mcp-orchestrator start
 
 # AI integration
-export ANTHROPIC_API_KEY=key && uv run lightfast-mcp-manager ai
+export ANTHROPIC_API_KEY=key && uv run lightfast-mcp-orchestrator ai
 ```
 
 ### File Structure
