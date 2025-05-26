@@ -84,13 +84,17 @@ The primary purpose of this repository is to provide production-ready MCP server
 ```
 src/lightfast_mcp/
 ├── core/                      # 🎯 Core MCP infrastructure
-│   └── base_server.py         # BaseServer, ServerConfig, ServerInfo
+│   └── base_server.py         # BaseServer, ServerConfig
 ├── servers/                   # 🎯 MCP server implementations  
 │   ├── blender/              # Blender MCP server
 │   ├── mock/                 # Mock MCP server for testing
 │   └── {future_apps}/        # Future server implementations
 └── utils/                     # 🎯 Shared utilities
     └── logging_utils.py       # Logging infrastructure
+
+src/common/                    # 🎯 Shared types and utilities
+├── types.py                   # ServerInfo, ServerState, ToolCall, etc.
+└── __init__.py               # Common exports
 ```
 
 **Dependencies**: Only `fastmcp` and `rich` (for logging)
@@ -115,14 +119,22 @@ All orchestration and AI integration features are completely separated into the 
 ```
 src/tools/
 ├── orchestration/             # Multi-server orchestration
-│   ├── multi_server_manager.py   # Run multiple servers
+│   ├── server_orchestrator.py    # Run multiple servers
 │   ├── server_registry.py        # Auto-discover servers
 │   ├── config_loader.py          # YAML/JSON configuration
 │   ├── server_selector.py        # Interactive server selection
 │   └── cli.py                    # Orchestration CLI
 ├── ai/                        # AI integration tools
-│   ├── multi_server_ai_client.py # Connect to multiple servers
-│   └── cli.py                    # AI client CLI
+│   ├── conversation_client.py     # Connect to multiple servers
+│   ├── conversation_session.py   # Session management
+│   ├── tool_executor.py          # Tool execution
+│   ├── providers/                # AI provider implementations
+│   └── conversation_cli.py       # AI client CLI
+├── common/                    # Tools-specific utilities
+│   ├── types.py              # ConversationResult, Result, etc.
+│   ├── async_utils.py        # Connection pooling, concurrency
+│   ├── errors.py             # Error classes
+│   └── logging.py            # Logging utilities
 └── __init__.py                # Tools package exports
 ```
 
@@ -221,6 +233,7 @@ lightfast-mcp-ai test        # Quick testing
 3. **Minimal Dependencies**: Core functionality has minimal dependencies
 4. **Graceful Degradation**: Features gracefully unavailable if dependencies missing
 5. **Clear Entry Points**: Each component has clear, purpose-specific entry points
+6. **Shared Types**: Common types (ServerInfo, ServerState, ToolCall) are shared via `src/common/` to ensure consistency across core and tools packages
 
 ### Architecture Changes: Strict Separation of Concerns
 
