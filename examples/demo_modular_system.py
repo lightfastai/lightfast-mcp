@@ -19,14 +19,14 @@ src_path = Path(__file__).parent / "src"
 if src_path.exists():
     sys.path.insert(0, str(src_path))
 
-from lightfast_mcp.clients import MultiServerAIClient
-from lightfast_mcp.core import (
+from lightfast_mcp.core import ServerConfig
+from lightfast_mcp.utils.logging_utils import configure_logging, get_logger
+from tools.ai import create_conversation_client
+from tools.orchestration import (
     ConfigLoader,
-    ServerConfig,
-    get_manager,
+    get_orchestrator,
     get_registry,
 )
-from lightfast_mcp.utils.logging_utils import configure_logging, get_logger
 
 # Configure logging
 configure_logging(level="INFO")
@@ -87,7 +87,7 @@ async def demo_multi_server_management(configs):
     print("🚀 DEMO: Multi-Server Management")
     print("=" * 50)
 
-    manager = get_manager()
+    orchestrator = get_orchestrator()
 
     # Filter to only mock servers for this demo (don't require external apps)
     mock_configs = [c for c in configs if c.config.get("type") == "mock"]
@@ -106,24 +106,34 @@ async def demo_multi_server_management(configs):
     print(f"Starting {len(mock_configs)} mock servers...")
 
     # Start servers in background
-    results = manager.start_multiple_servers(mock_configs, background=True)
+    results = await orchestrator.start_multiple_servers(mock_configs, background=True)
 
-    successful = sum(1 for success in results.values() if success)
+    successful = (
+        sum(1 for success in results.data.values() if success)
+        if results.is_success
+        else 0
+    )
     print(f"✅ Successfully started {successful}/{len(mock_configs)} servers")
 
     if successful > 0:
         # Show running servers
-        running_servers = manager.get_running_servers()
+        running_servers = orchestrator.get_running_servers()
         print(f"\n📊 Running Servers ({len(running_servers)}):")
 
         for name, info in running_servers.items():
-            print(f"   • {name}: {'✅ Healthy' if info.is_healthy else '❌ Unhealthy'}")
+            print(
+                f"   • {name}: {'✅ Healthy' if info.state.name == 'RUNNING' else '❌ Unhealthy'}"
+            )
             if info.url:
                 print(f"     URL: {info.url}")
-            print(f"     Tools: {', '.join(info.tools)}")
+            # Note: tools info not available in ServerInfo, would need to query servers directly
 
         # Show server URLs
-        urls = manager.get_server_urls()
+        urls = {}
+        for name, info in running_servers.items():
+            if info.url:
+                urls[name] = info.url
+
         if urls:
             print("\n📡 Server URLs:")
             for name, url in urls.items():
@@ -152,11 +162,31 @@ async def demo_ai_integration(server_urls):
         print("   Set ANTHROPIC_API_KEY or OPENAI_API_KEY to try full AI integration")
 
     try:
-        # Create client (this will fail gracefully without API key)
+        # Check if we have API keys (optional for demo)
         ai_provider = os.getenv("AI_PROVIDER", "claude")
 
         if has_api_key:
-            client = MultiServerAIClient(ai_provider=ai_provider)
+            # Convert URLs to server config format expected by ConversationClient
+            servers = {}
+            for name, url in server_urls.items():
+                servers[name] = {
+                    "name": name,
+                    "type": "sse",  # streamable-http maps to sse for MCP client
+                    "url": url,
+                }
+
+            print(f"📝 Creating {ai_provider.upper()} conversation client...")
+            client_result = await create_conversation_client(
+                servers=servers,
+                ai_provider=ai_provider,
+                max_steps=3,
+            )
+
+            if not client_result.is_success:
+                print(f"❌ Failed to create client: {client_result.error}")
+                return
+
+            client = client_result.data
         else:
             print(f"📝 Would create {ai_provider.upper()} client here...")
             print("📝 Client setup process:")
@@ -165,32 +195,36 @@ async def demo_ai_integration(server_urls):
         print("🔗 Adding servers to AI client:")
         for name, url in server_urls.items():
             print(f"   • {name}: {url}")
-            if has_api_key:
-                client.add_server(name, url, f"Demo {name}")
 
-        if has_api_key:
-            # Connect to servers
-            print("\n📡 Connecting to servers...")
-            connection_results = await client.connect_to_servers()
+        if has_api_key and client:
+            # Show available tools
+            connected_servers = client.get_connected_servers()
+            print(f"\n✅ Connected to {len(connected_servers)} servers")
 
-            successful_connections = sum(
-                1 for success in connection_results.values() if success
-            )
-            print(
-                f"✅ Connected to {successful_connections}/{len(server_urls)} servers"
-            )
-
-            if successful_connections > 0:
-                # Show available tools
-                tools_by_server = client.get_all_tools()
+            if connected_servers:
+                tools_by_server = client.get_available_tools()
                 print("\n🛠️  Available Tools:")
                 for server_name, tools in tools_by_server.items():
                     print(f"   {server_name}: {', '.join(tools)}")
 
                 # Demo tool execution
-                print("\n🎯 Testing tool execution...")
-                result = await client.execute_tool("get_server_status")
-                print(f"Tool result: {result.get('status', 'No status')}")
+                print("\n🎯 Testing conversation...")
+                chat_result = await client.chat(
+                    "Hello! What tools do you have available?"
+                )
+
+                if chat_result.is_success:
+                    conversation = chat_result.data
+                    print(
+                        f"Conversation completed with {len(conversation.steps)} steps"
+                    )
+                    for step in conversation.steps:
+                        if step.text:
+                            print(f"AI: {step.text[:100]}...")
+                        if step.tool_calls:
+                            print(f"Tool calls: {len(step.tool_calls)}")
+                else:
+                    print(f"Chat failed: {chat_result.error}")
 
                 # Cleanup
                 await client.disconnect_from_servers()
@@ -210,12 +244,13 @@ async def demo_cleanup():
     print("\n🧹 DEMO: Cleanup")
     print("=" * 50)
 
-    manager = get_manager()
+    orchestrator = get_orchestrator()
 
-    running_count = manager.get_server_count()
+    running_servers = orchestrator.get_running_servers()
+    running_count = len(running_servers)
     if running_count > 0:
         print(f"Shutting down {running_count} running servers...")
-        manager.shutdown_all()
+        orchestrator.shutdown_all()
         print("✅ All servers stopped")
     else:
         print("No servers to clean up")

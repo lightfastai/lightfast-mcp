@@ -158,11 +158,12 @@ Multi-server orchestration:
 - Provides health monitoring
 - Background execution support
 
-#### **MultiServerAIClient** (`src/tools/ai/multi_server_ai_client.py`)
+#### **ConversationClient** (`src/tools/ai/conversation_client.py`)
 AI integration layer:
 - Connects to multiple MCP servers simultaneously
 - Routes AI tool calls to appropriate servers
 - Supports Claude and OpenAI APIs
+- Manages conversation sessions with step-by-step execution
 
 ### Server Structure
 ```
@@ -275,8 +276,8 @@ from lightfast_mcp.clients import MultiServerAIClient
 
 **After:**
 ```python
-from tools.orchestration import ConfigLoader, get_manager
-from tools.ai import MultiServerAIClient
+from tools.orchestration import ConfigLoader, get_orchestrator
+from tools.ai import ConversationClient, create_conversation_client
 ```
 
 **Benefits Achieved:**
@@ -418,23 +419,48 @@ servers:
 
 ## 🤖 AI Integration Patterns
 
-### Multi-Server AI Client Usage
+### Conversation Client Usage
 ```python
-from tools.ai import MultiServerAIClient
+from tools.ai import ConversationClient, create_conversation_client
 
-# Setup
-client = MultiServerAIClient(ai_provider="claude")
-client.add_server("blender", "http://localhost:8001/mcp", "3D modeling")
-client.add_server("myapp", "http://localhost:8003/mcp", "Custom app")
+# Setup servers configuration
+servers = {
+    "blender": {
+        "name": "blender",
+        "type": "sse",
+        "url": "http://localhost:8001/mcp"
+    },
+    "myapp": {
+        "name": "myapp", 
+        "type": "sse",
+        "url": "http://localhost:8003/mcp"
+    }
+}
 
-# Connect and use
-await client.connect_to_servers()
-tools = client.get_all_tools()
-result = await client.execute_tool("my_tool", {"param": "value"})
+# Create and connect client
+client_result = await create_conversation_client(
+    servers=servers,
+    ai_provider="claude",
+    max_steps=5
+)
 
-# AI conversation
-response = await client.chat_with_ai("Create a sphere in Blender")
-final_result = await client.process_ai_response(response)
+if client_result.is_success:
+    client = client_result.data
+    
+    # Get available tools
+    tools_by_server = client.get_available_tools()
+    
+    # Have a conversation
+    chat_result = await client.chat("Create a sphere in Blender")
+    if chat_result.is_success:
+        conversation = chat_result.data
+        for step in conversation.steps:
+            print(f"Step {step.step_number}: {step.text}")
+            for tool_call in step.tool_calls:
+                print(f"Called {tool_call.tool_name}")
+    
+    # Cleanup
+    await client.disconnect_from_servers()
 ```
 
 ### Tool Routing
@@ -918,10 +944,11 @@ uv run lightfast-mcp-orchestrator start myapp-server
 ### Health Checks
 ```python
 # Programmatic health monitoring
-from lightfast_mcp.core import get_manager
+from tools.orchestration import get_orchestrator
 
-manager = get_manager()
-health_results = await manager.health_check_all()
+orchestrator = get_orchestrator()
+running_servers = orchestrator.get_running_servers()
+health_results = {name: info.state.name == 'RUNNING' for name, info in running_servers.items()}
 print(health_results)  # {"server-name": True/False, ...}
 ```
 
