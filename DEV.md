@@ -151,7 +151,7 @@ Auto-discovery and orchestration system:
 - Validates configurations
 - Creates server instances
 
-#### **MultiServerManager** (`src/tools/orchestration/multi_server_manager.py`)
+#### **ServerOrchestrator** (`src/tools/orchestration/server_orchestrator.py`)
 Multi-server orchestration:
 - Manages multiple server instances
 - Handles concurrent startup/shutdown
@@ -264,20 +264,6 @@ src/tools/                   # 🔧 DEVELOPMENT TOOLS
 ├── orchestration/           # Multi-server orchestration
 ├── ai/                      # AI integration tools
 └── __init__.py              # Tools package exports
-```
-
-**Import Path Changes:**
-
-**Before:**
-```python
-from lightfast_mcp.management import ConfigLoader, get_manager
-from lightfast_mcp.clients import MultiServerAIClient
-```
-
-**After:**
-```python
-from tools.orchestration import ConfigLoader, get_orchestrator
-from tools.ai import ConversationClient, create_conversation_client
 ```
 
 **Benefits Achieved:**
@@ -929,7 +915,7 @@ touch src/lightfast_mcp/servers/myapp/{__init__.py,server.py,tools.py}
 
 # 3. Test auto-discovery
 uv run python -c "
-from lightfast_mcp.core import get_registry
+from tools.orchestration import get_registry
 registry = get_registry()
 print('Available servers:', registry.get_available_server_types())
 "

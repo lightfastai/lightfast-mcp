@@ -182,7 +182,9 @@ def start_servers_interactive(show_logs: bool = True):
         print(
             "\n🎯 Servers are running! Use the dedicated AI client to interact with them."
         )
-        print("   Run 'uv run task conversation_client' to start the AI client.")
+        print(
+            "   Run 'uv run lightfast-conversation-client chat' to start the AI client."
+        )
         print("   Press Ctrl+C to shutdown all servers.\n")
 
         try:
@@ -256,8 +258,8 @@ Examples:
 
 
 AI Client (use after starting servers):
-  uv run task conversation_client                   # Start interactive AI chat
-  uv run task conversation_test --message "Hello"   # Quick AI test
+  uv run lightfast-conversation-client chat         # Start interactive AI chat
+  uv run lightfast-conversation-client test         # Quick AI test
         """,
     )
 

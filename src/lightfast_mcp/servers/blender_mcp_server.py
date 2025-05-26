@@ -19,7 +19,7 @@ def main():
     """Run the Blender MCP server."""
     logger.info("Starting Blender MCP server")
 
-    # Check for environment configuration (from MultiServerManager)
+    # Check for environment configuration (from ServerOrchestrator)
     env_config = os.getenv("LIGHTFAST_MCP_SERVER_CONFIG")
 
     if env_config:

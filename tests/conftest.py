@@ -79,17 +79,19 @@ def clean_singletons():
 
     # Clean up registry singleton
     try:
-        from lightfast_mcp.core.server_registry import ServerRegistry
+        from tools.orchestration.server_registry import reset_registry
 
-        ServerRegistry._instance = None
+        reset_registry()
     except ImportError:
         pass
 
-    # Clean up manager singleton
+    # Clean up orchestrator singleton
     try:
-        from lightfast_mcp.core.multi_server_manager import MultiServerManager
+        from tools.orchestration.server_orchestrator import _orchestrator
 
-        MultiServerManager._instance = None
+        if _orchestrator:
+            _orchestrator.shutdown_all()
+            globals()["_orchestrator"] = None
     except ImportError:
         pass
 
