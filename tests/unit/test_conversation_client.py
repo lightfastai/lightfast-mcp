@@ -486,7 +486,7 @@ class TestConversationClient:
         conversation_client.connection_pool = mock_pool
 
         with patch(
-            "tools.ai.conversation_client.shutdown_connection_pool"
+            "tools.common.async_utils.shutdown_connection_pool"
         ) as mock_shutdown:
             result = await conversation_client.disconnect_from_servers()
 

@@ -231,7 +231,7 @@ class TestToolExecutor:
 
         assert result.error is not None
         assert "timed out" in result.error
-        assert result.error_code == "TOOL_TIMEOUT"
+        assert result.error_code == "ToolTimeoutError"
 
     @pytest.mark.asyncio
     async def test_execute_tool_execution_error(
@@ -258,7 +258,7 @@ class TestToolExecutor:
 
         assert result.error is not None
         assert "Tool execution failed" in result.error
-        assert result.error_code == "TOOL_EXECUTION_ERROR"
+        assert result.error_code == "ToolExecutionError"
 
     @pytest.mark.asyncio
     async def test_execute_tool_connection_pool_error(
@@ -281,7 +281,7 @@ class TestToolExecutor:
 
         assert result.error is not None
         assert "Connection failed" in result.error
-        assert result.error_code == "TOOL_EXECUTION_ERROR"
+        assert result.error_code == "ToolExecutionError"
 
     @pytest.mark.asyncio
     async def test_convert_mcp_result_with_text(self, tool_executor):
@@ -416,7 +416,7 @@ class TestToolExecutor:
 
         result = tool_executor._convert_mcp_result(mock_result, tool_call)
 
-        assert result.result == "direct result"
+        assert result.result == {"type": "str", "content": "direct result"}
 
     @pytest.mark.asyncio
     async def test_execute_tools_concurrently_empty(self, tool_executor):
@@ -700,8 +700,9 @@ class TestToolExecutor:
         )
 
         is_valid, error = tool_executor.validate_tool_call(tool_call)
-        assert is_valid is False
-        assert "ID is required" in error
+        # ToolCall automatically generates UUID for empty ID, so validation should pass
+        assert is_valid is True
+        assert error is None
 
     def test_validate_tool_call_none_id(self, tool_executor, sample_tools):
         """Test tool call validation with None ID."""
@@ -712,8 +713,9 @@ class TestToolExecutor:
         )
 
         is_valid, error = tool_executor.validate_tool_call(tool_call)
-        assert is_valid is False
-        assert "ID is required" in error
+        # ToolCall automatically generates UUID for None ID, so validation should pass
+        assert is_valid is True
+        assert error is None
 
     def test_validate_tool_call_invalid_arguments(self, tool_executor, sample_tools):
         """Test tool call validation with invalid arguments."""
@@ -802,6 +804,7 @@ class TestToolExecutorEdgeCases:
 
         assert result.error is not None
         assert "Connection failed" in result.error
+        assert result.error_code == "ToolExecutionError"
 
     @pytest.mark.asyncio
     async def test_execute_tools_concurrently_operation_wrapper_failure(

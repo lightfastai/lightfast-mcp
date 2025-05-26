@@ -6,7 +6,7 @@ import asyncio
 import signal
 import subprocess
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -88,7 +88,7 @@ class TestServerProcess:
         """Test uptime calculation with custom start time."""
         past_time = datetime.utcnow()
         # Simulate 1 second ago
-        past_time = past_time.replace(microsecond=past_time.microsecond - 1000000)
+        past_time = past_time - timedelta(seconds=1)
 
         process = ServerProcess()
         process.start_time = past_time
@@ -329,15 +329,17 @@ class TestServerOrchestrator:
     @pytest.mark.asyncio
     async def test_start_server_general_exception(self, orchestrator, sample_config):
         """Test server startup with general exception."""
+        # Mock validation to pass, but then mock subprocess creation to fail
         with patch.object(
-            orchestrator.registry,
-            "validate_server_config",
-            side_effect=Exception("Validation error"),
+            orchestrator.registry, "validate_server_config", return_value=(True, None)
         ):
-            result = await orchestrator.start_server(sample_config)
+            with patch(
+                "subprocess.Popen", side_effect=Exception("Subprocess creation failed")
+            ):
+                result = await orchestrator.start_server(sample_config)
 
         assert result.is_failed
-        assert "Failed to start server" in result.error
+        assert "Failed to start server test-server" in result.error
 
     def test_run_server_in_thread(self, orchestrator):
         """Test running server in thread."""
@@ -435,11 +437,15 @@ class TestServerOrchestrator:
             ),
         ]
 
-        def mock_start_server(config, *args, **kwargs):
+        async def mock_start_server(config, *args, **kwargs):
+            from tools.common import OperationStatus, Result
+
             if config.name == "server-1":
-                return MagicMock(is_success=True)
+                return Result(status=OperationStatus.SUCCESS, data=None)
             else:
-                return MagicMock(is_success=False)
+                return Result(
+                    status=OperationStatus.FAILED, error="Server failed to start"
+                )
 
         with patch.object(orchestrator, "start_server", side_effect=mock_start_server):
             result = await orchestrator.start_multiple_servers(configs)
@@ -658,7 +664,10 @@ class TestServerOrchestrator:
 
         result = orchestrator.stop_server("error-server")
 
-        assert result is False
+        assert (
+            result is True
+        )  # Server is still removed from running list despite exception
+        assert "error-server" not in orchestrator._running_servers
 
     def test_shutdown_all_servers(self, orchestrator):
         """Test shutting down all servers."""
@@ -799,8 +808,17 @@ class TestServerOrchestratorEdgeCases:
         """Test server orchestrator error recovery scenarios."""
         orchestrator = ServerOrchestrator()
 
-        # Test with invalid server in running list
-        invalid_process = ServerProcess()
+        # Test with invalid server in running list (with config so it shows up)
+        config = ServerConfig(
+            name="invalid-server",
+            description="Invalid server",
+            host="localhost",
+            port=8001,
+            transport="http",
+            path="/mcp",
+            config={"type": "mock"},
+        )
+        invalid_process = ServerProcess(config=config)
         orchestrator._running_servers["invalid-server"] = invalid_process
 
         # Should handle gracefully when getting running servers

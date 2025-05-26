@@ -238,7 +238,10 @@ class ConnectionPool:
                     break
 
             for connection in connections:
-                await self._close_connection(server_name, connection)
+                try:
+                    await self._close_connection(server_name, connection)
+                except Exception as e:
+                    logger.warning(f"Error closing connection for {server_name}: {e}")
 
         logger.info("Connection pool closed")
 

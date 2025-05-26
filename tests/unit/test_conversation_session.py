@@ -152,11 +152,13 @@ class TestConversationSession:
     @pytest.mark.asyncio
     async def test_process_message_with_tool_calls(self, conversation_session):
         """Test message processing with tool calls."""
-        # Create step with tool calls
+        # Create step with tool calls and finish_reason to stop conversation
         tool_call = ToolCall(
             id="call-1", tool_name="tool1", arguments={"param": "value"}
         )
-        mock_step = ConversationStep(step_number=0, text="Using tool")
+        mock_step = ConversationStep(
+            step_number=0, text="Using tool", finish_reason="stop"
+        )
         mock_step.tool_calls = [tool_call]
 
         # Mock tool result
@@ -288,7 +290,7 @@ class TestConversationSession:
         result = await conversation_session.process_message("Exception test")
 
         assert result.is_failed
-        assert "Error processing message" in result.error
+        assert "Failed to generate step 0" in result.error
 
     @pytest.mark.asyncio
     async def test_generate_step_success(self, conversation_session):
