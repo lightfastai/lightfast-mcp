@@ -17,14 +17,18 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
-# 🎯 CORE: Only dependencies needed for MCP server implementations
+# 🎯 CORE: Dependencies needed for MCP server implementations and tools
 dependencies = [
     "fastmcp>=2.0.0",
-    "rich",  # For logging and CLI output
+    "rich",        # For logging and CLI output
+    "pyyaml",      # For YAML config support (used by orchestration tools)
+    "anthropic",   # Claude AI integration (used by conversation client)
+    "openai",      # OpenAI integration (used by conversation client)
+    "typer",       # CLI framework (used by conversation CLI)
 ]
 
 [project.optional-dependencies]
-# Development dependencies and tool integrations (not included in deployable package)
+# Development dependencies (testing, linting, etc.)
 dev = [
     "ruff",
     "taskipy",
@@ -35,10 +39,6 @@ dev = [
     "nox",
     "mypy",
     "build",
-    "pyyaml",      # For YAML config support
-    "anthropic",   # Claude AI integration
-    "openai",      # OpenAI integration
-    "typer",       # CLI
 ]
 
 [project.scripts]
@@ -70,7 +70,11 @@ packages = [
     "lightfast_mcp.servers.mock",
     "lightfast_mcp.utils",
     "common",  # Required by lightfast_mcp.core
-    # The 'tools' package and submodules are for development only and are NOT included in deployable packages
+    "tools",   # Orchestration and AI client tools
+    "tools.orchestration",
+    "tools.ai",
+    "tools.ai.providers",
+    "tools.common",
 ]
 
 [project.urls]
