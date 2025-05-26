@@ -1,3 +1,14 @@
+# Performance Optimizations Applied:
+# 1. Enhanced caching strategy with cache reuse between jobs
+# 2. Parallel execution for linting, formatting, and testing
+# 3. Cross-platform tests only on Mac/Windows (Linux already covered)
+# 4. Conditional coverage reporting (only on main branch pushes)
+# 5. Reduced timeouts and sleep times for faster feedback
+# 6. Bytecode caching for faster Python imports
+# 7. Platform-specific cache keys for better hit rates
+# 8. Parallel tool installation and verification
+# 9. Use UV's dev dependencies instead of separate nox installation
+
 name: CI/CD Pipeline
 
 on:
@@ -85,8 +96,7 @@ jobs:
 
     - name: Fast tests with optimizations
       run: |
-        # Install nox only once and reuse
-        uv run python -m pip install nox
+        # Nox is already installed via dev dependencies
         # Use pytest's parallel execution and fail-fast for speed
         uv run nox -s test_fast -- --numprocesses=auto --maxfail=3
 
@@ -220,7 +230,7 @@ jobs:
 
     - name: Integration test suite (optimized)
       run: |
-        uv run python -m pip install nox
+        # Nox is already installed via dev dependencies
         uv run nox -s test_integration -- --numprocesses=auto
 
     - name: Coverage report (conditional)
@@ -346,7 +356,7 @@ jobs:
 
     - name: Run E2E tests (optimized)
       run: |
-        uv run python -m pip install nox
+        # Nox is already installed via dev dependencies
         uv run nox -s test_e2e -- --numprocesses=auto --maxfail=1
 
     - name: Upload E2E test results
@@ -463,11 +473,9 @@ jobs:
 
     - name: Run core tests (optimized for platform)
       run: |
-        # Install nox
-        python -m pip install nox
-        
+        # Nox is already installed via dev dependencies
         # Run system verification with platform-specific optimizations
-        nox -s verify_system
+        uv run nox -s verify_system
 
     - name: Test CLI on ${{ matrix.os }} (essential commands only)
       shell: bash
