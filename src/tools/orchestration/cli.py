@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Lightfast MCP Manager - Multi-server management for creative applications.
+Lightfast MCP Orchestrator - Multi-server management for creative applications.
 
-This is the main entry point for managing multiple MCP servers simultaneously.
+This is the main entry point for orchestrating multiple MCP servers simultaneously.
 Users can select which servers to start, run them in the background, and then
 use the dedicated AI client to interact with them.
 """
@@ -18,7 +18,7 @@ from .server_selector import ServerSelector
 
 # Configure logging
 configure_logging(level="INFO")
-logger = get_logger("LightfastMCPManager")
+logger = get_logger("LightfastMCPOrchestrator")
 
 
 # Async wrapper functions for CLI
@@ -66,7 +66,7 @@ def create_sample_config():
     if success:
         print("✅ Sample configuration created at: config/servers.yaml")
         print("📝 Edit this file to customize your server settings.")
-        print("🚀 Run 'lightfast-mcp-manager start' to begin!")
+        print("🚀 Run 'lightfast-mcp-orchestrator start' to begin!")
     else:
         print("❌ Failed to create sample configuration")
 
@@ -99,7 +99,9 @@ def list_available_servers():
 
     if not configs:
         print("❌ No server configurations found.")
-        print("   Run 'lightfast-mcp-manager init' to create a sample configuration.")
+        print(
+            "   Run 'lightfast-mcp-orchestrator init' to create a sample configuration."
+        )
         return
 
     for config in configs:
@@ -114,7 +116,7 @@ def list_available_servers():
 
 def start_servers_interactive(show_logs: bool = True):
     """Start servers with interactive selection."""
-    print("🚀 Lightfast MCP Multi-Server Manager")
+    print("🚀 Lightfast MCP Multi-Server Orchestrator")
     print("=" * 50)
 
     # Interactive server selection
@@ -240,10 +242,18 @@ def start_servers_by_names(server_names: list[str], show_logs: bool = True):
 def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
-        description="Lightfast MCP Manager - Multi-server management for creative applications",
+        description="Lightfast MCP Orchestrator - Multi-server management for creative applications",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
+  lightfast-mcp-orchestrator init                        # Create sample configuration
+  lightfast-mcp-orchestrator list                        # List available servers
+  lightfast-mcp-orchestrator start                       # Interactive server selection
+  lightfast-mcp-orchestrator start blender-server        # Start specific server
+  lightfast-mcp-orchestrator start --hide-logs           # Start servers without showing logs
+  lightfast-mcp-orchestrator start --verbose             # Start with debug logging and server logs
+
+Legacy Commands (deprecated, use lightfast-mcp-orchestrator instead):
   lightfast-mcp-manager init                        # Create sample configuration
   lightfast-mcp-manager list                        # List available servers
   lightfast-mcp-manager start                       # Interactive server selection

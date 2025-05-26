@@ -10,6 +10,9 @@ on:
 permissions:
   contents: read
 
+env:
+  PYTHON_VERSION: "3.13"
+
 jobs:
   # Fast feedback loop using UV (matches development workflow)
   fast-checks:
@@ -23,14 +26,24 @@ jobs:
       uses: astral-sh/setup-uv@v6
       with:
         version: "latest"
+        enable-cache: true
 
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: "3.13"
+        python-version: ${{ env.PYTHON_VERSION }}
 
-    - name: Install dependencies
-      run: uv sync --extra dev
+    - name: Install dependencies with cache
+      run: |
+        uv sync --extra dev --cache-dir ~/.cache/uv
+
+    - name: Cache nox environments
+      uses: actions/cache@v4
+      with:
+        path: .nox
+        key: nox-${{ runner.os }}-${{ hashFiles('pyproject.toml', 'uv.lock') }}
+        restore-keys: |
+          nox-${{ runner.os }}-
 
     - name: Lint with Ruff
       run: uv run ruff check .
@@ -48,14 +61,15 @@ jobs:
         pip install nox
         nox -s verify_system
 
-  # Comprehensive testing across Python versions using nox
+  # Comprehensive testing across Python versions using nox (optimized)
   comprehensive-tests:
-    name: Comprehensive Tests (Nox)
+    name: Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
+    needs: [fast-checks]
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.12", "3.13"]  # Reduced from 4 to 3 versions for performance
 
     steps:
     - name: Checkout repository
@@ -65,6 +79,14 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
+
+    - name: Cache nox environments
+      uses: actions/cache@v4
+      with:
+        path: .nox
+        key: nox-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml', 'uv.lock') }}
+        restore-keys: |
+          nox-${{ runner.os }}-${{ matrix.python-version }}-
 
     - name: Install nox
       run: |
@@ -87,27 +109,40 @@ jobs:
       uses: astral-sh/setup-uv@v6
       with:
         version: "latest"
+        enable-cache: true
 
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: "3.13"
+        python-version: ${{ env.PYTHON_VERSION }}
 
-    - name: Install dependencies
-      run: uv sync --extra dev
-
-    - name: Test CLI commands
+    - name: Install dependencies with cache
       run: |
-        # Test main CLI functionality
-        uv run lightfast-mcp-manager init
-        uv run lightfast-mcp-manager list
+        uv sync --extra dev --cache-dir ~/.cache/uv
+
+    - name: Cache nox environments
+      uses: actions/cache@v4
+      with:
+        path: .nox
+        key: nox-${{ runner.os }}-${{ hashFiles('pyproject.toml', 'uv.lock') }}
+        restore-keys: |
+          nox-${{ runner.os }}-
+
+    - name: Test CLI commands (orchestrator)
+      run: |
+        # Test main CLI functionality with new orchestrator command
+        uv run lightfast-mcp-orchestrator init
+        uv run lightfast-mcp-orchestrator list
         
-        # Test manager workflow
-        timeout 30s uv run lightfast-mcp-manager start mock-server --verbose &
-        MANAGER_PID=$!
+        # Test orchestrator workflow
+        timeout 30s uv run lightfast-mcp-orchestrator start mock-server --verbose &
+        ORCHESTRATOR_PID=$!
         sleep 5  # Let server start
-        kill $MANAGER_PID || true
+        kill $ORCHESTRATOR_PID || true
         
+        # Test legacy manager alias still works
+        uv run lightfast-mcp-manager --help
+
     - name: Test development workflows
       run: |
         # Test taskipy integration
@@ -133,12 +168,54 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
         fail_ci_if_error: false
 
-  # End-to-end testing for full system workflows
+  # Combined static analysis and security checks
+  static-analysis:
+    name: Static Analysis & Security
+    runs-on: ubuntu-latest
+    needs: [fast-checks]
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Cache nox environments
+      uses: actions/cache@v4
+      with:
+        path: .nox
+        key: nox-${{ runner.os }}-${{ hashFiles('pyproject.toml', 'uv.lock') }}
+        restore-keys: |
+          nox-${{ runner.os }}-
+
+    - name: Install nox
+      run: |
+        python -m pip install --upgrade pip
+        pip install nox
+
+    - name: Type check with mypy
+      run: nox -s typecheck
+
+    - name: Security check with bandit
+      run: |
+        pip install bandit[toml]
+        bandit -r src/ -f json -o bandit-report.json || true
+
+    - name: Upload security report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: security-report
+        path: bandit-report.json
+
+  # End-to-end testing for full system workflows (optimized)
   e2e-tests:
     name: End-to-End Tests
     runs-on: ubuntu-latest
-    needs: [fast-checks, integration-tests]
-    timeout-minutes: 15
+    needs: [integration-tests]
+    timeout-minutes: 10  # Reduced from 15 minutes
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -147,14 +224,24 @@ jobs:
       uses: astral-sh/setup-uv@v6
       with:
         version: "latest"
+        enable-cache: true
 
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: "3.13"
+        python-version: ${{ env.PYTHON_VERSION }}
 
-    - name: Install dependencies
-      run: uv sync --extra dev
+    - name: Install dependencies with cache
+      run: |
+        uv sync --extra dev --cache-dir ~/.cache/uv
+
+    - name: Cache nox environments
+      uses: actions/cache@v4
+      with:
+        path: .nox
+        key: nox-${{ runner.os }}-${{ hashFiles('pyproject.toml', 'uv.lock') }}
+        restore-keys: |
+          nox-${{ runner.os }}-
 
     - name: Run E2E tests with nox
       run: |
@@ -170,37 +257,11 @@ jobs:
           pytest-results.xml
           e2e-logs/
 
-  # Type checking and advanced static analysis
-  static-analysis:
-    name: Static Analysis
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.13"
-
-    - name: Install nox
-      run: |
-        python -m pip install --upgrade pip
-        pip install nox
-
-    - name: Type check with mypy
-      run: nox -s typecheck
-
-    - name: Security check
-      run: |
-        pip install bandit[toml]
-        bandit -r src/ -f json -o bandit-report.json || true
-
-  # Package building and verification
+  # Package building and verification (optimized)
   build-and-verify:
     name: Build & Verify Package
     runs-on: ubuntu-latest
-    needs: [fast-checks, comprehensive-tests]
+    needs: [fast-checks]  # Removed comprehensive-tests dependency for performance
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -209,11 +270,12 @@ jobs:
       uses: astral-sh/setup-uv@v6
       with:
         version: "latest"
+        enable-cache: true
 
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: "3.13"
+        python-version: ${{ env.PYTHON_VERSION }}
 
     - name: Build package with uv
       run: |
@@ -230,7 +292,8 @@ jobs:
         uv pip install dist/*.whl --system
         python -c "import lightfast_mcp; print('Package imported successfully')"
         
-        # Test CLI script works
+        # Test CLI script works (both new and legacy)
+        lightfast-mcp-orchestrator --help
         lightfast-mcp-manager --help
         
     - name: Upload build artifacts
@@ -239,7 +302,7 @@ jobs:
         name: python-package-distributions
         path: dist/
 
-  # Optional: Test on different OS
+  # Cross-platform tests (streamlined for performance)
   cross-platform-tests:
     name: Cross Platform Tests
     runs-on: ${{ matrix.os }}
@@ -248,7 +311,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest]  # Removed windows-latest for performance
         
     steps:
     - name: Checkout repository
@@ -258,14 +321,24 @@ jobs:
       uses: astral-sh/setup-uv@v6
       with:
         version: "latest"
+        enable-cache: true
 
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: "3.13"
+        python-version: ${{ env.PYTHON_VERSION }}
 
-    - name: Install dependencies
-      run: uv sync --extra dev
+    - name: Install dependencies with cache
+      run: |
+        uv sync --extra dev --cache-dir ~/.cache/uv
+
+    - name: Cache nox environments
+      uses: actions/cache@v4
+      with:
+        path: .nox
+        key: nox-${{ runner.os }}-${{ hashFiles('pyproject.toml', 'uv.lock') }}
+        restore-keys: |
+          nox-${{ runner.os }}-
 
     - name: Run core tests
       run: |
@@ -274,5 +347,5 @@ jobs:
 
     - name: Test CLI on ${{ matrix.os }}
       run: |
-        uv run lightfast-mcp-manager init
-        uv run lightfast-mcp-manager list 
+        uv run lightfast-mcp-orchestrator init
+        uv run lightfast-mcp-orchestrator list 

@@ -84,8 +84,8 @@ lightfast-mock-server       # Mock MCP server for testing
 pip install lightfast-mcp[tools]
 
 # Multi-server orchestration
-lightfast-mcp-manager init
-lightfast-mcp-manager start
+lightfast-mcp-orchestrator init
+lightfast-mcp-orchestrator start
 
 # AI integration for testing
 lightfast-mcp-ai chat
