@@ -1,27 +1,433 @@
 ---
 title: Roadmap
-description: Future plans for Lightfast MCP
+description: Comprehensive roadmap for integrating 40+ creative applications into the lightfast-mcp ecosystem
 ---
 
-# Roadmap
+# Creative Applications Integration Roadmap
 
-Lightfast MCP is under active development. This page outlines our plans for the future.
+This document outlines the comprehensive roadmap for integrating 40+ creative applications into the lightfast-mcp ecosystem.
 
-## Current Focus
+## Current State
 
-- Improving Blender integration stability
-- Adding support for additional creative applications
-- Enhancing documentation and examples
+**✅ Implemented:**
+- **Blender MCP Server**: Complete 3D modeling and animation control via socket connection
+- **Mock MCP Server**: Testing and development server
+- **Modular Architecture**: BaseServer class supporting multiple server types
 
-## Upcoming Features
+## Applications Integration Summary
 
-- Support for TouchDesigner
-- Support for Adobe Creative Suite
-- Improved error handling and logging
-- More comprehensive examples
+| Application | Category | Phase | Connection Method | Priority | Status |
+|------------|----------|-------|-------------------|----------|---------|
+| **Blender** | 3D | ✅ | Socket-based | ✅ | Implemented |
+| **Maya** | 3D | 1 | Python API | High | Planned |
+| **Cinema 4D** | 3D | 1 | Python API | High | Planned |
+| **Photoshop** | 2D Graphics | 1 | ExtendScript/CEP | High | Planned |
+| **DaVinci Resolve** | Video | 1 | Python API | High | Planned |
+| **Ableton Live** | Audio | 1 | OSC/Max for Live | High | Planned |
+| **Unreal Engine** | Game Dev | 1 | Python API | High | Planned |
+| **3ds Max** | 3D | 2 | PyMXS/MaxScript | High | Planned |
+| **Figma** | Web Design | 2 | REST API | High | Planned |
+| **TouchDesigner** | Interactive | 2 | Socket/Python | High | Planned |
+| **Reaper** | Audio | 2 | Python API | High | Planned |
+| **Houdini** | 3D | 2 | Python API | Medium | Planned |
+| **Unity** | Game Dev | 2 | TCP/C# API | Medium | Planned |
+| **Nuke** | VFX | 2 | Python API | Medium | Planned |
+| **Illustrator** | 2D Graphics | 3 | ExtendScript/CEP | Medium | Planned |
+| **Premiere Pro** | Video | 3 | ExtendScript/CEP | Medium | Planned |
+| **Max/MSP** | Audio/Interactive | 3 | OSC/TCP | Medium | Planned |
+| **Godot** | Game Dev | 3 | HTTP/CLI | Medium | Planned |
+| **Substance 3D** | Materials | 3 | SDK/HTTP | Medium | Planned |
+| **After Effects** | Motion Graphics | 3 | ExtendScript | Medium | Planned |
+| **GIMP** | 2D Graphics | 3 | Python-Fu | Low | Planned |
+| **Inkscape** | 2D Graphics | 4+ | CLI | Low | Future |
+| **Krita** | 2D Graphics | 4+ | Python API | Low | Future |
+| **Logic Pro** | Audio | 4+ | AppleScript | Low | Future |
+| **FL Studio** | Audio | 4+ | Python API | Low | Future |
+| **Pro Tools** | Audio | 4+ | EUCON API | Low | Future |
+| **Final Cut Pro** | Video | 4+ | AppleScript | Low | Future |
+| **Modo** | 3D | 4+ | Python API | Low | Future |
+| **KeyShot** | 3D Rendering | 4+ | Python API | Low | Future |
+| **ZBrush** | 3D Sculpting | 4+ | ZScript/Python | Low | Future |
+| **Sketch** | Web Design | 4+ | JavaScript API | Low | Future |
+| **Canva** | Web Design | 4+ | REST API | Low | Future |
+| **GameMaker Studio** | Game Dev | 4+ | GML Scripting | Low | Future |
+| **Resolume** | Live Performance | 4+ | OSC/Web API | Low | Future |
+| **Processing** | Creative Coding | 4+ | CLI | Low | Future |
 
-## Long-term Vision
+## Connection Methods
 
-Our goal is to make AI-assisted creation accessible to everyone who uses creative software. We aim to build a robust, flexible system that can connect any AI model to any creative application through a standardized protocol.
+| Method | Applications | Examples |
+|--------|-------------|----------|
+| **Python API** | 12 apps | Cinema 4D, Maya, DaVinci Resolve, Houdini, Nuke, Reaper |
+| **ExtendScript/CEP** | 4 apps | Photoshop, Illustrator, Premiere Pro, After Effects |
+| **Socket-based** | 3 apps | Blender, TouchDesigner, Max/MSP |
+| **REST/HTTP API** | 4 apps | Figma, Canva, Substance 3D, Godot |
+| **OSC/Network** | 3 apps | Ableton Live, Max/MSP, Resolume |
+| **CLI/Command Line** | 3 apps | Inkscape, Processing, Godot |
+| **Platform Specific** | 3 apps | Logic Pro, Final Cut Pro (AppleScript) |
 
-For the latest roadmap updates, please visit our [GitHub projects page](https://github.com/lightfastai/lightfast-mcp/projects). 
+## Quick Start Implementation Guide
+
+### Server Template Structure
+```
+src/lightfast_mcp/servers/{application}/
+├── server.py          # Main server implementation
+├── __init__.py        # Package initialization
+└── tools/             # Application-specific tools
+    ├── __init__.py
+    └── {tool_name}.py
+```
+
+### Basic Server Template
+```python
+class {Application}MCPServer(BaseServer):
+    SERVER_TYPE = "{application}"
+    REQUIRED_APPS = ["{Application}"]
+    
+    def _register_tools(self):
+        self.mcp.tool()(self.get_state)
+        self.mcp.tool()(self.execute_command)
+```
+
+## Phase 1: High-Priority Creative Suite 
+
+### Cinema 4D MCP Server 🎬
+
+**Target Directory:** `src/lightfast_mcp/servers/cinema4d/`
+
+#### Technical Approach
+- **Connection Method**: Direct Python API via `c4d` module
+- **Dependencies**: Cinema 4D Python SDK, socket communication
+- **Architecture**: Follow BaseServer pattern with C4D-specific adaptations
+
+#### Key Features to Implement
+- **Scene Management**: Object creation/deletion, scene hierarchy navigation
+- **Modeling Operations**: Primitive creation, modifier application, mesh manipulation
+- **Animation Controls**: Keyframe management, timeline operations
+- **Material System**: Material creation, texture assignment, shader management
+- **Rendering**: Render queue management, camera controls, lighting setup
+- **Import/Export**: Asset pipeline, various file format support
+
+### Maya MCP Server 🎬
+
+**Target Directory:** `src/lightfast_mcp/servers/maya/`
+
+#### Technical Approach
+- **Connection Method**: Direct API via `maya.cmds` and `maya.OpenMaya`
+- **Dependencies**: Maya Python API, mayapy interpreter
+- **Architecture**: Native Python integration with Maya's command engine
+
+#### Key Features to Implement
+- **Scene Operations**: File operations, scene queries, hierarchy management
+- **Object Manipulation**: Create/modify/delete objects, materials, textures
+- **Animation Controls**: Keyframes, timeline, animation curves
+- **Rendering**: Arnold/Maya renderer integration, batch rendering
+- **Rigging Tools**: Joint creation, skinning, constraint systems
+- **Import/Export**: Various file formats (FBX, OBJ, Alembic)
+
+### Photoshop MCP Server 🎨
+
+**Target Directory:** `src/lightfast_mcp/servers/photoshop/`
+
+#### Technical Approach
+- **Connection Method**: ExtendScript via CEP panels or UXP
+- **Dependencies**: Adobe CEP SDK, ExtendScript libraries
+- **Architecture**: Script-based automation through Photoshop's scripting engine
+
+#### Key Features to Implement
+- **Document Operations**: Create/open/save documents, canvas manipulation
+- **Layer Management**: Layer creation, blending modes, effects
+- **Image Processing**: Filters, adjustments, transformations
+- **Selection Tools**: Selection creation, masking operations
+- **Batch Operations**: Action recording/playback, batch processing
+- **Export Pipeline**: Multiple format export, web optimization
+
+### DaVinci Resolve MCP Server 🎯
+
+**Target Directory:** `src/lightfast_mcp/servers/davinci/`
+
+#### Technical Approach
+- **Connection Method**: Direct Python API via DaVinci Resolve's Python scripting
+- **Dependencies**: DaVinci Resolve Python API
+- **Architecture**: Native Python integration with Resolve's project management
+
+#### Key Features to Implement
+- **Project Management**: Project creation, media pool operations
+- **Timeline Operations**: Clip placement, editing operations, transitions
+- **Color Grading**: Node manipulation, color correction tools
+- **Audio Mixing**: Track management, audio effects, mixing console
+- **Rendering**: Delivery page automation, render queue management
+- **VFX Integration**: Fusion page control, effect application
+
+### Ableton Live MCP Server 🎧
+
+**Target Directory:** `src/lightfast_mcp/servers/ableton/`
+
+#### Technical Approach
+- **Connection Method**: TCP/UDP via Max for Live or Python Live API
+- **Dependencies**: Max for Live, Python Live API, OSC support
+- **Architecture**: Network-based communication with Live's API
+
+#### Key Features to Implement
+- **Session Management**: Scene triggering, clip launching, transport control
+- **Track Operations**: Track creation, device management, routing
+- **MIDI Control**: MIDI mapping, note generation, CC automation
+- **Audio Processing**: Effect parameter control, audio routing
+- **Live Performance**: Set management, scene automation, recording
+- **Device Control**: Instrument/effect parameter manipulation
+
+### Unreal Engine MCP Server 🎮
+
+**Target Directory:** `src/lightfast_mcp/servers/unreal/`
+
+#### Technical Approach
+- **Connection Method**: Direct Python API integration via `unreal` module
+- **Dependencies**: Unreal Engine Python API, socket communication
+- **Architecture**: Follow Blender server pattern with UE-specific adaptations
+
+#### Key Features to Implement
+- **Scene Management**: Create/delete actors, query scene hierarchy
+- **Asset Operations**: Import/export assets, manage content browser
+- **Transform Controls**: Position, rotation, scale manipulation
+- **Blueprint Integration**: Create/modify blueprint classes
+- **Rendering**: Camera controls, lighting setup, render pipeline
+- **Level Editing**: Terrain modification, landscape tools
+
+## Phase 2: Expanded Creative Ecosystem
+
+### 3ds Max MCP Server 🏗️
+
+**Target Directory:** `src/lightfast_mcp/servers/3dsmax/`
+
+#### Technical Approach
+- **Connection Method**: Direct API via `pymxs` or MaxScript integration
+- **Dependencies**: 3ds Max Python API, MaxScript bridge
+- **Architecture**: Hybrid Python/MaxScript execution environment
+
+#### Key Features to Implement
+- **Scene Management**: Object creation/modification, scene hierarchy
+- **Modeling Tools**: Modifier stack, mesh editing, architectural modeling
+- **Animation System**: Keyframe animation, constraints, character rigging
+- **Rendering**: V-Ray/Arnold integration, render farm management
+- **Import/Export**: CAD import, game asset export, format conversion
+
+### Figma MCP Server 🎨
+
+**Target Directory:** `src/lightfast_mcp/servers/figma/`
+
+#### Technical Approach
+- **Connection Method**: HTTP/REST API via Figma Web API
+- **Dependencies**: Figma API authentication, HTTP client
+- **Architecture**: Web API client with real-time collaboration support
+
+#### Key Features to Implement
+- **Design Operations**: Component creation, frame management, prototyping
+- **Collaboration**: Team library access, comment management, version control
+- **Asset Export**: Multiple format export, developer handoff
+- **Plugin Integration**: Custom plugin development, automation workflows
+- **Design System**: Component library management, style guide automation
+
+### TouchDesigner MCP Server 🎭
+
+**Target Directory:** `src/lightfast_mcp/servers/touchdesigner/`
+
+#### Technical Approach
+- **Connection Method**: Socket-based communication + Python scripting
+- **Dependencies**: TouchDesigner Python API, OSC support
+- **Architecture**: Real-time node-based visual programming control
+
+#### Key Features to Implement
+- **Network Operations**: Node creation/connection, parameter control
+- **Real-time Control**: Live performance parameters, MIDI/OSC integration
+- **Media Processing**: Video/audio input/output, effects processing
+- **Generative Systems**: Procedural content generation, data visualization
+- **Hardware Integration**: Sensor input, projection mapping control
+
+## Phase 3: Specialized Creative Applications
+
+### Illustrator MCP Server ✏️
+
+**Target Directory:** `src/lightfast_mcp/servers/illustrator/`
+
+#### Technical Approach
+- **Connection Method**: ExtendScript via CEP panels or UXP
+- **Dependencies**: Adobe CEP SDK, ExtendScript libraries
+- **Architecture**: Vector graphics automation through Adobe's scripting engine
+
+#### Key Features to Implement
+- **Vector Operations**: Path creation/editing, shape manipulation
+- **Typography**: Text formatting, font management, layout control
+- **Asset Export**: Multiple format export, web/print optimization
+- **Design Automation**: Pattern creation, batch processing
+- **Color Management**: Swatches, gradients, color harmony tools
+
+### Premiere Pro MCP Server 🎞️
+
+**Target Directory:** `src/lightfast_mcp/servers/premiere/`
+
+#### Technical Approach
+- **Connection Method**: ExtendScript via CEP panels
+- **Dependencies**: Adobe CEP SDK, Premiere Pro scripting
+- **Architecture**: Timeline-based editing automation
+
+#### Key Features to Implement
+- **Timeline Operations**: Clip placement, editing, transitions
+- **Media Management**: Import/export, proxy workflows
+- **Effects Control**: Effect application, parameter automation
+- **Audio Integration**: Audio editing, mixing, synchronization
+- **Render Pipeline**: Export presets, batch rendering
+
+### Max/MSP MCP Server 🔌
+
+**Target Directory:** `src/lightfast_mcp/servers/maxmsp/`
+
+#### Technical Approach
+- **Connection Method**: TCP/UDP sockets + OSC protocol
+- **Dependencies**: Max/MSP runtime, OSC libraries
+- **Architecture**: Real-time audio/visual programming environment
+
+#### Key Features to Implement
+- **Patch Operations**: Object creation/connection, message routing
+- **Audio Processing**: DSP control, real-time audio manipulation
+- **MIDI Integration**: MIDI I/O, device control, mapping
+- **Visual Programming**: Jitter integration, video processing
+- **Hardware Control**: Sensor input, device automation
+
+### Godot MCP Server 👾
+
+**Target Directory:** `src/lightfast_mcp/servers/godot/`
+
+#### Technical Approach
+- **Connection Method**: HTTP server mode + command line tools
+- **Dependencies**: Godot Engine, HTTP client libraries
+- **Architecture**: Scene-based game development automation
+
+#### Key Features to Implement
+- **Scene Management**: Node creation/manipulation, scene switching
+- **Asset Pipeline**: Resource import, texture management
+- **Scripting Control**: GDScript execution, C# integration
+- **Game Logic**: Component systems, signal connections
+- **Export Pipeline**: Platform builds, deployment automation
+
+### Substance 3D Suite MCP Server 🧪
+
+**Target Directory:** `src/lightfast_mcp/servers/substance/`
+
+#### Technical Approach
+- **Connection Method**: Substance SDK + HTTP API
+- **Dependencies**: Substance automation toolkit
+- **Architecture**: Material authoring and procedural generation
+
+#### Key Features to Implement
+- **Material Creation**: Node graph manipulation, parameter control
+- **Texture Generation**: Procedural texturing, pattern creation
+- **Asset Export**: Multiple format export, game engine integration
+- **Batch Processing**: Material libraries, automation workflows
+- **Pipeline Integration**: Version control, asset management
+
+### After Effects MCP Server 🎬
+
+**Target Directory:** `src/lightfast_mcp/servers/aftereffects/`
+
+#### Technical Approach
+- **Connection Method**: ExtendScript via CEP panels
+- **Dependencies**: Adobe CEP SDK, After Effects scripting
+- **Architecture**: Composition-based motion graphics automation
+
+#### Key Features to Implement
+- **Composition Management**: Layer creation, timeline control
+- **Animation System**: Keyframe automation, expression control
+- **Effects Pipeline**: Effect application, parameter animation
+- **Rendering Control**: Render queue management, output settings
+- **Asset Integration**: Import/export, template management
+
+### GIMP MCP Server 🎨
+
+**Target Directory:** `src/lightfast_mcp/servers/gimp/`
+
+#### Technical Approach
+- **Connection Method**: Python-Fu scripting interface
+- **Dependencies**: GIMP Python API, script-fu support
+- **Architecture**: Open-source image editing automation
+
+#### Key Features to Implement
+- **Image Operations**: Layer management, filter application
+- **Selection Tools**: Advanced selection, masking operations
+- **Batch Processing**: Script automation, file processing
+- **Plugin Integration**: Custom filter development
+- **Export Pipeline**: Multiple format support, optimization
+
+## Phase 4+: Future Integrations
+
+### Additional Applications Under Consideration
+
+#### Professional Audio
+- **Pro Tools** (EUCON API)
+- **Logic Pro** (AppleScript/Scripter)
+- **FL Studio** (Python scripting)
+
+#### Specialized 3D
+- **Modo** (Python API)
+- **KeyShot** (Python scripting)
+- **ZBrush** (ZScript/Python)
+
+#### Game Development
+- **GameMaker Studio** (GML scripting)
+
+#### Web & UI Design
+- **Sketch** (JavaScript API)
+- **Canva** (REST API)
+
+#### Interactive & Performance
+- **Resolume** (OSC/Web API)
+
+#### Creative Coding
+- **Processing** (CLI interface)
+- **Inkscape** (Command line tools)
+- **Krita** (Python API)
+
+## Cross-Application Workflow Examples
+
+| Workflow | Applications | Pipeline |
+|----------|-------------|----------|
+| **Game Asset Pipeline** | Blender → Substance 3D → Unreal Engine | 3D Model → Texturing → Game Integration |
+| **VFX Production** | Maya → Houdini → Nuke → DaVinci Resolve | Animation → Simulation → Compositing → Color |
+| **Motion Graphics** | Cinema 4D → After Effects → Premiere Pro | 3D Animation → Compositing → Final Edit |
+| **Music Production** | Ableton Live → Reaper → Pro Tools | Composition → Mixing → Mastering |
+| **Brand Design** | Illustrator → Photoshop → After Effects | Vector Design → Raster Edit → Animation |
+| **Interactive Art** | Processing → TouchDesigner → Max/MSP | Code Generation → Visual Programming → Audio |
+
+
+## Community Contribution Guidelines
+
+### Adding New Creative Applications
+
+1. **Research Phase**: Document application's Python/scripting capabilities
+2. **Proposal**: Submit integration proposal with technical approach
+3. **Implementation**: Follow established architecture patterns
+4. **Testing**: Comprehensive test coverage and documentation
+5. **Review**: Community review and integration
+
+### Supported Application Criteria
+
+**🎯 Primary Criteria (Must Have):**
+- **Programmatic Interface**: Python API, REST API, CLI, or scripting support
+- **Active Development**: Regular updates and maintained documentation
+- **Industry Adoption**: Significant user base in creative industries
+- **Technical Feasibility**: Reliable integration methods available
+
+**⭐ Secondary Criteria (Nice to Have):**
+- **Open Source/Free**: Lower barrier to community testing and adoption
+- **Cross-Platform**: Available on multiple operating systems
+- **Educational Use**: Common in schools and training programs
+- **Workflow Integration**: Natural fit with existing creative pipelines
+
+**❌ Exclusion Criteria:**
+- **No API Access**: Applications without any programmatic control
+- **Deprecated Software**: End-of-life or unsupported applications
+- **Legal Restrictions**: Licensing that prohibits automation
+- **Unstable APIs**: Frequently changing interfaces without versioning
+
+---
+
+*This roadmap provides a comprehensive overview of lightfast-mcp's expansion into a complete creative automation ecosystem covering 40+ applications across all major creative domains.* 
