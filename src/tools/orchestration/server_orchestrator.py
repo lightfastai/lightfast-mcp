@@ -233,9 +233,14 @@ class ServerOrchestrator:
         """Start a server using the traditional approach (for stdio transport)."""
         try:
             # Create server instance
-            server = self.registry.create_server(
-                server_config.config.get("type"), server_config
-            )
+            server_type = server_config.config.get("type", "unknown")
+            if not server_type or server_type == "unknown":
+                return Result(
+                    status=OperationStatus.FAILED,
+                    error="Server type not specified in configuration",
+                    error_code="MISSING_SERVER_TYPE",
+                )
+            server = self.registry.create_server(server_type, server_config)
 
             if background:
                 # Run in background thread with proper asyncio handling

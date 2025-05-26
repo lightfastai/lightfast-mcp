@@ -107,19 +107,19 @@ class ToolExecutor:
             )
 
         except Exception as e:
-            error = ToolExecutionError(
+            execution_error = ToolExecutionError(
                 f"Error executing tool {tool_call.tool_name}: {e}",
                 tool_name=tool_call.tool_name,
                 server_name=server_name,
                 cause=e,
             )
-            logger.error("Tool execution failed", error=error)
+            logger.error("Tool execution failed", error=execution_error)
             return ToolResult(
                 id=tool_call.id,
                 tool_name=tool_call.tool_name,
                 arguments=tool_call.arguments,
-                error=str(error),
-                error_code=error.error_code,
+                error=str(execution_error),
+                error_code=execution_error.error_code,
                 server_name=server_name,
                 duration_ms=(time.time() - start_time) * 1000,
             )
@@ -128,6 +128,12 @@ class ToolExecutor:
         self, tool_call: ToolCall, server_name: str
     ) -> ToolResult:
         """Execute tool using connection pool."""
+        if not self.connection_pool:
+            raise ToolExecutionError(
+                "Connection pool not available",
+                tool_name=tool_call.tool_name,
+                server_name=server_name,
+            )
         async with self.connection_pool.get_connection(server_name) as client:
             # Call the tool
             mcp_result = await client.call_tool(

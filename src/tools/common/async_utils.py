@@ -383,8 +383,17 @@ async def run_concurrent_operations(
                     error_code=type(result).__name__,
                 )
             )
-        else:
+        elif isinstance(result, Result):
             final_results.append(result)
+        else:
+            # This shouldn't happen, but handle it gracefully
+            final_results.append(
+                Result(
+                    status=OperationStatus.FAILED,
+                    error=f"Unexpected result type: {type(result)}",
+                    error_code="UNEXPECTED_RESULT_TYPE",
+                )
+            )
 
     return final_results
 

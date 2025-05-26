@@ -37,13 +37,13 @@ def test_imports():
         return False
 
     try:
-        from tools.ai.multi_server_ai_client import (
-            MultiServerAIClient,  # noqa: F401
+        from tools.ai.conversation_client import (
+            ConversationClient,  # noqa: F401
         )
 
-        print("✓ MultiServerAIClient imported successfully")
+        print("✓ ConversationClient imported successfully")
     except ImportError as e:
-        print(f"✗ Failed to import MultiServerAIClient: {e}")
+        print(f"✗ Failed to import ConversationClient: {e}")
         return False
 
     return True

@@ -57,6 +57,7 @@ __all__ = [
     "ConversationResult",
     "ConversationStep",
     "ToolCall",
+    "ToolCallState",
     "ToolResult",
     "HealthStatus",
     # Errors
