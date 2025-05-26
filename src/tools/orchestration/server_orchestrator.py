@@ -344,7 +344,9 @@ class ServerOrchestrator:
         # Build result dictionary
         startup_results = {}
         for config, result in zip(server_configs, results):
-            startup_results[config.name] = result.is_success
+            # If the operation succeeded, use the data (boolean result)
+            # If the operation failed (exception), treat as False
+            startup_results[config.name] = result.data if result.is_success else False
 
         successful = sum(1 for success in startup_results.values() if success)
         logger.info(

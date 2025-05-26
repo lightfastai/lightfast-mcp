@@ -339,7 +339,7 @@ class TestServerOrchestrator:
                 result = await orchestrator.start_server(sample_config)
 
         assert result.is_failed
-        assert "Failed to start server test-server" in result.error
+        assert "Failed to start server subprocess" in result.error
 
     def test_run_server_in_thread(self, orchestrator):
         """Test running server in thread."""
