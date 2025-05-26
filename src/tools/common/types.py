@@ -1,15 +1,20 @@
 """Common types and data structures for the tools package."""
 
 # Import shared types from common module
-import sys
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
-from pathlib import Path
 from typing import Any, Dict, Generic, List, Optional, TypeVar
 
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-from common import OperationStatus, ToolCall, ToolResult
+try:
+    from common import OperationStatus, ToolCall, ToolResult
+except ImportError:
+    # Fallback for development/testing
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+    from common import OperationStatus, ToolCall, ToolResult
 
 T = TypeVar("T")
 

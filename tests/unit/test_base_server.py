@@ -61,7 +61,10 @@ class TestServerInfo:
         """Test creating ServerInfo."""
         from datetime import datetime
 
-        from common import HealthStatus, ServerState
+        try:
+            from common import HealthStatus, ServerState
+        except ImportError:
+            from tools.common import HealthStatus, ServerState
 
         info = ServerInfo(
             name=sample_server_config.name,

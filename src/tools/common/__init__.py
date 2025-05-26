@@ -1,19 +1,31 @@
 """Common utilities and types for the tools package."""
 
 # Import shared types from common module
-import sys
-from pathlib import Path
+try:
+    from common import (
+        HealthStatus,
+        OperationStatus,
+        ServerInfo,
+        ServerState,
+        ToolCall,
+        ToolCallState,
+        ToolResult,
+    )
+except ImportError:
+    # Fallback for development/testing
+    import sys
+    from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-from common import (
-    HealthStatus,
-    OperationStatus,
-    ServerInfo,
-    ServerState,
-    ToolCall,
-    ToolCallState,
-    ToolResult,
-)
+    sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+    from common import (
+        HealthStatus,
+        OperationStatus,
+        ServerInfo,
+        ServerState,
+        ToolCall,
+        ToolCallState,
+        ToolResult,
+    )
 
 from .async_utils import (
     ConnectionPool,

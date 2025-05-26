@@ -86,6 +86,7 @@ packages = [
     "lightfast_mcp.servers.blender",
     "lightfast_mcp.servers.mock",
     "lightfast_mcp.utils",
+    "common",
     "tools",
     "tools.common",
     "tools.orchestration",
