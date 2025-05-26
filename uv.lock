@@ -418,12 +418,6 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
-all = [
-    { name = "anthropic" },
-    { name = "openai" },
-    { name = "pyyaml" },
-    { name = "typer" },
-]
 dev = [
     { name = "anthropic" },
     { name = "build" },
@@ -439,12 +433,6 @@ dev = [
     { name = "taskipy" },
     { name = "typer" },
 ]
-tools = [
-    { name = "anthropic" },
-    { name = "openai" },
-    { name = "pyyaml" },
-    { name = "typer" },
-]
 
 [package.dev-dependencies]
 dev = [
@@ -457,31 +445,23 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "anthropic", marker = "extra == 'all'" },
     { name = "anthropic", marker = "extra == 'dev'" },
-    { name = "anthropic", marker = "extra == 'tools'" },
     { name = "build", marker = "extra == 'dev'" },
     { name = "coverage", marker = "extra == 'dev'" },
     { name = "fastmcp", specifier = ">=2.0.0" },
     { name = "mypy", marker = "extra == 'dev'" },
     { name = "nox", marker = "extra == 'dev'" },
-    { name = "openai", marker = "extra == 'all'" },
     { name = "openai", marker = "extra == 'dev'" },
-    { name = "openai", marker = "extra == 'tools'" },
     { name = "pytest", marker = "extra == 'dev'" },
     { name = "pytest-asyncio", marker = "extra == 'dev'" },
     { name = "pytest-cov", marker = "extra == 'dev'" },
-    { name = "pyyaml", marker = "extra == 'all'" },
     { name = "pyyaml", marker = "extra == 'dev'" },
-    { name = "pyyaml", marker = "extra == 'tools'" },
     { name = "rich" },
     { name = "ruff", marker = "extra == 'dev'" },
     { name = "taskipy", marker = "extra == 'dev'" },
-    { name = "typer", marker = "extra == 'all'" },
     { name = "typer", marker = "extra == 'dev'" },
-    { name = "typer", marker = "extra == 'tools'" },
 ]
-provides-extras = ["tools", "all", "dev"]
+provides-extras = ["dev"]
 
 [package.metadata.requires-dev]
 dev = [
