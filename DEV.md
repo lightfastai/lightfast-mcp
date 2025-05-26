@@ -20,14 +20,14 @@ source .venv/bin/activate  # macOS/Linux or .venv\Scripts\activate on Windows
 uv pip install -e ".[dev]"
 
 # 3. Initialize configuration
-uv run lightfast-mcp-manager init
+uv run lightfast-mcp-orchestrator init
 
 # 4. Start servers interactively
-uv run lightfast-mcp-manager start
+uv run lightfast-mcp-orchestrator start
 
 # 5. Connect AI client (set API key first)
 export ANTHROPIC_API_KEY=your_key_here
-uv run lightfast-mcp-manager ai
+uv run lightfast-mcp-orchestrator ai
 ```
 
 ## 📊 Commands & Usage
@@ -35,22 +35,22 @@ uv run lightfast-mcp-manager ai
 ### Server Management
 ```bash
 # List all available servers and configurations
-uv run lightfast-mcp-manager list
+uv run lightfast-mcp-orchestrator list
 
 # Start specific servers by name
-uv run lightfast-mcp-manager start blender-server mock-server
+uv run lightfast-mcp-orchestrator start blender-server mock-server
 
 # Start servers with verbose logging
-uv run lightfast-mcp-manager start --verbose
+uv run lightfast-mcp-orchestrator start --verbose
 ```
 
 ### AI Integration
 ```bash
 # Start AI client (auto-discovers running servers)
-uv run lightfast-mcp-manager ai
+uv run lightfast-mcp-orchestrator ai
 
 # Use a specific AI provider
-AI_PROVIDER=openai uv run lightfast-mcp-manager ai
+AI_PROVIDER=openai uv run lightfast-mcp-orchestrator ai
 ```
 
 ### Development Tasks
@@ -73,7 +73,35 @@ uv run python -m lightfast_mcp.servers.blender_mcp_server
 
 ## 🏗️ Architecture Overview
 
-### Core Components
+Lightfast MCP is designed with **strict separation of concerns** to emphasize that the core value is in the **MCP server implementations**, while management and AI client features are optional conveniences.
+
+### 🎯 Core Value: MCP Server Implementations
+
+The primary purpose of this repository is to provide production-ready MCP server implementations for creative applications.
+
+#### Core Components (Always Available)
+
+```
+src/lightfast_mcp/
+├── core/                      # 🎯 Core MCP infrastructure
+│   └── base_server.py         # BaseServer, ServerConfig
+├── servers/                   # 🎯 MCP server implementations  
+│   ├── blender/              # Blender MCP server
+│   ├── mock/                 # Mock MCP server for testing
+│   └── {future_apps}/        # Future server implementations
+└── utils/                     # 🎯 Shared utilities
+    └── logging_utils.py       # Logging infrastructure
+
+src/common/                    # 🎯 Shared types and utilities
+├── types.py                   # ServerInfo, ServerState, ToolCall, etc.
+└── __init__.py               # Common exports
+```
+
+**Dependencies**: Only `fastmcp` and `rich` (for logging)
+
+**Entry Points**:
+- `lightfast-blender-server` - Direct Blender MCP server
+- `lightfast-mock-server` - Direct Mock MCP server
 
 #### **BaseServer** (`src/lightfast_mcp/core/base_server.py`)
 Common interface for all MCP servers with:
@@ -82,25 +110,60 @@ Common interface for all MCP servers with:
 - Health checks and monitoring
 - Standardized tool registration
 
-#### **ServerRegistry** (`src/lightfast_mcp/core/server_registry.py`)  
-Auto-discovery and management system:
+### 🔧 Development Tools (Separate Package)
+
+All orchestration and AI integration features are completely separated into the `tools` package for maximum separation of concerns.
+
+#### Tools Package Structure
+
+```
+src/tools/
+├── orchestration/             # Multi-server orchestration
+│   ├── server_orchestrator.py    # Run multiple servers
+│   ├── server_registry.py        # Auto-discover servers
+│   ├── config_loader.py          # YAML/JSON configuration
+│   ├── server_selector.py        # Interactive server selection
+│   └── cli.py                    # Orchestration CLI
+├── ai/                        # AI integration tools
+│   ├── conversation_client.py     # Connect to multiple servers
+│   ├── conversation_session.py   # Session management
+│   ├── tool_executor.py          # Tool execution
+│   ├── providers/                # AI provider implementations
+│   └── conversation_cli.py       # AI client CLI
+├── common/                    # Tools-specific utilities
+│   ├── types.py              # ConversationResult, Result, etc.
+│   ├── async_utils.py        # Connection pooling, concurrency
+│   ├── errors.py             # Error classes
+│   └── logging.py            # Logging utilities
+└── __init__.py                # Tools package exports
+```
+
+**Additional Dependencies**: `pyyaml`, `anthropic`, `openai`, `typer`
+
+**Entry Points**:
+- `lightfast-mcp-orchestrator` - Multi-server orchestration CLI
+- `lightfast-conversation-client` - AI integration CLI (Typer-based)
+
+#### **ServerRegistry** (`src/tools/orchestration/server_registry.py`)  
+Auto-discovery and orchestration system:
 - Discovers available server classes automatically
 - Manages server type registration
 - Validates configurations
 - Creates server instances
 
-#### **MultiServerManager** (`src/lightfast_mcp/core/multi_server_manager.py`)
+#### **ServerOrchestrator** (`src/tools/orchestration/server_orchestrator.py`)
 Multi-server orchestration:
 - Manages multiple server instances
 - Handles concurrent startup/shutdown
 - Provides health monitoring
 - Background execution support
 
-#### **MultiServerAIClient** (`src/lightfast_mcp/clients/multi_server_ai_client.py`)
+#### **ConversationClient** (`src/tools/ai/conversation_client.py`)
 AI integration layer:
 - Connects to multiple MCP servers simultaneously
 - Routes AI tool calls to appropriate servers
 - Supports Claude and OpenAI APIs
+- Manages conversation sessions with step-by-step execution
 
 ### Server Structure
 ```
@@ -117,6 +180,98 @@ src/lightfast_mcp/servers/
     ├── tools.py        # Tool implementations
     └── __init__.py
 ```
+
+### Installation Options
+
+#### 🎯 Core Only (Recommended for Production)
+```bash
+pip install lightfast-mcp
+# Only installs: fastmcp, rich
+# Available: lightfast-blender-server, lightfast-mock-server
+```
+
+#### 🔧 With Development Tools
+```bash
+pip install lightfast-mcp[dev]
+# Adds: pyyaml, anthropic, openai, typer
+# Available: lightfast-mcp-orchestrator, lightfast-conversation-client
+```
+
+#### 🔧 Everything
+```bash
+pip install lightfast-mcp[all]
+# All features available
+```
+
+### Usage Patterns
+
+#### 🎯 Primary: Individual MCP Servers
+
+```bash
+# Direct server usage (core functionality)
+lightfast-blender-server     # Start Blender MCP server
+lightfast-mock-server        # Start Mock MCP server
+
+# Use with any MCP client (Claude Desktop, etc.)
+```
+
+#### 🔧 Secondary: Development Tools
+
+```bash
+# Optional convenience for development/testing
+lightfast-mcp-orchestrator init   # Create configuration
+lightfast-mcp-orchestrator start  # Start multiple servers
+
+# Optional tool for testing servers
+lightfast-conversation-client chat        # Interactive AI chat
+lightfast-conversation-client test        # Quick testing
+```
+
+### Design Principles
+
+1. **Core First**: MCP server implementations are the primary value
+2. **Optional Convenience**: Orchestration and AI features are helpful but not essential
+3. **Minimal Dependencies**: Core functionality has minimal dependencies
+4. **Graceful Degradation**: Features gracefully unavailable if dependencies missing
+5. **Clear Entry Points**: Each component has clear, purpose-specific entry points
+6. **Shared Types**: Common types (ServerInfo, ServerState, ToolCall) are shared via `src/common/` to ensure consistency across core and tools packages
+7. **Development Tools Not Packaged**: The `tools` package and its CLIs are not included in the core deployable package, but are available in development mode.
+
+### Architecture Changes: Strict Separation of Concerns
+
+#### Key Changes Made
+
+**Package Restructuring:**
+
+**Before:**
+```
+src/lightfast_mcp/
+├── core/                    # Core infrastructure
+├── servers/                 # MCP server implementations
+├── management/              # Multi-server management
+├── clients/                 # AI client tools
+└── utils/                   # Shared utilities
+```
+
+**After:**
+```
+src/lightfast_mcp/          # 🎯 PURE MCP SERVERS
+├── core/                    # Core infrastructure
+├── servers/                 # MCP server implementations
+└── utils/                   # Shared utilities
+
+src/tools/                   # 🔧 DEVELOPMENT TOOLS
+├── orchestration/           # Multi-server orchestration
+├── ai/                      # AI integration tools
+└── __init__.py              # Tools package exports
+```
+
+**Benefits Achieved:**
+
+1. **Clearer Value Proposition**: Core package is obviously about MCP servers
+2. **Better Dependency Management**: Core servers have minimal dependencies
+3. **Improved Developer Experience**: Users can install just what they need
+4. **Maintainability**: Clear boundaries between core and optional features
 
 ## 📝 Configuration
 
@@ -250,23 +405,48 @@ servers:
 
 ## 🤖 AI Integration Patterns
 
-### Multi-Server AI Client Usage
+### Conversation Client Usage
 ```python
-from lightfast_mcp.clients import MultiServerAIClient
+from tools.ai import ConversationClient, create_conversation_client
 
-# Setup
-client = MultiServerAIClient(ai_provider="claude")
-client.add_server("blender", "http://localhost:8001/mcp", "3D modeling")
-client.add_server("myapp", "http://localhost:8003/mcp", "Custom app")
+# Setup servers configuration
+servers = {
+    "blender": {
+        "name": "blender",
+        "type": "sse",
+        "url": "http://localhost:8001/mcp"
+    },
+    "myapp": {
+        "name": "myapp", 
+        "type": "sse",
+        "url": "http://localhost:8003/mcp"
+    }
+}
 
-# Connect and use
-await client.connect_to_servers()
-tools = client.get_all_tools()
-result = await client.execute_tool("my_tool", {"param": "value"})
+# Create and connect client
+client_result = await create_conversation_client(
+    servers=servers,
+    ai_provider="claude",
+    max_steps=5
+)
 
-# AI conversation
-response = await client.chat_with_ai("Create a sphere in Blender")
-final_result = await client.process_ai_response(response)
+if client_result.is_success:
+    client = client_result.data
+    
+    # Get available tools
+    tools_by_server = client.get_available_tools()
+    
+    # Have a conversation
+    chat_result = await client.chat("Create a sphere in Blender")
+    if chat_result.is_success:
+        conversation = chat_result.data
+        for step in conversation.steps:
+            print(f"Step {step.step_number}: {step.text}")
+            for tool_call in step.tool_calls:
+                print(f"Called {tool_call.tool_name}")
+    
+    # Cleanup
+    await client.disconnect_from_servers()
 ```
 
 ### Tool Routing
@@ -414,6 +594,183 @@ async def test_myapp_tools(myapp_config):
     assert "test" in result
 ```
 
+## 🧪 Comprehensive Testing Strategy
+
+### Testing Philosophy
+
+The project maintains a three-tier testing strategy designed for both rapid development feedback and production confidence:
+
+#### **Unit Tests** - Fast Development Feedback
+- **Purpose**: Test individual components in isolation with mocks
+- **Speed**: < 10 seconds total execution
+- **Coverage**: Core business logic, configuration, utilities
+- **When to Run**: Every code change, pre-commit hooks
+
+#### **Integration Tests** - Component Interaction Validation  
+- **Purpose**: Test real component interactions without mocks
+- **Speed**: < 30 seconds total execution
+- **Coverage**: Server lifecycle, multi-server coordination, CLI workflows
+- **When to Run**: Before pull requests, CI pipeline
+
+#### **End-to-End Tests** - Production Readiness Validation
+- **Purpose**: Test complete user workflows and production scenarios
+- **Speed**: 1-3 minutes total execution
+- **Coverage**: Full system workflows, AI integration, performance testing
+- **When to Run**: Release validation, nightly builds
+
+### Key Testing Scenarios
+
+#### **Real AI Integration Testing**
+```python
+@pytest.mark.asyncio
+async def test_ai_conversation_with_multiple_servers():
+    """Test AI conversation workflow with multiple servers."""
+    # Tests AI client with multiple MCP servers
+    # Validates tool routing and execution across servers
+    # Uses mock AI providers for consistent testing
+```
+
+#### **Production Deployment Validation**
+```python
+@pytest.mark.asyncio  
+async def test_production_configuration_validation():
+    """Test production-ready configuration validation."""
+    # Tests production-like server configurations
+    # Validates multi-interface binding (0.0.0.0)
+    # Ensures security and performance settings
+```
+
+#### **System Performance Testing**
+```python
+@pytest.mark.asyncio
+async def test_system_load_testing():
+    """Test system under load with rapid operations."""
+    # Performs rapid startup/shutdown cycles (5 servers)
+    # Tests concurrent server operations
+    # Validates memory stability and resource cleanup
+```
+
+#### **MCP Protocol Compliance**
+```python
+@pytest.mark.asyncio
+async def test_mcp_client_server_communication():
+    """Test real MCP client-server communication."""
+    # Uses actual FastMCP client for protocol testing
+    # Validates MCP compliance and interoperability
+    # Tests tool discovery and execution
+```
+
+### Testing Best Practices
+
+#### **Async Testing Patterns**
+```python
+# ✅ Correct async test pattern
+@pytest.mark.asyncio
+async def test_server_lifecycle():
+    orchestrator = get_orchestrator()
+    result = await orchestrator.start_server(config)
+    assert result.is_success
+    await orchestrator.stop_all_servers()  # Cleanup
+
+# ❌ Avoid nested asyncio.run() calls
+def test_bad_pattern():
+    asyncio.run(some_async_function())  # Causes event loop conflicts
+```
+
+#### **Resource Management**
+```python
+@pytest.fixture
+async def clean_orchestrator():
+    """Fixture providing clean orchestrator with automatic cleanup."""
+    orchestrator = get_orchestrator()
+    yield orchestrator
+    # Automatic cleanup
+    await orchestrator.stop_all_servers()
+    await orchestrator.cleanup_resources()
+```
+
+#### **Error Testing**
+```python
+# Test both success and failure scenarios
+async def test_server_startup_failure():
+    result = await orchestrator.start_server(invalid_config)
+    assert result.status == OperationStatus.FAILED
+    assert "port already in use" in result.error
+    assert result.error_code == "SERVER_STARTUP_ERROR"
+```
+
+### Performance Testing Standards
+
+#### **Benchmarking Criteria**
+- **Server Startup**: < 5 seconds per server
+- **Memory Growth**: < 2.0x ratio during operations  
+- **Concurrent Operations**: Up to 5 servers simultaneously
+- **Load Testing**: 10 rapid startup/shutdown cycles
+
+#### **Memory Stability Testing**
+```python
+async def test_memory_usage_stability():
+    """Ensure system doesn't leak memory during operations."""
+    initial_memory = get_memory_usage()
+    
+    # Perform intensive operations
+    for _ in range(10):
+        await start_and_stop_servers()
+    
+    final_memory = get_memory_usage()
+    growth_ratio = final_memory / initial_memory
+    assert growth_ratio < 2.0, f"Memory growth too high: {growth_ratio}"
+```
+
+### Test Coverage Goals
+
+| Component | Unit Tests | Integration Tests | E2E Tests |
+|-----------|------------|-------------------|-----------|
+| **Core MCP Servers** | ✅ 95%+ | ✅ Key workflows | ✅ Full scenarios |
+| **Server Orchestration** | ✅ 90%+ | ✅ Multi-server | ✅ Production patterns |
+| **AI Integration** | ✅ 85%+ | ✅ Tool execution | ✅ Conversation flows |
+| **CLI Tools** | ✅ 80%+ | ✅ Real usage | ✅ User workflows |
+| **Configuration** | ✅ 95%+ | ✅ Loading/validation | ✅ Production configs |
+
+### Test Execution Commands
+
+```bash
+# Development workflow - fast feedback
+uv run pytest tests/unit/ -v --ff           # Unit tests with fail-fast
+uv run pytest tests/integration/ -v         # Integration tests
+
+# Comprehensive testing
+uv run pytest tests/e2e/ -v                 # End-to-end tests
+uv run pytest --cov=src --cov-report=html   # Coverage report
+
+# Specific test patterns
+uv run pytest -k "test_server_startup" -v   # Pattern matching
+uv run pytest tests/unit/test_config_loader.py::TestConfigLoader::test_load_valid_config -v
+
+# Performance and load testing
+uv run pytest tests/e2e/test_full_system.py::TestSystemPerformance -v
+```
+
+### Continuous Integration Strategy
+
+#### **Fast Feedback Pipeline** (< 2 minutes)
+1. **Linting & Formatting**: `ruff check` and `ruff format`
+2. **Type Checking**: `mypy` validation
+3. **Unit Tests**: Fast isolated tests
+4. **Integration Tests**: Component interaction tests
+
+#### **Comprehensive Validation** (5-10 minutes)
+1. **Multi-Python Testing**: Python 3.10, 3.11, 3.12, 3.13
+2. **End-to-End Tests**: Full system workflows
+3. **Performance Testing**: Load and memory stability
+4. **Security Scanning**: Dependency vulnerability checks
+
+#### **Release Validation** (15-20 minutes)
+1. **Production Scenarios**: Real deployment patterns
+2. **AI Integration**: Full conversation workflows
+3. **Cross-Platform**: Linux, macOS, Windows
+4. **Package Building**: Distribution validation
+
 ## 🛠️ Development Tools
 
 ### Taskipy Tasks
@@ -430,6 +787,9 @@ uv run task test                    # Run all tests
 uv run task test_fast               # Run fast tests
 uv run task test_coverage           # Tests with coverage
 uv run task demo                    # Run system demo
+uv run task orchestrator            # Multi-server orchestration CLI
+uv run task start_servers           # Start servers
+uv run task list_servers            # List available servers
 ```
 
 ### Ruff Configuration
@@ -509,8 +869,8 @@ uv pip install -e ".[dev]"
 uv run python scripts/test_working_system.py
 
 # 3. Start development server
-uv run lightfast-mcp-manager init
-uv run lightfast-mcp-manager start mock-server
+uv run lightfast-mcp-orchestrator init
+uv run lightfast-mcp-orchestrator start mock-server
 
 # 4. Development cycle
 # During development - fast feedback
@@ -530,16 +890,16 @@ nox -s lint typecheck test_coverage test_e2e build
 
 # 6. Test AI integration
 export ANTHROPIC_API_KEY=your_key
-uv run lightfast-mcp-manager ai
+uv run lightfast-mcp-orchestrator ai
 ```
 
 ### Multi-Application Creative Workflow
 ```bash
 # 1. Start multiple creative app servers
-uv run lightfast-mcp-manager start blender-server touchdesigner-server
+uv run lightfast-mcp-orchestrator start blender-server touchdesigner-server
 
 # 2. Connect AI to control both
-uv run lightfast-mcp-manager ai
+uv run lightfast-mcp-orchestrator ai
 
 # 3. AI can now coordinate between applications:
 # "Create a sphere in Blender and send its vertices to TouchDesigner"
@@ -555,14 +915,14 @@ touch src/lightfast_mcp/servers/myapp/{__init__.py,server.py,tools.py}
 
 # 3. Test auto-discovery
 uv run python -c "
-from lightfast_mcp.core import get_registry
+from tools.orchestration import get_registry
 registry = get_registry()
 print('Available servers:', registry.get_available_server_types())
 "
 
 # 4. Add configuration and test
-uv run lightfast-mcp-manager list
-uv run lightfast-mcp-manager start myapp-server
+uv run lightfast-mcp-orchestrator list
+uv run lightfast-mcp-orchestrator start myapp-server
 ```
 
 ## 🔍 Monitoring & Debugging
@@ -570,17 +930,18 @@ uv run lightfast-mcp-manager start myapp-server
 ### Health Checks
 ```python
 # Programmatic health monitoring
-from lightfast_mcp.core import get_manager
+from tools.orchestration import get_orchestrator
 
-manager = get_manager()
-health_results = await manager.health_check_all()
+orchestrator = get_orchestrator()
+running_servers = orchestrator.get_running_servers()
+health_results = {name: info.state.name == 'RUNNING' for name, info in running_servers.items()}
 print(health_results)  # {"server-name": True/False, ...}
 ```
 
 ### Server Status
 ```bash
 # Check running servers
-uv run lightfast-mcp-manager list
+uv run lightfast-mcp-orchestrator list
 
 # Server URLs (when using HTTP transport)
 # 📡 Server URLs:
@@ -597,7 +958,7 @@ from lightfast_mcp.utils.logging_utils import configure_logging
 configure_logging(level="DEBUG")
 
 # Or via command line
-uv run lightfast-mcp-manager start --verbose
+uv run lightfast-mcp-orchestrator start --verbose
 ```
 
 ## 🚀 Benefits of Modular Architecture
@@ -633,9 +994,9 @@ python ai_blender_client.py
 ### New Modular Approach:
 ```bash
 # Unified management
-uv run lightfast-mcp-manager init    # Create config
-uv run lightfast-mcp-manager start   # Start servers
-uv run lightfast-mcp-manager ai      # Connect AI
+uv run lightfast-mcp-orchestrator init    # Create config
+uv run lightfast-mcp-orchestrator start   # Start servers
+uv run lightfast-mcp-orchestrator ai      # Connect AI
 ```
 
 The new system maintains backward compatibility while providing much more flexibility and power.
@@ -695,6 +1056,11 @@ The project includes ready-to-use MCP server configurations for Cursor:
         "BLENDER_HOST": "localhost",
         "BLENDER_PORT": "9876"
       }
+    },
+    "lightfast-orchestrator": {
+      "command": "uv",
+      "args": ["run", "lightfast-mcp-orchestrator"],
+      "env": {"LIGHTFAST_MCP_LOG_LEVEL": "INFO"}
     }
   }
 }
@@ -706,7 +1072,7 @@ The project includes ready-to-use MCP server configurations for Cursor:
 The `.cursor/mcp.json` file is pre-configured. Cursor's Composer Agent automatically has access to:
 - **lightfast-mock**: Mock MCP server for testing and development
 - **lightfast-blender**: Blender MCP server for 3D modeling/animation
-- **lightfast-manager**: Multi-server manager for complex workflows
+- **lightfast-orchestrator**: Multi-server manager for complex workflows
 
 #### **Global Integration** (Optional)
 To use lightfast-mcp across all Cursor projects:
@@ -901,20 +1267,23 @@ uv run python scripts/test_working_system.py
 
 # Development
 uv run task fix && uv run task test_fast
-uv run lightfast-mcp-manager start
+uv run lightfast-mcp-orchestrator start
 
 # AI integration
-export ANTHROPIC_API_KEY=key && uv run lightfast-mcp-manager ai
+export ANTHROPIC_API_KEY=key && uv run lightfast-mcp-orchestrator ai
 ```
 
 ### File Structure
 ```
 lightfast-mcp/
-├── src/lightfast_mcp/          # Main library
-│   ├── core/                   # Core architecture  
-│   ├── servers/                # Server implementations
-│   ├── clients/                # AI clients
-│   └── utils/                  # Utilities
+├── src/lightfast_mcp/          # Main library - Core MCP server implementations
+│   ├── core/                   # Base classes (BaseServer, ServerConfig), shared server utilities
+│   ├── servers/                # MCP server implementations (e.g., blender/, mock/)
+│   └── utils/                  # Shared utilities for MCP servers
+├── src/tools/                  # Development and orchestration tools
+│   ├── orchestration/          # Multi-server orchestration
+│   ├── ai/                     # AI integration tools
+│   └── common/                 # Utilities specific to the tools package
 ├── tests/                      # Test suite
 ├── examples/                   # Examples & demos
 ├── config/                     # Configuration

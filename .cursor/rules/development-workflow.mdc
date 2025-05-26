@@ -28,10 +28,10 @@ uv run task demo          # Test working system
 
 ### Server Management
 ```bash
-uv run lightfast-mcp-manager init   # Create sample config
-uv run lightfast-mcp-manager list   # List available servers
-uv run lightfast-mcp-manager start  # Start servers interactively
-uv run lightfast-mcp-manager ai     # Start AI client
+uv run lightfast-mcp-orchestrator init   # Create sample config
+uv run lightfast-mcp-orchestrator list   # List available servers
+uv run lightfast-mcp-orchestrator start  # Start servers interactively
+uv run lightfast-mcp-orchestrator ai     # Start AI client
 
 # Individual Servers  
 uv run lightfast-blender-server     # Start Blender server directly

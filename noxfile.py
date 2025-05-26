@@ -127,6 +127,6 @@ def cli_test(session):
     """Test CLI functionality."""
     session.install("-e", ".[dev]")
     # Test basic CLI commands
-    session.run("lightfast-mcp-manager", "--help")
-    session.run("lightfast-mcp-manager", "init")
-    session.run("lightfast-mcp-manager", "list")
+    session.run("lightfast-mcp-orchestrator", "--help")
+    session.run("lightfast-mcp-orchestrator", "init")
+    session.run("lightfast-mcp-orchestrator", "list")

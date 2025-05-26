@@ -1,7 +1,7 @@
 [project]
 name = "lightfast-mcp"
 version = "0.0.1"
-description = "Lightfast integration through the Model Context Protocol"
+description = "MCP server implementations for creative applications (Blender, etc.)"
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [
@@ -16,15 +16,19 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Operating System :: OS Independent",
 ]
+
+# 🎯 CORE: Dependencies needed for MCP server implementations and tools
 dependencies = [
     "fastmcp>=2.0.0",
-    "rich",
-    "anthropic",
-    "openai",
-    "pyyaml",  # For YAML configuration support
+    "rich",        # For logging and CLI output
+    "pyyaml",      # For YAML config support (used by orchestration tools)
+    "anthropic",   # Claude AI integration (used by conversation client)
+    "openai",      # OpenAI integration (used by conversation client)
+    "typer",       # CLI framework (used by conversation CLI)
 ]
 
 [project.optional-dependencies]
+# Development dependencies (testing, linting, etc.)
 dev = [
     "ruff",
     "taskipy",
@@ -38,16 +42,19 @@ dev = [
 ]
 
 [project.scripts]
-# Main manager CLI
-lightfast-mcp-manager = "lightfast_mcp.cli:main"
-
-# Individual server scripts  
-lightfast-mock-server = "lightfast_mcp.servers.mock_server:main"
+# 🎯 PRIMARY: Individual MCP server entry points (core functionality only)
 lightfast-blender-server = "lightfast_mcp.servers.blender_mcp_server:main"
+lightfast-mock-server = "lightfast_mcp.servers.mock_server:main"
 
 # Direct modular server access
 lightfast-mock = "lightfast_mcp.servers.mock.server:main"
 lightfast-blender = "lightfast_mcp.servers.blender.server:main"
+
+# 🤖 Orchestration: Multi-server management CLI
+lightfast-mcp-orchestrator = "tools.orchestration.cli:main"
+
+# 🤖 AI: Conversation client CLI
+lightfast-conversation-client = "tools.ai.conversation_cli:app"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
@@ -61,8 +68,13 @@ packages = [
     "lightfast_mcp.servers",
     "lightfast_mcp.servers.blender",
     "lightfast_mcp.servers.mock",
-    "lightfast_mcp.clients",
-    "lightfast_mcp.utils"
+    "lightfast_mcp.utils",
+    "common",  # Required by lightfast_mcp.core
+    "tools",   # Orchestration and AI client tools
+    "tools.orchestration",
+    "tools.ai",
+    "tools.ai.providers",
+    "tools.common",
 ]
 
 [project.urls]
@@ -117,26 +129,18 @@ test_e2e = "nox -s test_e2e"
 test_coverage = "nox -s test_coverage"
 demo = "uv run pytest tests/e2e/test_full_system.py::TestFullSystemWorkflow::test_system_startup_and_discovery -v"
 
-# MCP Manager (Recommended approach)
-manager = "uv run lightfast-mcp-manager"
-start_servers = "uv run lightfast-mcp-manager start"
-list_servers = "uv run lightfast-mcp-manager list"
-
-# AI Client (Direct access - recommended for AI interactions)
-ai_client = "uv run python -m lightfast_mcp.clients.cli chat"  # Focused AI chat interface
-ai_test = "uv run python -m lightfast_mcp.clients.cli test"     # Quick AI testing
-
-# Individual servers via CLI scripts (Clean entry points)
-mock_server = "uv run lightfast-mock-server"
+# 🎯 PRIMARY: Individual MCP servers (core functionality)
 blender_server = "uv run lightfast-blender-server"
+mock_server = "uv run lightfast-mock-server"
 
-# Direct server access (Implementation layer)
-mock_direct = "uv run lightfast-mock"
-blender_direct = "uv run lightfast-blender"
+# 🔧 ORCHESTRATION: Multi-server management
+orchestrator = "uv run lightfast-mcp-orchestrator"
+start_servers = "uv run lightfast-mcp-orchestrator start"
+list_servers = "uv run lightfast-mcp-orchestrator list"
 
-# Development server access (Module-based)
-mock_dev = "uv run python -m lightfast_mcp.servers.mock_server"
-blender_dev = "uv run python -m lightfast_mcp.servers.blender_mcp_server"
+# 🤖 AI: Conversation client
+conversation_client = "uv run lightfast-conversation-client chat"
+conversation_test = "uv run lightfast-conversation-client test"
 
 [dependency-groups]
 dev = [
@@ -144,4 +148,5 @@ dev = [
     "pytest>=8.3.5",
     "pytest-asyncio>=0.26.0",
     "pytest-cov>=6.1.1",
+    "types-pyyaml>=6.0.12.20250516",
 ]

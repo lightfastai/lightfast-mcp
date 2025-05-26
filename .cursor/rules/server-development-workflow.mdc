@@ -19,7 +19,7 @@ When editing MCP server files, follow this workflow:
 1. **Test the Tool**: Create a unit test for the new/modified tool
 2. **Validate Tool Description**: Ensure tool has clear docstring for AI consumption
 3. **Test Server Startup**: Run `uv run lightfast-{server}-server` to verify server starts
-4. **Test Tool Integration**: Use `uv run lightfast-mcp-manager ai` to test the tool interactively
+4. **Test Tool Integration**: Use `uv run lightfast-mcp-orchestrator ai` to test the tool interactively
 
 ## Server File Validation Checklist
 

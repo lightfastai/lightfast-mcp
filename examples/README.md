@@ -33,7 +33,7 @@ Simple single-server AI client specifically for Blender MCP integration:
 
 **Usage**: `uv run python examples/ai_blender_client.py`
 
-**Note**: For production use, consider the multi-server manager: `uv run lightfast-mcp-manager ai`
+**Note**: For production use, consider the multi-server orchestrator: `uv run lightfast-mcp-orchestrator ai`
 
 ## Requirements
 
@@ -45,6 +45,6 @@ Simple single-server AI client specifically for Blender MCP integration:
 
 ## Related Scripts
 
-- Main multi-server manager: `uv run lightfast-mcp-manager`
+- Main multi-server orchestrator: `uv run lightfast-mcp-orchestrator`
 - Test system: `uv run python scripts/test_working_system.py`
 - Blender-specific testing: `./scripts/test_blender.sh` 

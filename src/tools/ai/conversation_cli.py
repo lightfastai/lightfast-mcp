@@ -1,4 +1,4 @@
-"""CLI interface for multi-server AI client."""
+"""CLI interface for the new ConversationClient."""
 
 import asyncio
 import os
@@ -12,21 +12,17 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
-from ..core.config_loader import load_server_configs
-from ..utils.logging_utils import get_logger
-from .multi_server_ai_client import (
-    MultiServerAIClient,
-    Step,
-    ToolCallState,
-    create_multi_server_client_from_config,
-)
+from tools.common import get_logger
+from tools.orchestration.config_loader import load_server_configs
 
-app = typer.Typer(help="Multi-server AI client CLI")
+from .conversation_client import ConversationClient, create_conversation_client
+
+app = typer.Typer(help="Conversation client CLI using the new architecture")
 console = Console()
-logger = get_logger("CLI")
+logger = get_logger("ConversationCLI")
 
 # Global client for signal handling
-current_client: Optional[MultiServerAIClient] = None
+current_client: Optional[ConversationClient] = None
 
 
 def handle_interrupt(signum, frame):
@@ -40,8 +36,8 @@ def handle_interrupt(signum, frame):
 signal.signal(signal.SIGINT, handle_interrupt)
 
 
-def print_step_info(step: Step) -> None:
-    """Print information about a completed step."""
+def print_step_info(step) -> None:
+    """Print information about a completed conversation step."""
     step_title = f"Step {step.step_number + 1}"
 
     if step.text and step.tool_calls:
@@ -78,10 +74,10 @@ def print_step_info(step: Step) -> None:
                 info_parts.append(f"**Arguments:** `{tool_call.arguments}`")
 
             if result:
-                if result.state == ToolCallState.RESULT:
+                if result.is_success:
                     info_parts.append(f"**Result:** {result.result}")
                     border_style = "green"
-                elif result.state == ToolCallState.ERROR:
+                elif result.is_error:
                     info_parts.append(f"**Error:** {result.error}")
                     border_style = "red"
                 else:
@@ -152,27 +148,39 @@ async def async_chat(
         ) as progress:
             task = progress.add_task("Connecting to servers...", total=None)
 
-            current_client = await create_multi_server_client_from_config(
+            client_result = await create_conversation_client(
                 servers=servers,
                 ai_provider=ai_provider,
                 api_key=api_key,
                 max_steps=max_steps,
             )
 
+            if not client_result.is_success:
+                console.print(
+                    f"[red]Failed to create client: {client_result.error}[/red]"
+                )
+                return
+
+            current_client = client_result.data
             progress.update(task, description="Connected!")
 
         # Display connected servers and tools
-        connected_servers = current_client.get_connected_servers()
-        if connected_servers:
-            console.print(
-                f"\n[green]✓ Connected to {len(connected_servers)} servers:[/green]"
-            )
-            tools_by_server = current_client.get_all_tools()
-            for server in connected_servers:
-                tools = tools_by_server.get(server, [])
-                console.print(f"  • {server}: {len(tools)} tools")
+        if current_client is not None:
+            connected_servers = current_client.get_connected_servers()
+            if connected_servers:
+                console.print(
+                    f"\n[green]✓ Connected to {len(connected_servers)} servers:[/green]"
+                )
+                tools_by_server = current_client.get_available_tools()
+                for server in connected_servers:
+                    tools = tools_by_server.get(server, [])
+                    console.print(f"  • {server}: {len(tools)} tools")
+            else:
+                console.print(
+                    "[yellow]Warning: No servers connected successfully[/yellow]"
+                )
         else:
-            console.print("[yellow]Warning: No servers connected successfully[/yellow]")
+            console.print("[red]Error: Client is not available[/red]")
 
         console.print(f"\n[blue]AI Provider:[/blue] {ai_provider}")
         console.print(f"[blue]Max Steps:[/blue] {max_steps}")
@@ -195,11 +203,23 @@ async def async_chat(
 
                 console.print("\n[yellow]🤖 Processing...[/yellow]")
 
-                # Stream the steps as they complete
-                async for step in current_client.generate_with_steps(user_input):
-                    print_step_info(step)
+                # Send message and get result
+                if current_client is not None:
+                    chat_result = await current_client.chat(user_input)
 
-                console.print("\n" + "=" * 50 + "\n")
+                    if not chat_result.is_success:
+                        console.print(f"[red]Error: {chat_result.error}[/red]")
+                        continue
+
+                    conversation_result = chat_result.data
+
+                    # Display the steps
+                    for step in conversation_result.steps:
+                        print_step_info(step)
+
+                    console.print("\n" + "=" * 50 + "\n")
+                else:
+                    console.print("[red]Error: Client is not available[/red]")
 
             except KeyboardInterrupt:
                 break
@@ -239,7 +259,7 @@ def test(
         help="Test message to send",
     ),
 ):
-    """Test the multi-server AI client with a single message."""
+    """Test the conversation client with a single message."""
     asyncio.run(async_test(config_path, ai_provider, max_steps, message))
 
 
@@ -254,31 +274,63 @@ async def async_test(config_path: str, ai_provider: str, max_steps: int, message
             console.print("[red]No servers configured.[/red]")
             return
 
-        console.print("[green]Testing multi-server AI client...[/green]")
+        console.print("[green]Testing conversation client...[/green]")
 
         # Create and connect client
-        current_client = await create_multi_server_client_from_config(
+        client_result = await create_conversation_client(
             servers=servers,
             ai_provider=ai_provider,
             max_steps=max_steps,
         )
 
-        # Display status
-        connected_servers = current_client.get_connected_servers()
-        console.print(f"Connected servers: {connected_servers}")
+        if not client_result.is_success:
+            console.print(f"[red]Failed to create client: {client_result.error}[/red]")
+            return
 
-        tools_by_server = current_client.get_all_tools()
-        console.print(f"Available tools: {tools_by_server}")
+        current_client = client_result.data
+
+        # Display status
+        if current_client is not None:
+            connected_servers = current_client.get_connected_servers()
+            console.print(f"Connected servers: {connected_servers}")
+
+            tools_by_server = current_client.get_available_tools()
+            console.print(f"Available tools: {tools_by_server}")
+        else:
+            console.print("[red]Error: Client is not available[/red]")
+            return
 
         # Send test message
         console.print(f"\n[cyan]Sending message:[/cyan] {message}")
 
-        steps = await current_client.chat_with_steps(message, max_steps=max_steps)
+        if current_client is not None:
+            chat_result = await current_client.chat(message)
 
-        # Display results
-        console.print(f"\n[green]Completed {len(steps)} steps:[/green]")
-        for step in steps:
-            print_step_info(step)
+            if not chat_result.is_success:
+                console.print(f"[red]Chat failed: {chat_result.error}[/red]")
+                return
+
+            conversation_result = chat_result.data
+
+            # Display results
+            console.print(
+                f"\n[green]Completed {len(conversation_result.steps)} steps:[/green]"
+            )
+            for step in conversation_result.steps:
+                print_step_info(step)
+
+            # Display summary
+            console.print("\n[blue]Conversation Summary:[/blue]")
+            console.print(
+                f"  • Total tool calls: {conversation_result.total_tool_calls}"
+            )
+            console.print(
+                f"  • Successful: {conversation_result.successful_tool_calls}"
+            )
+            console.print(f"  • Failed: {conversation_result.failed_tool_calls}")
+            console.print(f"  • Success rate: {conversation_result.success_rate:.1%}")
+        else:
+            console.print("[red]Error: Client is not available[/red]")
 
     except Exception as e:
         console.print(f"[red]Test failed: {e}[/red]")

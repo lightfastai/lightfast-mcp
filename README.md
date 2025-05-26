@@ -1,15 +1,20 @@
-# lightfast-mcp - Model Context Protocol for Creative Applications
+# lightfast-mcp - MCP Server Implementations for Creative Applications
 
-Lightfast MCP builds, maintains, and ships reliable Model Context Protocols (MCPs) for creative applications. Our goal is to connect AI models to tools like Blender, TouchDesigner, Ableton, Adobe Creative Suite, Unreal Engine, and more, enabling prompt-assisted creation, manipulation, and automation.
+**Production-ready MCP server implementations for creative applications** - Control Blender and other creative tools through the Model Context Protocol.
 
-## What is Lightfast MCP?
+Lightfast MCP provides reliable, well-tested MCP server implementations for creative applications, with optional management and AI client tools.
 
-Lightfast MCP provides a simple architecture that allows AI to directly interact with and control creative applications through the Model Context Protocol. This repository contains:
+## 🎯 Core MCP Servers
 
-- Implementations of MCPs for various creative applications
-- Documentation on how to use and extend these protocols
-- Examples and tutorials to get you started quickly
-- Tools to help developers build their own MCPs
+- **🎨 Blender MCP Server**: Control Blender through MCP protocol for 3D modeling, animation, and rendering
+- **🧪 Mock MCP Server**: Testing and development server for MCP protocol validation
+
+## 🔧 Optional Features
+
+- **Multi-Server Orchestration**: Run and coordinate multiple MCP servers simultaneously
+- **AI Integration**: Built-in AI tools for testing and interacting with servers  
+- **Configuration-Driven**: YAML/JSON configuration for easy server management
+- **Flexible Transport**: Support for both stdio and HTTP-based transports
 
 ## Protocol Compliance
 
@@ -61,15 +66,37 @@ This is a community-driven project. The integrations provided are third-party an
 
 ## Quick Start
 
-```bash
-# Install and setup
-uv pip install -e ".[dev]"
-uv run lightfast-mcp-manager init
-uv run lightfast-mcp-manager start
+### 🎯 Core Usage (MCP Servers Only)
 
-# Run tests
-nox  # Fast feedback loop
-nox -s test_e2e  # End-to-end tests
+```bash
+# Install core package
+pip install lightfast-mcp
+
+# Run individual servers
+lightfast-blender-server    # Blender MCP server
+lightfast-mock-server       # Mock MCP server for testing
+```
+
+### 🔧 Development Tools (Orchestration + AI)
+
+```bash
+# Install with development tools
+pip install lightfast-mcp[tools]
+
+# Multi-server orchestration
+lightfast-mcp-orchestrator init
+lightfast-mcp-orchestrator start
+
+# AI integration for testing
+lightfast-mcp-ai chat
+```
+
+### 🧪 Development
+
+```bash
+# Development setup
+uv pip install -e ".[dev]"
+nox  # Run tests
 ```
 
 For comprehensive development documentation, testing guide, and architecture details, see [DEV.md](DEV.md).

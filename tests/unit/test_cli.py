@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from lightfast_mcp.cli import (
+from tools.orchestration.cli import (
     create_sample_config,
     list_available_servers,
     main,
@@ -18,7 +18,7 @@ from lightfast_mcp.cli import (
 class TestCLI:
     """Test CLI functionality."""
 
-    @patch("lightfast_mcp.cli.ConfigLoader")
+    @patch("tools.orchestration.cli.ConfigLoader")
     def test_create_sample_config_success(self, mock_config_loader):
         """Test successful configuration creation."""
         mock_loader = MagicMock()
@@ -33,7 +33,7 @@ class TestCLI:
             "✅ Sample configuration created at: config/servers.yaml"
         )
 
-    @patch("lightfast_mcp.cli.ConfigLoader")
+    @patch("tools.orchestration.cli.ConfigLoader")
     def test_create_sample_config_failure(self, mock_config_loader):
         """Test configuration creation failure."""
         mock_loader = MagicMock()
@@ -45,8 +45,8 @@ class TestCLI:
 
         mock_print.assert_any_call("❌ Failed to create sample configuration")
 
-    @patch("lightfast_mcp.core.server_registry.get_registry")
-    @patch("lightfast_mcp.cli.ConfigLoader")
+    @patch("tools.orchestration.server_registry.get_registry")
+    @patch("tools.orchestration.cli.ConfigLoader")
     def test_list_available_servers(self, mock_config_loader, mock_get_registry):
         """Test listing available servers."""
         # Mock registry
@@ -83,10 +83,10 @@ class TestCLI:
     @pytest.mark.xfail(
         reason="stdin handling in pytest environment - known test infrastructure issue"
     )
-    @patch("lightfast_mcp.cli.get_manager")
-    @patch("lightfast_mcp.cli.ServerSelector")
+    @patch("tools.orchestration.cli.start_multiple_servers_sync")
+    @patch("tools.orchestration.cli.ServerSelector")
     def test_start_servers_interactive_no_configs(
-        self, mock_selector, mock_get_manager
+        self, mock_selector, mock_start_servers
     ):
         """Test interactive server start with no configurations."""
         mock_selector_instance = MagicMock()
@@ -98,9 +98,14 @@ class TestCLI:
 
         mock_print.assert_any_call("❌ No server configurations found.")
 
-    @patch("lightfast_mcp.cli.get_manager")
-    @patch("lightfast_mcp.cli.ServerSelector")
-    def test_start_servers_interactive_success(self, mock_selector, mock_get_manager):
+    @patch("tools.orchestration.cli.shutdown_all_sync")
+    @patch("tools.orchestration.cli.wait_for_shutdown_sync")
+    @patch("tools.orchestration.cli.get_server_urls_sync")
+    @patch("tools.orchestration.cli.start_multiple_servers_sync")
+    @patch("tools.orchestration.cli.ServerSelector")
+    def test_start_servers_interactive_success(
+        self, mock_selector, mock_start_servers, mock_get_urls, mock_wait, mock_shutdown
+    ):
         """Test successful interactive server start."""
         # Mock selector
         mock_selector_instance = MagicMock()
@@ -110,27 +115,21 @@ class TestCLI:
         mock_selector_instance.select_servers_interactive.return_value = [mock_config]
         mock_selector.return_value = mock_selector_instance
 
-        # Mock manager
-        mock_manager = MagicMock()
-        mock_manager.start_multiple_servers.return_value = {"test-server": True}
-        mock_manager.get_server_urls.return_value = {
-            "test-server": "http://localhost:8001"
-        }
-        mock_get_manager.return_value = mock_manager
+        # Mock sync functions
+        mock_start_servers.return_value = {"test-server": True}
+        mock_get_urls.return_value = {"test-server": "http://localhost:8001"}
+        mock_wait.side_effect = KeyboardInterrupt
 
         with patch("builtins.print"):
-            with patch(
-                "lightfast_mcp.cli.KeyboardInterrupt", side_effect=KeyboardInterrupt
-            ):
-                try:
-                    start_servers_interactive()
-                except KeyboardInterrupt:
-                    pass
+            try:
+                start_servers_interactive()
+            except KeyboardInterrupt:
+                pass
 
         # Check that start_multiple_servers was called with the expected arguments
-        mock_manager.start_multiple_servers.assert_called_once()
+        mock_start_servers.assert_called_once()
 
-    @patch("lightfast_mcp.cli.ConfigLoader")
+    @patch("tools.orchestration.cli.ConfigLoader")
     def test_start_servers_by_names_no_configs(self, mock_config_loader):
         """Test starting servers by name when no configs exist."""
         mock_loader = MagicMock()
@@ -142,9 +141,19 @@ class TestCLI:
 
         mock_print.assert_any_call("❌ No server configurations found.")
 
-    @patch("lightfast_mcp.cli.get_manager")
-    @patch("lightfast_mcp.cli.ConfigLoader")
-    def test_start_servers_by_names_success(self, mock_config_loader, mock_get_manager):
+    @patch("tools.orchestration.cli.shutdown_all_sync")
+    @patch("tools.orchestration.cli.wait_for_shutdown_sync")
+    @patch("tools.orchestration.cli.get_server_urls_sync")
+    @patch("tools.orchestration.cli.start_multiple_servers_sync")
+    @patch("tools.orchestration.cli.ConfigLoader")
+    def test_start_servers_by_names_success(
+        self,
+        mock_config_loader,
+        mock_start_servers,
+        mock_get_urls,
+        mock_wait,
+        mock_shutdown,
+    ):
         """Test successfully starting servers by name."""
         # Mock config
         mock_config = MagicMock()
@@ -153,25 +162,19 @@ class TestCLI:
         mock_loader.load_servers_config.return_value = [mock_config]
         mock_config_loader.return_value = mock_loader
 
-        # Mock manager
-        mock_manager = MagicMock()
-        mock_manager.start_multiple_servers.return_value = {"test-server": True}
-        mock_manager.get_server_urls.return_value = {
-            "test-server": "http://localhost:8001"
-        }
-        mock_get_manager.return_value = mock_manager
+        # Mock sync functions
+        mock_start_servers.return_value = {"test-server": True}
+        mock_get_urls.return_value = {"test-server": "http://localhost:8001"}
+        mock_wait.side_effect = KeyboardInterrupt
 
-        with patch(
-            "lightfast_mcp.cli.KeyboardInterrupt", side_effect=KeyboardInterrupt
-        ):
-            try:
-                start_servers_by_names(["test-server"])
-            except KeyboardInterrupt:
-                pass
+        try:
+            start_servers_by_names(["test-server"])
+        except KeyboardInterrupt:
+            pass
 
     def test_main_init_command(self):
         """Test main function with init command."""
-        with patch("lightfast_mcp.cli.create_sample_config") as mock_create:
+        with patch("tools.orchestration.cli.create_sample_config") as mock_create:
             with patch("sys.argv", ["cli.py", "init"]):
                 main()
 
@@ -179,7 +182,7 @@ class TestCLI:
 
     def test_main_list_command(self):
         """Test main function with list command."""
-        with patch("lightfast_mcp.cli.list_available_servers") as mock_list:
+        with patch("tools.orchestration.cli.list_available_servers") as mock_list:
             with patch("sys.argv", ["cli.py", "list"]):
                 main()
 
@@ -187,7 +190,7 @@ class TestCLI:
 
     def test_main_start_command_no_servers(self):
         """Test main function with start command and no server names."""
-        with patch("lightfast_mcp.cli.start_servers_interactive") as mock_start:
+        with patch("tools.orchestration.cli.start_servers_interactive") as mock_start:
             with patch("sys.argv", ["cli.py", "start"]):
                 main()
 
@@ -195,7 +198,7 @@ class TestCLI:
 
     def test_main_start_command_with_servers(self):
         """Test main function with start command and server names."""
-        with patch("lightfast_mcp.cli.start_servers_by_names") as mock_start:
+        with patch("tools.orchestration.cli.start_servers_by_names") as mock_start:
             with patch("sys.argv", ["cli.py", "start", "server1", "server2"]):
                 main()
 
@@ -203,8 +206,8 @@ class TestCLI:
 
     def test_main_verbose_flag(self):
         """Test main function with verbose flag."""
-        with patch("lightfast_mcp.cli.configure_logging") as mock_config:
-            with patch("lightfast_mcp.cli.create_sample_config"):
+        with patch("tools.orchestration.cli.configure_logging") as mock_config:
+            with patch("tools.orchestration.cli.create_sample_config"):
                 with patch("sys.argv", ["cli.py", "init", "--verbose"]):
                     main()
 
@@ -216,7 +219,7 @@ class TestCLIIntegration:
 
     def test_argument_parsing(self):
         """Test that arguments are parsed correctly."""
-        from lightfast_mcp.cli import main
+        from tools.orchestration.cli import main
 
         # Test that main can handle different argument combinations
         test_cases = [
@@ -229,10 +232,12 @@ class TestCLIIntegration:
 
         for args in test_cases:
             with patch("sys.argv", ["cli.py"] + args):
-                with patch("lightfast_mcp.cli.create_sample_config"):
-                    with patch("lightfast_mcp.cli.list_available_servers"):
-                        with patch("lightfast_mcp.cli.start_servers_interactive"):
-                            with patch("lightfast_mcp.cli.start_servers_by_names"):
+                with patch("tools.orchestration.cli.create_sample_config"):
+                    with patch("tools.orchestration.cli.list_available_servers"):
+                        with patch("tools.orchestration.cli.start_servers_interactive"):
+                            with patch(
+                                "tools.orchestration.cli.start_servers_by_names"
+                            ):
                                 try:
                                     main()
                                 except SystemExit:

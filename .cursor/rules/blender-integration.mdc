@@ -34,8 +34,8 @@ sleep 3
 # Test server is responding
 curl -f http://localhost:8001/health || echo "❌ Blender server not responding"
 
-# Test via manager
-uv run lightfast-mcp-manager ai
+# Test via orchestrator
+uv run lightfast-mcp-orchestrator ai
 ```
 
 ### After Editing Blender Addon (`addons/blender/`)

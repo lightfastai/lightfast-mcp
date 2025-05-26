@@ -12,8 +12,8 @@ try:
 except ImportError:
     YAML_AVAILABLE = False
 
-from ..utils.logging_utils import get_logger
-from .base_server import ServerConfig
+from lightfast_mcp.core.base_server import ServerConfig
+from lightfast_mcp.utils.logging_utils import get_logger
 
 logger = get_logger("ConfigLoader")
 
@@ -301,7 +301,7 @@ def load_config_from_env() -> list[ServerConfig]:
 def load_server_configs(
     config_path: str | Path | None = None,
 ) -> dict[str, dict[str, Any]]:
-    """Convenience function to load server configs in the format expected by MultiServerAIClient."""
+    """Convenience function to load server configs in the format expected by ConversationClient."""
     # If config_path is provided and starts with 'config/', treat it as relative to project root
     if config_path and str(config_path).startswith("config/"):
         # Don't create a ConfigLoader with config_dir, let it be relative to current directory
@@ -312,7 +312,7 @@ def load_server_configs(
         loader = ConfigLoader()
         server_configs = loader.load_servers_config(config_path)
 
-    # Convert ServerConfig objects to dictionary format expected by MultiServerAIClient
+    # Convert ServerConfig objects to dictionary format expected by ConversationClient
     servers = {}
     for config in server_configs:
         server_dict = {

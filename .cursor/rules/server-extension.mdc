@@ -1,5 +1,6 @@
 ---
 description: Guidelines for adding new MCP servers and extending the lightfast-mcp project
+globs: 
 alwaysApply: false
 ---
 
@@ -30,8 +31,8 @@ Add new script entry:
 lightfast-{app}-server = "lightfast_mcp.servers.{app}_mcp_server:main"
 ```
 
-### 4. Update Server Registry
-Add the new server to the registry in `src/lightfast_mcp/core/server_registry.py`
+### 4. Server Auto-Discovery
+New servers placed in `src/lightfast_mcp/servers/{app}/` following the `server.py` pattern (containing a class that inherits from `BaseServer` and defines `SERVER_TYPE`) are automatically discovered by the `ServerRegistry` located in `src/tools/orchestration/server_registry.py`. No manual changes to the registry code are typically needed.
 
 ### 5. Add Configuration Support
 Update sample configurations to include the new server type

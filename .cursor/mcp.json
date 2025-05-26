@@ -22,11 +22,11 @@
         "BLENDER_PORT": "9876"
       }
     },
-    "lightfast-manager": {
+    "lightfast-orchestrator": {
       "command": "uv",
       "args": [
         "run",
-        "lightfast-mcp-manager",
+        "lightfast-mcp-orchestrator",
         "start",
         "--hide-logs"
       ],

@@ -1,24 +1,59 @@
 #!/usr/bin/env python3
 """
-Lightfast MCP Manager - Multi-server management for creative applications.
+Lightfast MCP Orchestrator - Multi-server management for creative applications.
 
-This is the main entry point for managing multiple MCP servers simultaneously.
+This is the main entry point for orchestrating multiple MCP servers simultaneously.
 Users can select which servers to start, run them in the background, and then
 use the dedicated AI client to interact with them.
 """
 
 import argparse
+import asyncio
 
-from .clients.server_selector import ServerSelector
-from .core import (
-    ConfigLoader,
-    get_manager,
-)
-from .utils.logging_utils import configure_logging, get_logger
+from lightfast_mcp.utils.logging_utils import configure_logging, get_logger
+
+from .config_loader import ConfigLoader
+from .server_orchestrator import get_orchestrator
+from .server_selector import ServerSelector
 
 # Configure logging
 configure_logging(level="INFO")
-logger = get_logger("LightfastMCPManager")
+logger = get_logger("LightfastMCPOrchestrator")
+
+
+# Async wrapper functions for CLI
+
+
+def start_multiple_servers_sync(configs, background=True, show_logs=True):
+    """Sync wrapper for async start_multiple_servers."""
+    orchestrator = get_orchestrator()
+
+    async def _async_start():
+        result = await orchestrator.start_multiple_servers(
+            configs, background, show_logs
+        )
+        return result.data if result.is_success else {}
+
+    return asyncio.run(_async_start())
+
+
+def get_server_urls_sync():
+    """Get server URLs from orchestrator."""
+    orchestrator = get_orchestrator()
+    servers = orchestrator.get_running_servers()
+    return {name: info.url for name, info in servers.items() if info.url}
+
+
+def wait_for_shutdown_sync():
+    """Wait for shutdown signal."""
+    orchestrator = get_orchestrator()
+    orchestrator._shutdown_event.wait()
+
+
+def shutdown_all_sync():
+    """Shutdown all servers."""
+    orchestrator = get_orchestrator()
+    orchestrator.shutdown_all()
 
 
 def create_sample_config():
@@ -31,7 +66,7 @@ def create_sample_config():
     if success:
         print("✅ Sample configuration created at: config/servers.yaml")
         print("📝 Edit this file to customize your server settings.")
-        print("🚀 Run 'lightfast-mcp-manager start' to begin!")
+        print("🚀 Run 'lightfast-mcp-orchestrator start' to begin!")
     else:
         print("❌ Failed to create sample configuration")
 
@@ -41,7 +76,7 @@ def list_available_servers():
     print("🔍 Available Server Types:")
     print("=" * 50)
 
-    from .core.server_registry import get_registry
+    from .server_registry import get_registry
 
     registry = get_registry()
     server_info = registry.get_server_info()
@@ -64,7 +99,9 @@ def list_available_servers():
 
     if not configs:
         print("❌ No server configurations found.")
-        print("   Run 'lightfast-mcp-manager init' to create a sample configuration.")
+        print(
+            "   Run 'lightfast-mcp-orchestrator init' to create a sample configuration."
+        )
         return
 
     for config in configs:
@@ -79,7 +116,7 @@ def list_available_servers():
 
 def start_servers_interactive(show_logs: bool = True):
     """Start servers with interactive selection."""
-    print("🚀 Lightfast MCP Multi-Server Manager")
+    print("🚀 Lightfast MCP Multi-Server Orchestrator")
     print("=" * 50)
 
     # Interactive server selection
@@ -118,13 +155,10 @@ def start_servers_interactive(show_logs: bool = True):
         print("👋 No servers selected. Goodbye!")
         return
 
-    # Start selected servers
-    manager = get_manager()
-
     print(f"\n🚀 Starting {len(selected_configs)} servers...")
     print("   This may take a few moments as servers initialize...")
 
-    results = manager.start_multiple_servers(
+    results = start_multiple_servers_sync(
         selected_configs, background=True, show_logs=show_logs
     )
 
@@ -139,7 +173,7 @@ def start_servers_interactive(show_logs: bool = True):
 
     if successful > 0:
         # Show server URLs
-        urls = manager.get_server_urls()
+        urls = get_server_urls_sync()
         if urls:
             print("\n📡 Server URLs:")
             for name, url in urls.items():
@@ -148,15 +182,17 @@ def start_servers_interactive(show_logs: bool = True):
         print(
             "\n🎯 Servers are running! Use the dedicated AI client to interact with them."
         )
-        print("   Run 'uv run task ai_client' to start the AI client.")
+        print(
+            "   Run 'uv run lightfast-conversation-client chat' to start the AI client."
+        )
         print("   Press Ctrl+C to shutdown all servers.\n")
 
         try:
             # Wait for shutdown
-            manager.wait_for_shutdown()
+            wait_for_shutdown_sync()
         except KeyboardInterrupt:
             print("\n⏹️  Shutting down servers...")
-            manager.shutdown_all()
+            shutdown_all_sync()
             print("👋 All servers stopped. Goodbye!")
 
 
@@ -183,8 +219,7 @@ def start_servers_by_names(server_names: list[str], show_logs: bool = True):
         return
 
     # Start servers
-    manager = get_manager()
-    results = manager.start_multiple_servers(
+    results = start_multiple_servers_sync(
         selected_configs, background=True, show_logs=show_logs
     )
 
@@ -193,36 +228,38 @@ def start_servers_by_names(server_names: list[str], show_logs: bool = True):
     print(f"✅ Successfully started {successful}/{len(selected_configs)} servers")
 
     if successful > 0:
-        urls = manager.get_server_urls()
+        urls = get_server_urls_sync()
         if urls:
             print("\n📡 Server URLs:")
             for name, url in urls.items():
                 print(f"   • {name}: {url}")
 
         try:
-            manager.wait_for_shutdown()
+            wait_for_shutdown_sync()
         except KeyboardInterrupt:
             print("\n⏹️  Shutting down servers...")
-            manager.shutdown_all()
+            shutdown_all_sync()
 
 
 def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
-        description="Lightfast MCP Manager - Multi-server management for creative applications",
+        description="Lightfast MCP Orchestrator - Multi-server management for creative applications",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  lightfast-mcp-manager init                        # Create sample configuration
-  lightfast-mcp-manager list                        # List available servers
-  lightfast-mcp-manager start                       # Interactive server selection
-  lightfast-mcp-manager start blender-server        # Start specific server
-  lightfast-mcp-manager start --hide-logs           # Start servers without showing logs
-  lightfast-mcp-manager start --verbose             # Start with debug logging and server logs
+  lightfast-mcp-orchestrator init                        # Create sample configuration
+  lightfast-mcp-orchestrator list                        # List available servers
+  lightfast-mcp-orchestrator start                       # Interactive server selection
+  lightfast-mcp-orchestrator start blender-server        # Start specific server
+  lightfast-mcp-orchestrator start --hide-logs           # Start servers without showing logs
+  lightfast-mcp-orchestrator start --verbose             # Start with debug logging and server logs
+
+
 
 AI Client (use after starting servers):
-  uv run task ai_client                             # Start interactive AI chat
-  uv run task ai_test --message "Hello"             # Quick AI test
+  uv run lightfast-conversation-client chat         # Start interactive AI chat
+  uv run lightfast-conversation-client test         # Quick AI test
         """,
     )
 

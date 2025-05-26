@@ -1,25 +1,35 @@
 ---
 description: Lightfast MCP project architecture, structure, and file organization patterns
+globs: 
 alwaysApply: true
 ---
-
 # Project Architecture
 
 ## Core Structure
 ```
-src/lightfast_mcp/
-├── core/           # Base classes, config loading, server registry
-├── servers/        # MCP server implementations
-│   ├── blender/    # Blender MCP server (modular implementation)
-│   ├── mock/       # Mock server for testing
-│   ├── blender_mcp_server.py  # Blender entry point
-│   └── mock_server.py         # Mock entry point  
-├── clients/        # Multi-server client and server selection
-└── utils/          # Logging, configuration utilities
+src/lightfast_mcp/          # Core MCP server implementations
+├── core/                   # Base classes (BaseServer, ServerConfig), shared server utilities
+├── servers/                # MCP server implementations
+│   ├── blender/            # Blender MCP server
+│   │   ├── server.py
+│   │   └── __init__.py
+│   ├── mock/               # Mock MCP server for testing
+│   │   ├── server.py
+│   │   ├── tools.py
+│   │   └── __init__.py
+│   ├── blender_mcp_server.py  # Blender server entry point script
+│   └── mock_mcp_server.py     # Mock server entry point script
+└── utils/                  # Shared utilities for MCP servers (e.g., logging)
+
+src/tools/                  # Development and orchestration tools
+├── orchestration/          # Multi-server orchestration (ServerOrchestrator, ServerRegistry, ConfigLoader)
+├── ai/                     # AI integration tools (ConversationClient, AI providers)
+├── common/                 # Common utilities specific to the tools package
+└── __init__.py             # Tools package exports
 ```
 
 ## Entry Points
-- `lightfast-mcp-manager`: Main CLI for managing multiple servers
+- `lightfast-mcp-orchestrator`: Main CLI for orchestrating multiple servers
 - `lightfast-blender-server`: Direct Blender server entry point
 - `lightfast-mock-server`: Direct mock server entry point
 

@@ -6,8 +6,8 @@ import pkgutil
 from pathlib import Path
 from typing import Any
 
-from ..utils.logging_utils import get_logger
-from .base_server import BaseServer, ServerConfig
+from lightfast_mcp.core.base_server import BaseServer, ServerConfig
+from lightfast_mcp.utils.logging_utils import get_logger
 
 logger = get_logger("ServerRegistry")
 

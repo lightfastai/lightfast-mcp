@@ -37,13 +37,13 @@ def test_imports():
         return False
 
     try:
-        from lightfast_mcp.clients.multi_server_ai_client import (
-            MultiServerAIClient,  # noqa: F401
+        from tools.ai.conversation_client import (
+            ConversationClient,  # noqa: F401
         )
 
-        print("✓ MultiServerAIClient imported successfully")
+        print("✓ ConversationClient imported successfully")
     except ImportError as e:
-        print(f"✗ Failed to import MultiServerAIClient: {e}")
+        print(f"✗ Failed to import ConversationClient: {e}")
         return False
 
     return True
@@ -53,15 +53,15 @@ def test_cli_commands():
     """Test that CLI commands are available."""
     print("\n=== Testing CLI Commands ===")
 
-    # Test main manager CLI
+    # Test main orchestrator CLI
     exit_code, stdout, stderr = run_command(
-        ["uv", "run", "lightfast-mcp-manager", "--help"], timeout=10
+        ["uv", "run", "lightfast-mcp-orchestrator", "--help"], timeout=10
     )
 
     if exit_code == 0:
-        print("✓ lightfast-mcp-manager CLI works")
+        print("✓ lightfast-mcp-orchestrator CLI works")
     else:
-        print(f"✗ lightfast-mcp-manager CLI failed: {stderr}")
+        print(f"✗ lightfast-mcp-orchestrator CLI failed: {stderr}")
         return False
 
     # Test mock server CLI (just check if it's available, don't run it)
@@ -120,8 +120,8 @@ def test_basic_functionality():
     print("\n=== Testing Basic Functionality ===")
 
     try:
-        from lightfast_mcp.core.config_loader import ConfigLoader
-        from lightfast_mcp.core.server_registry import ServerRegistry
+        from tools.orchestration.config_loader import ConfigLoader
+        from tools.orchestration.server_registry import ServerRegistry
 
         # Test config loader
         ConfigLoader()  # Just test that it can be instantiated
