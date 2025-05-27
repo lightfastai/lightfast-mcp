@@ -1,5 +1,5 @@
 ---
-description: 
+description: MCP configuration should be referenced when dealing MCP tool calls
 globs: 
 alwaysApply: false
 ---
@@ -13,6 +13,91 @@ This rule applies when working with MCP (Model Context Protocol) configuration f
 - `.cursor/mcp_*.json`
 - `config/servers.yaml`
 - Files containing MCP server configurations
+
+## Upstream Repository Reference
+**Always reference the upstream repository for latest patterns and configurations:**
+- **Repository**: `lightfastai/lightfast-mcp`
+- **URL**: https://github.com/lightfastai/lightfast-mcp
+- **Documentation**: https://mcp.lightfast.ai
+- **Key Configuration Files**:
+  - `.cursor/mcp.json`: Local development MCP configuration
+  - `.cursor/mcp_global_example.json`: Global Cursor configuration template
+  - `config/servers.yaml`: Server orchestration configuration
+  - `pyproject.toml`: Entry points and package structure
+
+### When to Fetch from Upstream
+Always check the upstream repository when:
+- Adding new MCP server configurations
+- Updating existing server configurations
+- Implementing new server types
+- Troubleshooting configuration issues
+- Looking for configuration best practices
+- Understanding the latest server architecture patterns
+
+## GitHub Issues and PRs Interlink
+
+### Current Development Status
+The upstream repository actively tracks development through GitHub Issues and Pull Requests:
+
+#### 🔄 Active Development Areas
+- **New Creative Applications**: Issues for Photoshop (#1), OpenSCAD (#2), Maya (#28), Cinema 4D (#27)
+- **Feature Enhancements**: OBJ import/export for Blender (#29), ongoing improvements
+- **Infrastructure**: Dependency management via Renovate (#4), CI/CD optimizations
+
+#### 📋 Issue Categories
+- **Feature Requests**: New MCP server implementations for creative applications
+- **Enhancement**: Improvements to existing servers and functionality
+- **Dependencies**: Automated dependency updates via Renovate bot
+- **Documentation**: Roadmap and creative applications documentation
+
+#### 🔗 PR Workflow Patterns
+- **Feature Branches**: Named as `jeevanpillay/{feature-name}` or `feat/{application}`
+- **Automated PRs**: Renovate bot handles dependency updates
+- **Draft PRs**: Used for work-in-progress features (e.g., Photoshop MCP #3)
+- **Auto-generated Release Notes**: CodeRabbit AI provides comprehensive PR summaries
+
+### Tracking Development Progress
+
+#### Monitor These Issue Types:
+1. **New Server Implementations**:
+   - Photoshop MCP (#1) - Feature request
+   - OpenSCAD MCP (#2) - Feature request  
+   - Maya (#28) - Feature request
+   - Cinema 4D (#27) - Feature request
+
+2. **Active Development**:
+   - OBJ import/export for Blender (#29) - Active PR
+   - Photoshop implementation (#3) - Draft PR
+
+3. **Infrastructure Updates**:
+   - Dependency Dashboard (#4) - Ongoing maintenance
+   - CI/CD improvements - Regular updates
+
+#### How to Use Issue/PR Information:
+- **Before implementing new features**: Check if similar issues exist upstream
+- **Configuration updates**: Look for merged PRs that might affect configuration patterns
+- **Troubleshooting**: Search closed issues for similar problems and solutions
+- **Contributing**: Reference related issues when making local changes
+
+### Integration Workflow
+```bash
+# Check for related issues before starting work
+# Use GitHub CLI or web interface to search:
+# - Open issues for the feature you're working on
+# - Recent PRs that might affect configuration
+# - Closed issues with solutions to similar problems
+
+# Example searches:
+# - Issues labeled "enhancement" for new features
+# - PRs with "feat:" prefix for feature implementations
+# - Issues mentioning specific applications (blender, photoshop, etc.)
+```
+
+### Staying Updated
+- **Watch the repository** for notifications on new issues and PRs
+- **Check the Dependency Dashboard** (#4) for upcoming dependency updates
+- **Monitor feature PRs** for new configuration patterns
+- **Review merged PRs** for configuration changes that might affect local setup
 
 ## Configuration Structure
 
@@ -53,16 +138,38 @@ The project includes these standard MCP servers:
 - **Command**: `uv run lightfast-mcp-orchestrator start --hide-logs`
 - **Environment**: `LIGHTFAST_MCP_LOG_LEVEL=WARNING`
 
+### Global Configuration Template
+For system-wide MCP server access, use the global configuration pattern from upstream:
+```json
+{
+  "mcpServers": {
+    "lightfast-blender-global": {
+      "command": "uv",
+      "args": ["run", "lightfast-blender-server"],
+      "workingDirectory": "/path/to/lightfast-mcp",
+      "env": {
+        "LIGHTFAST_MCP_LOG_LEVEL": "INFO",
+        "BLENDER_HOST": "localhost",
+        "BLENDER_PORT": "9876"
+      }
+    }
+  }
+}
+```
+
 ## Configuration Guidelines
 
 ### Adding New MCP Servers
 When adding new MCP servers:
 
-1. **Use consistent naming**: `lightfast-{application}`
-2. **Use uv for local servers**: `uv run lightfast-{app}-server`
-3. **Set appropriate log levels**: INFO for development, WARNING for production
-4. **Include required environment variables** for the specific application
-5. **Follow the project's server architecture** (inherit from BaseServer)
+1. **Check upstream first**: Review `lightfastai/lightfast-mcp` for latest patterns
+2. **Check related issues**: Look for existing feature requests or implementations
+3. **Use consistent naming**: `lightfast-{application}`
+4. **Use uv for local servers**: `uv run lightfast-{app}-server`
+5. **Set appropriate log levels**: INFO for development, WARNING for production
+6. **Include required environment variables** for the specific application
+7. **Follow the project's server architecture** (inherit from BaseServer)
+8. **Reference upstream entry points** in `pyproject.toml`
 
 ### Environment Variables
 - `LIGHTFAST_MCP_LOG_LEVEL`: Controls logging verbosity (DEBUG, INFO, WARNING, ERROR)
@@ -76,6 +183,21 @@ When adding new MCP servers:
 - **Consider using .env files** for local development
 
 ## Development Workflow
+
+### Fetching Latest Configuration Patterns
+```bash
+# Check upstream repository for latest configurations
+# Use GitHub API or direct repository access to fetch:
+# - .cursor/mcp.json (local development patterns)
+# - .cursor/mcp_global_example.json (global configuration template)
+# - config/servers.yaml (orchestration configuration)
+# - pyproject.toml (entry points and package structure)
+
+# Monitor GitHub Issues and PRs:
+# - Check for new server implementations
+# - Look for configuration updates in merged PRs
+# - Review feature requests for upcoming changes
+```
 
 ### Testing MCP Configuration
 ```bash
@@ -95,6 +217,8 @@ uv run lightfast-mcp-orchestrator list
 - Verify command paths and arguments are correct
 - Test server connectivity and functionality
 - Validate JSON syntax and structure
+- Cross-reference with upstream configuration patterns
+- Check for updates in related GitHub issues and PRs
 
 ## Integration with Cursor
 The `.cursor/mcp.json` file enables:
@@ -103,8 +227,25 @@ The `.cursor/mcp.json` file enables:
 - **Multi-server orchestration** capabilities
 - **Development and testing** workflows
 
+## Package Structure Reference
+Based on upstream `pyproject.toml`, the package provides these entry points:
+- `lightfast-blender-server`: Blender MCP server
+- `lightfast-mock-server`: Mock MCP server for testing
+- `lightfast-mcp-orchestrator`: Multi-server orchestration CLI
+- `lightfast-conversation-client`: AI conversation client
+
 ## Related Files
 - `src/lightfast_mcp/core/base.py`: BaseServer implementation
 - `config/servers.yaml`: Server configuration templates
 - `src/tools/orchestration/`: Orchestrator implementation
 - Entry point scripts in `src/lightfast_mcp/servers/`
+
+## Best Practices for Configuration Management
+1. **Always check upstream** before making configuration changes
+2. **Monitor GitHub issues and PRs** for development updates
+3. **Use the global configuration template** for system-wide access
+4. **Follow the established naming conventions** from upstream
+5. **Test configurations** with both individual servers and orchestrator
+6. **Keep environment variables** consistent with upstream patterns
+7. **Document any custom configurations** and their purpose
+8. **Reference related issues** when implementing new features
