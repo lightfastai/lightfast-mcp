@@ -1,0 +1,40 @@
+---
+description: if calling github mcp tool
+globs: 
+alwaysApply: false
+---
+# GitHub Repository Reference
+
+## Correct Repository Information
+- **Repository Owner**: `lightfastai` 
+- **Repository Name**: `lightfast-mcp`
+- **Full Repository**: `lightfastai/lightfast-mcp`
+- **URL**: https://github.com/lightfastai/lightfast-mcp
+
+## Common Mistake to Avoid
+❌ **INCORRECT**: `lightfast-mcp/lightfast-mcp`
+✅ **CORRECT**: `lightfastai/lightfast-mcp`
+
+## When Using GitHub MCP Tools
+Always use the correct repository format:
+- `owner`: `lightfastai`
+- `repo`: `lightfast-mcp`
+
+This applies to all GitHub MCP tool calls including:
+- Searching issues and PRs
+- Creating/updating issues
+- Managing pull requests
+- Repository operations
+
+## Repository Context
+This is the main lightfast-mcp repository containing:
+- MCP server implementations for creative applications
+- Blender, Photoshop, Maya, Cinema 4D, and other creative tool integrations
+- Multi-server orchestration system
+- Documentation and roadmap for 40+ creative applications
+
+## Issue References in Documentation
+When updating documentation (like roadmap.mdx) with GitHub issue links:
+- Use format: `[#IssueNumber](mdc:https:/github.com/lightfastai/lightfast-mcp/issues/IssueNumber)`
+- Always verify issue exists before adding to documentation
+- Use consistent formatting across all documentation files
