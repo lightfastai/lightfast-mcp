@@ -90,7 +90,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#09090b",
+  themeColor: "#121212",
 };
 
 interface RootLayoutProperties {
