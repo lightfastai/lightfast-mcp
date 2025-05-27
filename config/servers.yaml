@@ -27,10 +27,10 @@ servers:
   type: mock
   version: 1.0.0
 - config:
-    api_token: FIGMA_API_TOKEN  # Set via FIGMA_API_TOKEN environment variable  
-    # Alternative: api_token: "your_figma_token_here"  # Direct value (not recommended for security)
-    timeout: 30
     type: figma
+    plugin_channel: "default"
+    command_timeout: 30.0
+    websocket_port: 9003 # Default for Figma: MCP port (8003) + 1000
   dependencies:
   - aiohttp
   description: Figma MCP Server for web design and collaborative design workflows

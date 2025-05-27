@@ -26,6 +26,21 @@ def main():
         try:
             # Parse configuration from environment
             config_data = json.loads(env_config)
+
+            # Extract nested config first, as it might contain websocket_port
+            nested_server_config = config_data.get("config", {})
+            if "type" not in nested_server_config:  # Ensure type is present
+                nested_server_config["type"] = "figma"
+
+            # Determine websocket_port: use from nested_config if available, else derive
+            default_websocket_port = config_data.get("port", 8002) + 1000
+            websocket_port = nested_server_config.get(
+                "websocket_port", default_websocket_port
+            )
+            nested_server_config["websocket_port"] = (
+                websocket_port  # Ensure it's in the nested config for the server
+            )
+
             config = ServerConfig(
                 name=config_data.get("name", "FigmaMCP"),
                 description=config_data.get(
@@ -38,15 +53,7 @@ def main():
                     "transport", "streamable-http"
                 ),  # Default to HTTP for subprocess
                 path=config_data.get("path", "/mcp"),
-                config=config_data.get(
-                    "config",
-                    {
-                        "type": "figma",
-                        "plugin_channel": "default",
-                        "command_timeout": 30.0,
-                        "websocket_port": config_data.get("port", 8002) + 1000,
-                    },
-                ),
+                config=nested_server_config,  # Pass the potentially modified nested_server_config
             )
             logger.info(
                 f"Using environment configuration: {config.transport}://{config.host}:{config.port}"

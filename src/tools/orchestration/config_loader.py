@@ -177,6 +177,7 @@ class ConfigLoader:
         config = config.copy()
 
         # Define environment variable mappings for different server types
+        # @todo more modular...
         env_mappings = {
             "figma": {"api_token": "FIGMA_API_TOKEN"},
             "github": {

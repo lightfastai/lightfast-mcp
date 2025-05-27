@@ -535,10 +535,8 @@
                     
                     // Send initial server status request
                     sendWebSocketMessage({
-                        type: 'tool_call',
-                        id: generateMessageId(),
-                        tool: 'get_server_status',
-                        params: {}
+                        type: 'plugin_status_request',
+                        id: generateMessageId()
                     });
                 };
 
@@ -775,6 +773,9 @@
                 case 'tool_response':
                     handleToolResponse(message);
                     break;
+                case 'plugin_status_response':
+                    handlePluginStatusResponse(message);
+                    break;
                 case 'pong':
                     log(`Pong received (latency: ${Date.now() - message.timestamp}ms)`, 'success');
                     break;
@@ -787,6 +788,17 @@
                     break;
                 default:
                     log(`Unknown message type: ${message.type}`, 'info');
+            }
+        }
+
+        function handlePluginStatusResponse(message) {
+            const { success, data, error } = message;
+            if (success && data) {
+                log(`Plugin status received: ${data.server_name} v${data.server_version}`, 'success');
+                // You can update UI elements with server info if needed here
+                // e.g., statusDetails.textContent = `Connected to ${data.server_name} (${data.websocket_url})`;
+            } else {
+                log(`Error receiving plugin status: ${error || 'Unknown error'}`, 'error');
             }
         }
 

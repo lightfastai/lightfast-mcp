@@ -68,7 +68,24 @@ class FigmaWebSocketHandler:
                     "id": message_id,
                     "timestamp": data.get("timestamp", time.time()),
                 }
-
+            elif message_type == "plugin_status_request":
+                try:
+                    # Directly get status without full tool machinery for plugin
+                    status_info = await self.server.get_server_status_for_plugin()
+                    response = {
+                        "type": "plugin_status_response",
+                        "id": message_id,
+                        "success": True,
+                        "data": status_info,
+                    }
+                except Exception as e:
+                    logger.error(f"Error getting plugin status: {e}")
+                    response = {
+                        "type": "plugin_status_response",
+                        "id": message_id,
+                        "success": False,
+                        "error": str(e),
+                    }
             elif message_type == "tool_call":
                 tool_name = data.get("tool")
                 params = data.get("params", {})
@@ -115,7 +132,7 @@ class FigmaWebSocketHandler:
     async def execute_mcp_tool(self, tool_name: str, params: dict):
         """Execute an MCP tool and return the result."""
         # Create a context for the tool execution
-        context = Context()
+        context = Context(self.server.mcp)
 
         # Map tool names to server methods
         tool_methods = {
@@ -970,6 +987,20 @@ class FigmaMCPServer(BaseServer):
         except Exception as e:
             logger.error(f"Error getting server status: {e}")
             return json.dumps({"error": str(e)}, indent=2)
+
+    async def get_server_status_for_plugin(self) -> dict:
+        """Get essential server status for the plugin."""
+        return {
+            "server_name": self.config.name,
+            "server_type": self.SERVER_TYPE,
+            "server_version": self.SERVER_VERSION,
+            "plugin_channel": self.plugin_channel,
+            "websocket_port": self.websocket_port,
+            "connected_clients": len(self.websocket_handler.clients),
+            "status": "running",
+            "message": "WebSocket-enabled Figma MCP server ready for real-time communication",
+            "websocket_url": f"ws://{self.config.host}:{self.websocket_port}",
+        }
 
 
 def main():
