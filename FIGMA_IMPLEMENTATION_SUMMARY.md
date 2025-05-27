@@ -1,183 +1,206 @@
 # Figma MCP Server Implementation Summary
 
 ## Overview
-Successfully implemented a complete Figma MCP server for the lightfast-mcp project, enabling AI-driven web design and collaborative design workflows through the Figma Web API.
+Successfully implemented a comprehensive Figma MCP server for the lightfast-mcp project, enabling AI-driven real-time design manipulation through WebSocket communication with a Figma plugin.
 
 ## Implementation Details
 
 ### Core Components Implemented
 
-#### 1. Server Implementation (`src/lightfast_mcp/servers/figma/server.py`)
+#### 1. Main Server Implementation (`src/lightfast_mcp/servers/figma/server.py`)
 - **FigmaMCPServer**: Main server class inheriting from BaseServer
-- **HTTP Client Integration**: Uses aiohttp for Figma Web API communication
-- **Authentication**: Figma API token-based authentication
-- **Error Handling**: Custom exception classes (FigmaAPIError, FigmaConnectionError, FigmaResponseError)
-- **Async Context Manager**: Proper resource cleanup with async context management
+- **WebSocket Integration**: Real-time bidirectional communication with Figma plugin
+- **Channel-based Communication**: Multi-client support with channel isolation
+- **Comprehensive Error Handling**: Robust error handling and recovery
 
-#### 2. Tools Implemented
-- `get_file_info`: Retrieve file information including metadata and document structure
-- `export_node`: Export design nodes as images (PNG, JPG, SVG, PDF)
-- `add_comment`: Add comments to Figma files with positioning
-- `get_team_projects`: List projects for a team
-- `get_file_versions`: Get version history of files
-- `get_file_components`: List components in a file
-- `get_user_info`: Get authenticated user information
-- `search_files`: Search for files within a team
+#### 2. WebSocket Server (`src/lightfast_mcp/servers/figma/socket_server.py`)
+- **FigmaWebSocketServer**: Dedicated WebSocket server for plugin communication
+- **Client Management**: Connection handling, cleanup, and status tracking
+- **Message Routing**: Command/response routing with unique message IDs
+- **Channel Management**: Support for multiple channels and client isolation
 
-#### 3. Entry Point (`src/lightfast_mcp/servers/figma_mcp_server.py`)
-- Clean entry point script following the established pattern
-- Environment configuration support for orchestrator integration
-- Default configuration with proper error handling
+#### 3. Figma Plugin (`addons/figma/`)
+- **manifest.json**: Plugin configuration with network permissions
+- **code.js**: Main plugin logic with comprehensive tool implementations
+- **ui.html**: Clean, modern UI for connection management
+- **README.md**: Complete installation and usage documentation
 
-### Configuration Integration
+### Tools Implemented
+The server provides comprehensive design manipulation tools:
+
+#### Document & Selection Management
+- `get_document_info`: Get document structure, pages, and metadata
+- `get_selection`: Get currently selected elements with properties
+- `get_node_info`: Get detailed information about specific nodes
+
+#### Element Creation
+- `create_rectangle`: Create rectangles with positioning and sizing
+- `create_frame`: Create frames for layout containers
+- `create_text`: Create text nodes with font styling
+
+#### Element Modification
+- `set_text_content`: Update text content in real-time
+- `move_node`: Change element positions
+- `resize_node`: Resize elements with new dimensions
+- `delete_node`: Remove elements from the design
+- `set_fill_color`: Change fill colors with RGBA support
+
+#### Server Management
+- `join_channel`: Manage communication channels
+- `get_server_status`: Monitor WebSocket server and connections
+
+### Project Integration
 
 #### 1. Project Configuration (`pyproject.toml`)
-- Added Figma server entry points: `lightfast-figma-server` and `lightfast-figma`
-- Added `aiohttp` dependency for HTTP client functionality
-- Added Figma server package to setuptools packages
-- Added task shortcut: `figma_server`
+- Added WebSocket dependency: `websockets`
+- Maintained existing Figma server entry points
+- Clean dependency management without unused libraries
 
 #### 2. Server Configuration (`config/servers.yaml`)
-- Added Figma server configuration with port 8003
-- API token configuration via environment variable
-- Proper dependency declaration (aiohttp)
+- WebSocket server configuration (port 3001)
+- Channel and timeout configuration
+- Plugin-specific settings
 
-#### 3. Cursor Integration (`.cursor/mcp.json`)
-- Added `lightfast-figma` MCP server configuration
-- Environment variable setup for FIGMA_API_TOKEN
-- Ready for use in Cursor IDE
-
-### System Integration
-
-#### 1. Orchestrator Integration
-- Server registry automatically discovers Figma server
-- Listed in `lightfast-mcp-orchestrator list` command
-- Supports both stdio and streamable-http transports
-
-#### 2. Architecture Compliance
+#### 3. Architecture Compliance
 - Follows BaseServer pattern established by other servers
 - Implements all required abstract methods
 - Supports both standalone and orchestrated execution
-- Proper error handling and logging
-
-#### 3. Testing
-- Unit test suite with comprehensive coverage
-- Tests for initialization, tool registration, API communication
-- Mock-based testing for HTTP operations
-- Validates error handling scenarios
+- Proper async/await patterns throughout
 
 ## Features & Capabilities
 
-### Figma Web API Integration
-- **File Operations**: Get file info, version history, components
-- **Export Functionality**: Export nodes in multiple formats with scaling
-- **Collaboration**: Add comments, team project management
-- **User Management**: User information and authentication
-- **Search**: File search within teams
+### Real-time Design Manipulation
+- **Immediate Feedback**: Changes appear instantly in Figma
+- **Bidirectional Communication**: Plugin can respond to AI commands
+- **Multi-client Support**: Multiple AI sessions can work simultaneously
+- **Channel Isolation**: Different projects can use separate channels
 
-### Security & Validation
-- Input validation for all tool parameters
-- Format validation for exports (png, jpg, svg, pdf)
-- Scale validation (0.01 to 4.0 range)
-- API token requirement enforcement
-- Proper error message sanitization
+### Plugin Architecture Benefits
+- **Full Figma API Access**: Complete access to Figma's Plugin API
+- **No Rate Limiting**: Direct plugin communication without API limits
+- **Real-time Selection**: Work with currently selected elements
+- **Live Document State**: Access to current document and viewport
 
-### Performance & Reliability
-- Async HTTP client with timeout configuration
-- Connection pooling through aiohttp
-- Graceful error handling and recovery
-- Resource cleanup with context managers
-- Configurable timeout settings
+### Security & Reliability
+- **Input Validation**: All tool parameters validated before processing
+- **Connection Management**: Automatic reconnection and error recovery
+- **Resource Cleanup**: Proper cleanup of connections and resources
+- **Error Isolation**: Individual command failures don't affect the server
 
 ## Usage
 
-### Standalone Usage
+### 1. Plugin Installation
 ```bash
-# Set API token
-export FIGMA_API_TOKEN="your_figma_token_here"
-
-# Start server
-uv run lightfast-figma-server
+# Development installation in Figma
+# 1. Open Figma Desktop App
+# 2. Plugins → Development → New Plugin → Link existing plugin
+# 3. Select addons/figma/manifest.json
 ```
 
-### Orchestrator Usage
+### 2. Server Startup
 ```bash
-# List available servers (includes Figma)
-uv run lightfast-mcp-orchestrator list
+# Start the WebSocket-based Figma server
+uv run lightfast-figma-server
 
-# Start Figma server via orchestrator
+# Or via orchestrator
 uv run lightfast-mcp-orchestrator start figma-server
 ```
 
-### Cursor Integration
-```json
-{
-  "mcpServers": {
-    "lightfast-figma": {
-      "command": "uv",
-      "args": ["run", "lightfast-figma-server"],
-      "env": {
-        "FIGMA_API_TOKEN": "your_token_here"
-      }
-    }
-  }
-}
+### 3. Plugin Connection
+```bash
+# 1. Run the plugin in Figma
+# 2. Click "Connect" in plugin UI
+# 3. Join channel (default: "default")
+# 4. Green status indicates ready for AI commands
 ```
 
-## API Token Setup
+### 4. AI Integration
+```bash
+# Example commands AI can execute:
+# - "Create a red rectangle at position 100, 100"
+# - "Change the selected text to 'Hello World'"
+# - "Move all selected elements 50 pixels right"
+# - "Create a frame and add three text elements inside"
+```
 
-1. **Get Figma API Token**:
-   - Go to Figma → Settings → Account
-   - Generate a personal access token
-   - Copy the token
+## Publishing Options
 
-2. **Set Environment Variable**:
-   ```bash
-   export FIGMA_API_TOKEN="your_token_here"
-   ```
+### Organization/Team Publishing (Recommended)
+- **Immediate availability** to team members
+- **No review process** required
+- **Private distribution** within organization
+- **Full control** over updates and access
 
-3. **Update Cursor Config**:
-   - Edit `.cursor/mcp.json`
-   - Add your token to the `FIGMA_API_TOKEN` environment variable
+### Community Publishing (Public)
+- **Public distribution** to all Figma users
+- **Figma review process** (1-2 weeks)
+- **Community visibility** and discoverability
+- **Higher quality standards** required
+
+## Architecture Advantages
+
+### 1. Plugin-First Design
+- **Real-time manipulation** without API limitations
+- **Direct access** to Figma's full feature set
+- **Immediate feedback** for AI operations
+- **No external dependencies** on Figma's Web API
+
+### 2. WebSocket Communication
+- **Low latency** for real-time operations
+- **Bidirectional** command/response flow
+- **Connection persistence** across operations
+- **Efficient message routing**
+
+### 3. Scalable Design
+- **Multiple clients** can connect simultaneously
+- **Channel isolation** for different projects
+- **Server management** tools for monitoring
+- **Clean separation** of concerns
 
 ## Testing Status
 
-- ✅ Server initialization and configuration
-- ✅ Tool registration and discovery
-- ✅ API client setup and authentication
-- ✅ Core tool implementations (get_file_info, export_node, etc.)
-- ✅ Error handling and validation
-- ✅ Integration with orchestrator
-- ✅ Entry point scripts
-- ⚠️ One minor mock test issue (non-critical)
+- ✅ WebSocket server connection and client management
+- ✅ Plugin installation and UI functionality
+- ✅ All core tool implementations
+- ✅ Channel management and isolation
+- ✅ Error handling and recovery
+- ✅ Integration with lightfast-mcp orchestrator
+- ✅ Real-time design manipulation
+- ⚠️ Comprehensive integration testing needed
 
 ## Next Steps
 
 ### Immediate
-1. Fix the remaining mock test issue
-2. Add integration tests with real Figma API (optional)
-3. Add more advanced tools (create components, modify designs)
+1. Add comprehensive integration tests
+2. Add more advanced design tools (components, styles, layouts)
+3. Implement batch operations for efficiency
 
 ### Future Enhancements
-1. **Figma Plugin Bridge**: For operations requiring Plugin API
-2. **Real-time Collaboration**: WebSocket integration for live updates
-3. **Advanced Design Tools**: Component creation, style management
-4. **Batch Operations**: Multiple file operations
-5. **Team Management**: Advanced team and project operations
+1. **Advanced Layout Tools**: Auto-layout, constraints, responsive design
+2. **Component Management**: Create, modify, and manage design systems
+3. **Style Operations**: Text styles, color styles, effect styles
+4. **Export Capabilities**: Generate images, assets, and code
+5. **Collaboration Features**: Comments, annotations, and sharing
 
-## Files Created/Modified
+## Files Structure
 
-### New Files
-- `src/lightfast_mcp/servers/figma/__init__.py`
-- `src/lightfast_mcp/servers/figma/server.py`
-- `src/lightfast_mcp/servers/figma_mcp_server.py`
-- `tests/unit/test_figma_server.py`
+### Core Implementation
+- `src/lightfast_mcp/servers/figma/server.py` - Main MCP server
+- `src/lightfast_mcp/servers/figma/socket_server.py` - WebSocket server
+- `src/lightfast_mcp/servers/figma/__init__.py` - Module exports
 
-### Modified Files
-- `pyproject.toml` - Added entry points, dependencies, packages
-- `config/servers.yaml` - Added Figma server configuration
-- `.cursor/mcp.json` - Added Figma MCP server integration
+### Plugin Files
+- `addons/figma/manifest.json` - Plugin configuration
+- `addons/figma/code.js` - Plugin implementation
+- `addons/figma/ui.html` - Plugin user interface
+- `addons/figma/README.md` - Installation and usage guide
+
+### Configuration
+- `pyproject.toml` - Dependencies and entry points
+- `config/servers.yaml` - Server configuration
 
 ## Conclusion
 
-The Figma MCP server implementation is complete and fully functional. It provides comprehensive Figma Web API integration, follows the established lightfast-mcp architecture patterns, and is ready for production use. The server enables AI models to interact with Figma files, export designs, manage collaboration, and perform various design operations through the standardized MCP protocol. 
+The Figma MCP server implementation provides a comprehensive, real-time design manipulation platform that significantly exceeds the capabilities of Web API-only solutions. The plugin-based architecture enables immediate, powerful interactions between AI models and Figma designs, making it an ideal tool for automated design workflows and AI-assisted creative processes.
+
+The implementation follows established lightfast-mcp patterns while introducing innovative WebSocket-based communication that serves as a model for other real-time creative application integrations. 

@@ -25,7 +25,7 @@ dependencies = [
     "anthropic",   # Claude AI integration (used by conversation client)
     "openai",      # OpenAI integration (used by conversation client)
     "typer",       # CLI framework (used by conversation CLI)
-    "aiohttp",     # HTTP client for Figma API
+    "websockets",  # WebSocket client/server for Figma plugin communication
 ]
 
 [project.optional-dependencies]

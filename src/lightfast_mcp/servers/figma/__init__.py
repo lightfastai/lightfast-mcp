@@ -1,5 +1,5 @@
 """
-Figma MCP Server for web design and collaborative design workflows.
+Figma MCP Server for design manipulation via plugin communication.
 """
 
 from .server import FigmaMCPServer
