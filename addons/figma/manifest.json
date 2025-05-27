@@ -14,8 +14,8 @@
     "allowedDomains": [
       "https://localhost",
       "http://localhost",
-      "ws://localhost:8002"
+      "ws://localhost:9003"
     ],
-    "reasoning": "Plugin needs to communicate with local development server for [your specific use case]"
+    "reasoning": "Plugin needs to communicate with local WebSocket server for real-time MCP communication"
   }
 }

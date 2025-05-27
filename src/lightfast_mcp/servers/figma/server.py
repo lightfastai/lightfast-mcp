@@ -186,7 +186,7 @@ class FigmaWebSocketHandler:
             for client in disconnected:
                 self.clients.discard(client)
 
-    async def client_handler(self, websocket: WebSocketServerProtocol, path: str):
+    async def client_handler(self, websocket: WebSocketServerProtocol):
         """Handle a WebSocket client connection."""
         await self.register_client(websocket)
         try:
@@ -206,6 +206,8 @@ class FigmaWebSocketHandler:
                 self.client_handler, host, port, ping_interval=20, ping_timeout=10
             )
             logger.info(f"WebSocket server started on ws://{host}:{port}")
+            # Server is now running and will accept connections
+            # Don't block here - let the server run in the background
         except Exception as e:
             logger.error(f"Failed to start WebSocket server: {e}")
             raise
@@ -293,15 +295,23 @@ class FigmaMCPServer(BaseServer):
         """Figma server startup logic."""
         logger.info(f"Figma server '{self.config.name}' starting up...")
 
-        # Start WebSocket server in background
+        # Start WebSocket server
         try:
-            self.websocket_task = asyncio.create_task(
-                self.websocket_handler.start_websocket_server(
-                    self.config.host, self.websocket_port
-                )
+            await self.websocket_handler.start_websocket_server(
+                self.config.host, self.websocket_port
             )
-            await asyncio.sleep(0.1)  # Give it a moment to start
-            logger.info("WebSocket server started successfully")
+
+            # Check if the server is actually running
+            if self.websocket_handler.websocket_server:
+                logger.info("WebSocket server started successfully")
+
+                # Create a task to keep the server alive
+                self.websocket_task = asyncio.create_task(
+                    self.websocket_handler.websocket_server.wait_closed()
+                )
+            else:
+                logger.warning("WebSocket server may not have started properly")
+
         except Exception as e:
             logger.error(f"Failed to start WebSocket server: {e}")
 
@@ -972,7 +982,7 @@ def main():
             "type": "figma",
             "plugin_channel": "default",
             "command_timeout": 30.0,
-            "websocket_port": 9002,  # WebSocket on port 9002
+            "websocket_port": 9003,  # WebSocket on port 9003
         },
     )
 

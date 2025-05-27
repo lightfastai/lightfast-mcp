@@ -69,14 +69,14 @@ def _get_default_config() -> ServerConfig:
         name="FigmaMCP",
         description="Figma MCP Server for web design and collaborative design workflows",
         host="localhost",
-        port=8002,  # Use port 8002 by default for figma server
+        port=8003,  # Use port 8003 by default for figma server (matches servers.yaml)
         transport="streamable-http",  # Use HTTP by default for easier testing
         path="/mcp",
         config={
             "type": "figma",
             "plugin_channel": "default",
             "command_timeout": 30.0,
-            "websocket_port": 9002,  # WebSocket on port 9002 (8002 + 1000)
+            "websocket_port": 9003,  # WebSocket on port 9003 (8003 + 1000)
         },
     )
 
