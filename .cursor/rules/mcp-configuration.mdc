@@ -1,0 +1,110 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# MCP Configuration Management
+
+## Overview
+This rule applies when working with MCP (Model Context Protocol) configuration files, particularly `.cursor/mcp.json` and related server configuration.
+
+## File Patterns
+- `.cursor/mcp.json`
+- `.cursor/mcp_*.json`
+- `config/servers.yaml`
+- Files containing MCP server configurations
+
+## Configuration Structure
+
+### MCP Server Definition
+Each MCP server in `.cursor/mcp.json` follows this structure:
+```json
+{
+  "mcpServers": {
+    "server-name": {
+      "command": "command-to-run",
+      "args": ["arg1", "arg2"],
+      "env": {
+        "ENV_VAR": "value"
+      }
+    }
+  }
+}
+```
+
+### Lightfast MCP Servers
+The project includes these standard MCP servers:
+
+#### lightfast-mock
+- **Purpose**: Testing and development
+- **Command**: `uv run lightfast-mock-server`
+- **Environment**: `LIGHTFAST_MCP_LOG_LEVEL=INFO`
+
+#### lightfast-blender
+- **Purpose**: Blender integration
+- **Command**: `uv run lightfast-blender-server`
+- **Environment**: 
+  - `LIGHTFAST_MCP_LOG_LEVEL=INFO`
+  - `BLENDER_HOST=localhost`
+  - `BLENDER_PORT=9876`
+
+#### lightfast-orchestrator
+- **Purpose**: Multi-server orchestration
+- **Command**: `uv run lightfast-mcp-orchestrator start --hide-logs`
+- **Environment**: `LIGHTFAST_MCP_LOG_LEVEL=WARNING`
+
+## Configuration Guidelines
+
+### Adding New MCP Servers
+When adding new MCP servers:
+
+1. **Use consistent naming**: `lightfast-{application}`
+2. **Use uv for local servers**: `uv run lightfast-{app}-server`
+3. **Set appropriate log levels**: INFO for development, WARNING for production
+4. **Include required environment variables** for the specific application
+5. **Follow the project's server architecture** (inherit from BaseServer)
+
+### Environment Variables
+- `LIGHTFAST_MCP_LOG_LEVEL`: Controls logging verbosity (DEBUG, INFO, WARNING, ERROR)
+- Application-specific variables (e.g., `BLENDER_HOST`, `BLENDER_PORT`)
+- Authentication tokens for external services (e.g., GitHub PAT)
+
+### Security Considerations
+- **Never commit sensitive tokens** to version control
+- **Use environment variable references** for secrets
+- **Rotate tokens regularly** and use minimal required permissions
+- **Consider using .env files** for local development
+
+## Development Workflow
+
+### Testing MCP Configuration
+```bash
+# Test individual servers
+uv run lightfast-mock-server
+uv run lightfast-blender-server
+
+# Test orchestrator
+uv run lightfast-mcp-orchestrator start
+
+# Validate configuration
+uv run lightfast-mcp-orchestrator list
+```
+
+### Configuration Validation
+- Ensure all required environment variables are set
+- Verify command paths and arguments are correct
+- Test server connectivity and functionality
+- Validate JSON syntax and structure
+
+## Integration with Cursor
+The `.cursor/mcp.json` file enables:
+- **Direct MCP server access** from Cursor AI
+- **Tool integration** for creative applications
+- **Multi-server orchestration** capabilities
+- **Development and testing** workflows
+
+## Related Files
+- `src/lightfast_mcp/core/base.py`: BaseServer implementation
+- `config/servers.yaml`: Server configuration templates
+- `src/tools/orchestration/`: Orchestrator implementation
+- Entry point scripts in `src/lightfast_mcp/servers/`

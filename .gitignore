@@ -184,3 +184,5 @@ cython_debug/
 .cursor/local_*.json
 .cursor/workspace_*.json
 # Keep .cursor/rules/, .cursor/mcp.json, and .cursor/mcp_global_example.json in version control
+
+.cursor/mcp.json
