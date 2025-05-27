@@ -42,8 +42,9 @@ def main():
                     "config",
                     {
                         "type": "figma",
-                        "api_token": os.getenv("FIGMA_API_TOKEN"),
-                        "timeout": 30,
+                        "plugin_channel": "default",
+                        "command_timeout": 30.0,
+                        "websocket_port": config_data.get("port", 8002) + 1000,
                     },
                 ),
             )
@@ -73,8 +74,9 @@ def _get_default_config() -> ServerConfig:
         path="/mcp",
         config={
             "type": "figma",
-            "api_token": os.getenv("FIGMA_API_TOKEN"),
-            "timeout": 30,
+            "plugin_channel": "default",
+            "command_timeout": 30.0,
+            "websocket_port": 9002,  # WebSocket on port 9002 (8002 + 1000)
         },
     )
 

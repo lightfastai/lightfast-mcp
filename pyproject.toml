@@ -20,12 +20,12 @@ classifiers = [
 # 🎯 CORE: Dependencies needed for MCP server implementations and tools
 dependencies = [
     "fastmcp>=2.0.0",
-    "rich",        # For logging and CLI output
-    "pyyaml",      # For YAML config support (used by orchestration tools)
-    "anthropic",   # Claude AI integration (used by conversation client)
-    "openai",      # OpenAI integration (used by conversation client)
-    "typer",       # CLI framework (used by conversation CLI)
-    "websockets",  # WebSocket client/server for Figma plugin communication
+    "rich", # For logging and CLI output
+    "pyyaml", # For YAML config support (used by orchestration tools)
+    "anthropic", # Claude AI integration (used by conversation client)
+    "openai", # OpenAI integration (used by conversation client)
+    "typer", # CLI framework (used by conversation CLI)
+    "websockets", # WebSocket client/server for Figma plugin communication
 ]
 
 [project.optional-dependencies]

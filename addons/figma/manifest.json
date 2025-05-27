@@ -12,7 +12,10 @@
   "ui": "ui.html",
   "networkAccess": {
     "allowedDomains": [
-      "none"
-    ]
+      "https://localhost",
+      "http://localhost",
+      "ws://localhost:8002"
+    ],
+    "reasoning": "Plugin needs to communicate with local development server for [your specific use case]"
   }
 }

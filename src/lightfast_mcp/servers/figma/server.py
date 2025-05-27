@@ -1,17 +1,221 @@
 """
 Figma MCP Server for design manipulation through Figma plugin integration.
-Uses direct API communication without WebSocket dependencies.
+Uses direct API communication with WebSocket support for real-time bidirectional communication.
 """
 
+import asyncio
 import json
+import time
 from typing import ClassVar
 
+import websockets
 from fastmcp import Context
+from websockets.server import WebSocketServerProtocol
 
 from ...core.base_server import BaseServer, ServerConfig
 from ...utils.logging_utils import get_logger
 
 logger = get_logger("FigmaMCPServer")
+
+
+class FigmaWebSocketHandler:
+    """Handles WebSocket connections for real-time communication with Figma plugin."""
+
+    def __init__(self, server_instance):
+        self.server = server_instance
+        self.clients = set()
+        self.message_handlers = {}
+        self.websocket_server = None
+
+    async def register_client(self, websocket: WebSocketServerProtocol):
+        """Register a new WebSocket client."""
+        self.clients.add(websocket)
+        logger.info(f"Client connected. Total clients: {len(self.clients)}")
+
+        # Send welcome message
+        await websocket.send(
+            json.dumps(
+                {
+                    "type": "connected",
+                    "server_info": {
+                        "name": self.server.config.name,
+                        "version": self.server.SERVER_VERSION,
+                        "channel": self.server.plugin_channel,
+                    },
+                }
+            )
+        )
+
+    async def unregister_client(self, websocket: WebSocketServerProtocol):
+        """Unregister a WebSocket client."""
+        self.clients.discard(websocket)
+        logger.info(f"Client disconnected. Total clients: {len(self.clients)}")
+
+    async def handle_message(self, websocket: WebSocketServerProtocol, message: str):
+        """Handle incoming WebSocket messages."""
+        try:
+            data = json.loads(message)
+            message_type = data.get("type")
+            message_id = data.get("id")
+
+            logger.info(f"Received message: {message_type} (id: {message_id})")
+
+            response = None
+
+            if message_type == "ping":
+                response = {
+                    "type": "pong",
+                    "id": message_id,
+                    "timestamp": data.get("timestamp", time.time()),
+                }
+
+            elif message_type == "tool_call":
+                tool_name = data.get("tool")
+                params = data.get("params", {})
+
+                # Execute the MCP tool
+                try:
+                    result = await self.execute_mcp_tool(tool_name, params)
+                    response = {
+                        "type": "tool_response",
+                        "id": message_id,
+                        "tool": tool_name,
+                        "success": True,
+                        "data": result,
+                    }
+                except Exception as e:
+                    logger.error(f"Tool execution error: {e}")
+                    response = {
+                        "type": "tool_response",
+                        "id": message_id,
+                        "tool": tool_name,
+                        "success": False,
+                        "error": str(e),
+                    }
+
+            else:
+                response = {
+                    "type": "error",
+                    "id": message_id,
+                    "error": f"Unknown message type: {message_type}",
+                }
+
+            if response:
+                await websocket.send(json.dumps(response))
+
+        except json.JSONDecodeError as e:
+            logger.error(f"Invalid JSON message: {e}")
+            await websocket.send(
+                json.dumps({"type": "error", "error": "Invalid JSON message"})
+            )
+        except Exception as e:
+            logger.error(f"Message handling error: {e}")
+            await websocket.send(json.dumps({"type": "error", "error": str(e)}))
+
+    async def execute_mcp_tool(self, tool_name: str, params: dict):
+        """Execute an MCP tool and return the result."""
+        # Create a context for the tool execution
+        context = Context()
+
+        # Map tool names to server methods
+        tool_methods = {
+            "get_document_info": self.server.get_document_info,
+            "get_selection": self.server.get_selection,
+            "get_node_info": self.server.get_node_info,
+            "create_rectangle": self.server.create_rectangle,
+            "create_frame": self.server.create_frame,
+            "create_text": self.server.create_text,
+            "set_text_content": self.server.set_text_content,
+            "move_node": self.server.move_node,
+            "resize_node": self.server.resize_node,
+            "delete_node": self.server.delete_node,
+            "set_fill_color": self.server.set_fill_color,
+            "get_server_status": self.server.get_server_status,
+        }
+
+        if tool_name not in tool_methods:
+            raise ValueError(f"Unknown tool: {tool_name}")
+
+        method = tool_methods[tool_name]
+
+        # Call the method with appropriate parameters
+        if tool_name == "get_node_info":
+            return await method(context, params.get("node_id"))
+        elif tool_name == "create_rectangle":
+            return await method(context, **params)
+        elif tool_name == "create_frame":
+            return await method(context, **params)
+        elif tool_name == "create_text":
+            return await method(context, **params)
+        elif tool_name == "set_text_content":
+            return await method(context, params.get("node_id"), params.get("text"))
+        elif tool_name == "move_node":
+            return await method(
+                context, params.get("node_id"), params.get("x"), params.get("y")
+            )
+        elif tool_name == "resize_node":
+            return await method(
+                context,
+                params.get("node_id"),
+                params.get("width"),
+                params.get("height"),
+            )
+        elif tool_name == "delete_node":
+            return await method(context, params.get("node_id"))
+        elif tool_name == "set_fill_color":
+            return await method(context, **params)
+        else:
+            return await method(context)
+
+    async def broadcast_message(self, message: dict):
+        """Broadcast a message to all connected clients."""
+        if self.clients:
+            message_str = json.dumps(message)
+            disconnected = set()
+
+            for client in self.clients:
+                try:
+                    await client.send(message_str)
+                except websockets.exceptions.ConnectionClosed:
+                    disconnected.add(client)
+                except Exception as e:
+                    logger.error(f"Error broadcasting to client: {e}")
+                    disconnected.add(client)
+
+            # Remove disconnected clients
+            for client in disconnected:
+                self.clients.discard(client)
+
+    async def client_handler(self, websocket: WebSocketServerProtocol, path: str):
+        """Handle a WebSocket client connection."""
+        await self.register_client(websocket)
+        try:
+            async for message in websocket:
+                await self.handle_message(websocket, message)
+        except websockets.exceptions.ConnectionClosed:
+            logger.info("Client connection closed")
+        except Exception as e:
+            logger.error(f"Client handler error: {e}")
+        finally:
+            await self.unregister_client(websocket)
+
+    async def start_websocket_server(self, host: str, port: int):
+        """Start the WebSocket server."""
+        try:
+            self.websocket_server = await websockets.serve(
+                self.client_handler, host, port, ping_interval=20, ping_timeout=10
+            )
+            logger.info(f"WebSocket server started on ws://{host}:{port}")
+        except Exception as e:
+            logger.error(f"Failed to start WebSocket server: {e}")
+            raise
+
+    async def stop_websocket_server(self):
+        """Stop the WebSocket server."""
+        if self.websocket_server:
+            self.websocket_server.close()
+            await self.websocket_server.wait_closed()
+            logger.info("WebSocket server stopped")
 
 
 class FigmaMCPServer(BaseServer):
@@ -20,7 +224,7 @@ class FigmaMCPServer(BaseServer):
     # Server metadata
     SERVER_TYPE: ClassVar[str] = "figma"
     SERVER_VERSION: ClassVar[str] = "1.0.0"
-    REQUIRED_DEPENDENCIES: ClassVar[list[str]] = []
+    REQUIRED_DEPENDENCIES: ClassVar[list[str]] = ["websockets"]
     REQUIRED_APPS: ClassVar[list[str]] = ["Figma"]
 
     def __init__(self, config: ServerConfig):
@@ -30,8 +234,16 @@ class FigmaMCPServer(BaseServer):
         # Figma-specific configuration
         self.plugin_channel = config.config.get("plugin_channel", "default")
         self.command_timeout = config.config.get("command_timeout", 30.0)
+        self.websocket_port = config.config.get(
+            "websocket_port", config.port + 1000
+        )  # Default: MCP port + 1000
+
+        # WebSocket handler
+        self.websocket_handler = FigmaWebSocketHandler(self)
+        self.websocket_task = None
 
         logger.info(f"Figma server configured with channel: {self.plugin_channel}")
+        logger.info(f"WebSocket will run on port: {self.websocket_port}")
 
     def _register_tools(self):
         """Register Figma server tools."""
@@ -80,19 +292,45 @@ class FigmaMCPServer(BaseServer):
     async def _on_startup(self):
         """Figma server startup logic."""
         logger.info(f"Figma server '{self.config.name}' starting up...")
+
+        # Start WebSocket server in background
+        try:
+            self.websocket_task = asyncio.create_task(
+                self.websocket_handler.start_websocket_server(
+                    self.config.host, self.websocket_port
+                )
+            )
+            await asyncio.sleep(0.1)  # Give it a moment to start
+            logger.info("WebSocket server started successfully")
+        except Exception as e:
+            logger.error(f"Failed to start WebSocket server: {e}")
+
         logger.info("Plugin-based Figma server ready for MCP communication")
         logger.info("Figma server startup complete")
 
     async def _on_shutdown(self):
         """Figma server shutdown logic."""
         logger.info(f"Figma server '{self.config.name}' shutting down...")
+
+        # Stop WebSocket server
+        if self.websocket_task:
+            self.websocket_task.cancel()
+            try:
+                await self.websocket_task
+            except asyncio.CancelledError:
+                pass
+
+        await self.websocket_handler.stop_websocket_server()
         logger.info("Figma server shutdown complete")
 
     async def _perform_health_check(self) -> bool:
         """Perform health check."""
         try:
-            # For plugin-based integration, we're always healthy if running
-            return True
+            # Check if WebSocket server is running and we have some basic state
+            return (
+                self.websocket_handler.websocket_server is not None
+                or len(self.websocket_handler.clients) > 0
+            )
         except Exception as e:
             logger.debug(f"Health check failed: {e}")
             return False
@@ -105,16 +343,33 @@ class FigmaMCPServer(BaseServer):
             JSON string with document information
         """
         try:
-            # This is a placeholder - actual implementation would communicate with plugin
-            result = {
-                "message": "This tool requires the Figma plugin to be active",
-                "status": "plugin_required",
-                "server_info": {
-                    "name": self.config.name,
-                    "type": self.SERVER_TYPE,
-                    "channel": self.plugin_channel,
-                },
-            }
+            # Check if we have connected clients
+            if self.websocket_handler.clients:
+                # Broadcast request to connected plugins
+                await self.websocket_handler.broadcast_message(
+                    {"type": "figma_command", "command": "get_current_document"}
+                )
+
+                result = {
+                    "message": "Document info request sent to connected Figma plugins",
+                    "status": "requested",
+                    "connected_clients": len(self.websocket_handler.clients),
+                    "server_info": {
+                        "name": self.config.name,
+                        "type": self.SERVER_TYPE,
+                        "channel": self.plugin_channel,
+                    },
+                }
+            else:
+                result = {
+                    "message": "No Figma plugins currently connected",
+                    "status": "no_clients",
+                    "server_info": {
+                        "name": self.config.name,
+                        "type": self.SERVER_TYPE,
+                        "channel": self.plugin_channel,
+                    },
+                }
             return json.dumps(result, indent=2)
         except Exception as e:
             logger.error(f"Error getting document info: {e}")
@@ -127,15 +382,31 @@ class FigmaMCPServer(BaseServer):
             JSON string with selection information
         """
         try:
-            result = {
-                "message": "This tool requires the Figma plugin to be active",
-                "status": "plugin_required",
-                "server_info": {
-                    "name": self.config.name,
-                    "type": self.SERVER_TYPE,
-                    "channel": self.plugin_channel,
-                },
-            }
+            if self.websocket_handler.clients:
+                await self.websocket_handler.broadcast_message(
+                    {"type": "figma_command", "command": "get_current_selection"}
+                )
+
+                result = {
+                    "message": "Selection info request sent to connected Figma plugins",
+                    "status": "requested",
+                    "connected_clients": len(self.websocket_handler.clients),
+                    "server_info": {
+                        "name": self.config.name,
+                        "type": self.SERVER_TYPE,
+                        "channel": self.plugin_channel,
+                    },
+                }
+            else:
+                result = {
+                    "message": "No Figma plugins currently connected",
+                    "status": "no_clients",
+                    "server_info": {
+                        "name": self.config.name,
+                        "type": self.SERVER_TYPE,
+                        "channel": self.plugin_channel,
+                    },
+                }
             return json.dumps(result, indent=2)
         except Exception as e:
             logger.error(f"Error getting selection: {e}")
@@ -151,16 +422,40 @@ class FigmaMCPServer(BaseServer):
             JSON string with node information
         """
         try:
-            result = {
-                "message": "This tool requires the Figma plugin to be active",
-                "status": "plugin_required",
-                "node_id": node_id,
-                "server_info": {
-                    "name": self.config.name,
-                    "type": self.SERVER_TYPE,
-                    "channel": self.plugin_channel,
-                },
-            }
+            if self.websocket_handler.clients:
+                await self.websocket_handler.broadcast_message(
+                    {
+                        "type": "figma_command",
+                        "command": "execute_tool",
+                        "params": {
+                            "tool": "get_node_info",
+                            "params": {"node_id": node_id},
+                        },
+                    }
+                )
+
+                result = {
+                    "message": "Node info request sent to connected Figma plugins",
+                    "status": "requested",
+                    "node_id": node_id,
+                    "connected_clients": len(self.websocket_handler.clients),
+                    "server_info": {
+                        "name": self.config.name,
+                        "type": self.SERVER_TYPE,
+                        "channel": self.plugin_channel,
+                    },
+                }
+            else:
+                result = {
+                    "message": "No Figma plugins currently connected",
+                    "status": "no_clients",
+                    "node_id": node_id,
+                    "server_info": {
+                        "name": self.config.name,
+                        "type": self.SERVER_TYPE,
+                        "channel": self.plugin_channel,
+                    },
+                }
             return json.dumps(result, indent=2)
         except Exception as e:
             logger.error(f"Error getting node info for {node_id}: {e}")
@@ -188,23 +483,47 @@ class FigmaMCPServer(BaseServer):
             JSON string with created rectangle information
         """
         try:
-            result = {
-                "message": "This tool requires the Figma plugin to be active",
-                "status": "plugin_required",
-                "command": "create_rectangle",
-                "params": {
-                    "x": x,
-                    "y": y,
-                    "width": width,
-                    "height": height,
-                    "name": name,
-                },
-                "server_info": {
-                    "name": self.config.name,
-                    "type": self.SERVER_TYPE,
-                    "channel": self.plugin_channel,
-                },
+            params = {
+                "x": x,
+                "y": y,
+                "width": width,
+                "height": height,
+                "name": name,
             }
+
+            if self.websocket_handler.clients:
+                await self.websocket_handler.broadcast_message(
+                    {
+                        "type": "figma_command",
+                        "command": "execute_tool",
+                        "params": {"tool": "create_rectangle", "params": params},
+                    }
+                )
+
+                result = {
+                    "message": "Rectangle creation request sent to connected Figma plugins",
+                    "status": "requested",
+                    "command": "create_rectangle",
+                    "params": params,
+                    "connected_clients": len(self.websocket_handler.clients),
+                    "server_info": {
+                        "name": self.config.name,
+                        "type": self.SERVER_TYPE,
+                        "channel": self.plugin_channel,
+                    },
+                }
+            else:
+                result = {
+                    "message": "No Figma plugins currently connected",
+                    "status": "no_clients",
+                    "command": "create_rectangle",
+                    "params": params,
+                    "server_info": {
+                        "name": self.config.name,
+                        "type": self.SERVER_TYPE,
+                        "channel": self.plugin_channel,
+                    },
+                }
             return json.dumps(result, indent=2)
         except Exception as e:
             logger.error(f"Error creating rectangle: {e}")
@@ -232,23 +551,47 @@ class FigmaMCPServer(BaseServer):
             JSON string with created frame information
         """
         try:
-            result = {
-                "message": "This tool requires the Figma plugin to be active",
-                "status": "plugin_required",
-                "command": "create_frame",
-                "params": {
-                    "x": x,
-                    "y": y,
-                    "width": width,
-                    "height": height,
-                    "name": name,
-                },
-                "server_info": {
-                    "name": self.config.name,
-                    "type": self.SERVER_TYPE,
-                    "channel": self.plugin_channel,
-                },
+            params = {
+                "x": x,
+                "y": y,
+                "width": width,
+                "height": height,
+                "name": name,
             }
+
+            if self.websocket_handler.clients:
+                await self.websocket_handler.broadcast_message(
+                    {
+                        "type": "figma_command",
+                        "command": "execute_tool",
+                        "params": {"tool": "create_frame", "params": params},
+                    }
+                )
+
+                result = {
+                    "message": "Frame creation request sent to connected Figma plugins",
+                    "status": "requested",
+                    "command": "create_frame",
+                    "params": params,
+                    "connected_clients": len(self.websocket_handler.clients),
+                    "server_info": {
+                        "name": self.config.name,
+                        "type": self.SERVER_TYPE,
+                        "channel": self.plugin_channel,
+                    },
+                }
+            else:
+                result = {
+                    "message": "No Figma plugins currently connected",
+                    "status": "no_clients",
+                    "command": "create_frame",
+                    "params": params,
+                    "server_info": {
+                        "name": self.config.name,
+                        "type": self.SERVER_TYPE,
+                        "channel": self.plugin_channel,
+                    },
+                }
             return json.dumps(result, indent=2)
         except Exception as e:
             logger.error(f"Error creating frame: {e}")
@@ -278,24 +621,48 @@ class FigmaMCPServer(BaseServer):
             JSON string with created text node information
         """
         try:
-            result = {
-                "message": "This tool requires the Figma plugin to be active",
-                "status": "plugin_required",
-                "command": "create_text",
-                "params": {
-                    "text": text,
-                    "x": x,
-                    "y": y,
-                    "fontSize": font_size,
-                    "fontFamily": font_family,
-                    "name": name,
-                },
-                "server_info": {
-                    "name": self.config.name,
-                    "type": self.SERVER_TYPE,
-                    "channel": self.plugin_channel,
-                },
+            params = {
+                "text": text,
+                "x": x,
+                "y": y,
+                "fontSize": font_size,
+                "fontFamily": font_family,
+                "name": name,
             }
+
+            if self.websocket_handler.clients:
+                await self.websocket_handler.broadcast_message(
+                    {
+                        "type": "figma_command",
+                        "command": "execute_tool",
+                        "params": {"tool": "create_text", "params": params},
+                    }
+                )
+
+                result = {
+                    "message": "Text creation request sent to connected Figma plugins",
+                    "status": "requested",
+                    "command": "create_text",
+                    "params": params,
+                    "connected_clients": len(self.websocket_handler.clients),
+                    "server_info": {
+                        "name": self.config.name,
+                        "type": self.SERVER_TYPE,
+                        "channel": self.plugin_channel,
+                    },
+                }
+            else:
+                result = {
+                    "message": "No Figma plugins currently connected",
+                    "status": "no_clients",
+                    "command": "create_text",
+                    "params": params,
+                    "server_info": {
+                        "name": self.config.name,
+                        "type": self.SERVER_TYPE,
+                        "channel": self.plugin_channel,
+                    },
+                }
             return json.dumps(result, indent=2)
         except Exception as e:
             logger.error(f"Error creating text: {e}")
@@ -312,17 +679,41 @@ class FigmaMCPServer(BaseServer):
             JSON string with update result
         """
         try:
-            result = {
-                "message": "This tool requires the Figma plugin to be active",
-                "status": "plugin_required",
-                "command": "set_text_content",
-                "params": {"nodeId": node_id, "text": text},
-                "server_info": {
-                    "name": self.config.name,
-                    "type": self.SERVER_TYPE,
-                    "channel": self.plugin_channel,
-                },
-            }
+            params = {"nodeId": node_id, "text": text}
+
+            if self.websocket_handler.clients:
+                await self.websocket_handler.broadcast_message(
+                    {
+                        "type": "figma_command",
+                        "command": "execute_tool",
+                        "params": {"tool": "set_text_content", "params": params},
+                    }
+                )
+
+                result = {
+                    "message": "Text content update request sent to connected Figma plugins",
+                    "status": "requested",
+                    "command": "set_text_content",
+                    "params": params,
+                    "connected_clients": len(self.websocket_handler.clients),
+                    "server_info": {
+                        "name": self.config.name,
+                        "type": self.SERVER_TYPE,
+                        "channel": self.plugin_channel,
+                    },
+                }
+            else:
+                result = {
+                    "message": "No Figma plugins currently connected",
+                    "status": "no_clients",
+                    "command": "set_text_content",
+                    "params": params,
+                    "server_info": {
+                        "name": self.config.name,
+                        "type": self.SERVER_TYPE,
+                        "channel": self.plugin_channel,
+                    },
+                }
             return json.dumps(result, indent=2)
         except Exception as e:
             logger.error(f"Error setting text content: {e}")
@@ -340,17 +731,41 @@ class FigmaMCPServer(BaseServer):
             JSON string with move result
         """
         try:
-            result = {
-                "message": "This tool requires the Figma plugin to be active",
-                "status": "plugin_required",
-                "command": "move_node",
-                "params": {"nodeId": node_id, "x": x, "y": y},
-                "server_info": {
-                    "name": self.config.name,
-                    "type": self.SERVER_TYPE,
-                    "channel": self.plugin_channel,
-                },
-            }
+            params = {"nodeId": node_id, "x": x, "y": y}
+
+            if self.websocket_handler.clients:
+                await self.websocket_handler.broadcast_message(
+                    {
+                        "type": "figma_command",
+                        "command": "execute_tool",
+                        "params": {"tool": "move_node", "params": params},
+                    }
+                )
+
+                result = {
+                    "message": "Node move request sent to connected Figma plugins",
+                    "status": "requested",
+                    "command": "move_node",
+                    "params": params,
+                    "connected_clients": len(self.websocket_handler.clients),
+                    "server_info": {
+                        "name": self.config.name,
+                        "type": self.SERVER_TYPE,
+                        "channel": self.plugin_channel,
+                    },
+                }
+            else:
+                result = {
+                    "message": "No Figma plugins currently connected",
+                    "status": "no_clients",
+                    "command": "move_node",
+                    "params": params,
+                    "server_info": {
+                        "name": self.config.name,
+                        "type": self.SERVER_TYPE,
+                        "channel": self.plugin_channel,
+                    },
+                }
             return json.dumps(result, indent=2)
         except Exception as e:
             logger.error(f"Error moving node: {e}")
@@ -370,17 +785,41 @@ class FigmaMCPServer(BaseServer):
             JSON string with resize result
         """
         try:
-            result = {
-                "message": "This tool requires the Figma plugin to be active",
-                "status": "plugin_required",
-                "command": "resize_node",
-                "params": {"nodeId": node_id, "width": width, "height": height},
-                "server_info": {
-                    "name": self.config.name,
-                    "type": self.SERVER_TYPE,
-                    "channel": self.plugin_channel,
-                },
-            }
+            params = {"nodeId": node_id, "width": width, "height": height}
+
+            if self.websocket_handler.clients:
+                await self.websocket_handler.broadcast_message(
+                    {
+                        "type": "figma_command",
+                        "command": "execute_tool",
+                        "params": {"tool": "resize_node", "params": params},
+                    }
+                )
+
+                result = {
+                    "message": "Node resize request sent to connected Figma plugins",
+                    "status": "requested",
+                    "command": "resize_node",
+                    "params": params,
+                    "connected_clients": len(self.websocket_handler.clients),
+                    "server_info": {
+                        "name": self.config.name,
+                        "type": self.SERVER_TYPE,
+                        "channel": self.plugin_channel,
+                    },
+                }
+            else:
+                result = {
+                    "message": "No Figma plugins currently connected",
+                    "status": "no_clients",
+                    "command": "resize_node",
+                    "params": params,
+                    "server_info": {
+                        "name": self.config.name,
+                        "type": self.SERVER_TYPE,
+                        "channel": self.plugin_channel,
+                    },
+                }
             return json.dumps(result, indent=2)
         except Exception as e:
             logger.error(f"Error resizing node: {e}")
@@ -396,17 +835,41 @@ class FigmaMCPServer(BaseServer):
             JSON string with deletion result
         """
         try:
-            result = {
-                "message": "This tool requires the Figma plugin to be active",
-                "status": "plugin_required",
-                "command": "delete_node",
-                "params": {"nodeId": node_id},
-                "server_info": {
-                    "name": self.config.name,
-                    "type": self.SERVER_TYPE,
-                    "channel": self.plugin_channel,
-                },
-            }
+            params = {"nodeId": node_id}
+
+            if self.websocket_handler.clients:
+                await self.websocket_handler.broadcast_message(
+                    {
+                        "type": "figma_command",
+                        "command": "execute_tool",
+                        "params": {"tool": "delete_node", "params": params},
+                    }
+                )
+
+                result = {
+                    "message": "Node deletion request sent to connected Figma plugins",
+                    "status": "requested",
+                    "command": "delete_node",
+                    "params": params,
+                    "connected_clients": len(self.websocket_handler.clients),
+                    "server_info": {
+                        "name": self.config.name,
+                        "type": self.SERVER_TYPE,
+                        "channel": self.plugin_channel,
+                    },
+                }
+            else:
+                result = {
+                    "message": "No Figma plugins currently connected",
+                    "status": "no_clients",
+                    "command": "delete_node",
+                    "params": params,
+                    "server_info": {
+                        "name": self.config.name,
+                        "type": self.SERVER_TYPE,
+                        "channel": self.plugin_channel,
+                    },
+                }
             return json.dumps(result, indent=2)
         except Exception as e:
             logger.error(f"Error deleting node: {e}")
@@ -434,17 +897,41 @@ class FigmaMCPServer(BaseServer):
             JSON string with color change result
         """
         try:
-            result = {
-                "message": "This tool requires the Figma plugin to be active",
-                "status": "plugin_required",
-                "command": "set_fill_color",
-                "params": {"nodeId": node_id, "r": r, "g": g, "b": b, "a": a},
-                "server_info": {
-                    "name": self.config.name,
-                    "type": self.SERVER_TYPE,
-                    "channel": self.plugin_channel,
-                },
-            }
+            params = {"nodeId": node_id, "r": r, "g": g, "b": b, "a": a}
+
+            if self.websocket_handler.clients:
+                await self.websocket_handler.broadcast_message(
+                    {
+                        "type": "figma_command",
+                        "command": "execute_tool",
+                        "params": {"tool": "set_fill_color", "params": params},
+                    }
+                )
+
+                result = {
+                    "message": "Fill color change request sent to connected Figma plugins",
+                    "status": "requested",
+                    "command": "set_fill_color",
+                    "params": params,
+                    "connected_clients": len(self.websocket_handler.clients),
+                    "server_info": {
+                        "name": self.config.name,
+                        "type": self.SERVER_TYPE,
+                        "channel": self.plugin_channel,
+                    },
+                }
+            else:
+                result = {
+                    "message": "No Figma plugins currently connected",
+                    "status": "no_clients",
+                    "command": "set_fill_color",
+                    "params": params,
+                    "server_info": {
+                        "name": self.config.name,
+                        "type": self.SERVER_TYPE,
+                        "channel": self.plugin_channel,
+                    },
+                }
             return json.dumps(result, indent=2)
         except Exception as e:
             logger.error(f"Error setting fill color: {e}")
@@ -463,8 +950,11 @@ class FigmaMCPServer(BaseServer):
                 "server_version": self.SERVER_VERSION,
                 "plugin_channel": self.plugin_channel,
                 "command_timeout": self.command_timeout,
+                "websocket_port": self.websocket_port,
+                "connected_clients": len(self.websocket_handler.clients),
                 "status": "running",
-                "message": "Plugin-based Figma MCP server ready for communication",
+                "message": "WebSocket-enabled Figma MCP server ready for real-time communication",
+                "websocket_url": f"ws://{self.config.host}:{self.websocket_port}",
             }
             return json.dumps(status, indent=2)
         except Exception as e:
@@ -482,6 +972,7 @@ def main():
             "type": "figma",
             "plugin_channel": "default",
             "command_timeout": 30.0,
+            "websocket_port": 9002,  # WebSocket on port 9002
         },
     )
 
