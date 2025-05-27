@@ -151,6 +151,9 @@ class ConfigLoader:
             # Try to infer from name or set a default
             config["type"] = server_data.get("type", "unknown")
 
+        # Inject environment variables into config
+        config = self._inject_environment_variables(config)
+
         # Dependencies and requirements
         dependencies = server_data.get("dependencies", [])
         required_apps = server_data.get("required_apps", [])
@@ -167,6 +170,36 @@ class ConfigLoader:
             dependencies=dependencies,
             required_apps=required_apps,
         )
+
+    def _inject_environment_variables(self, config: dict[str, Any]) -> dict[str, Any]:
+        """Inject environment variables into configuration values."""
+        # Create a copy to avoid modifying the original
+        config = config.copy()
+
+        # Define environment variable mappings for different server types
+        env_mappings = {
+            "figma": {"api_token": "FIGMA_API_TOKEN"},
+            "github": {
+                "api_token": "GITHUB_TOKEN",
+                "personal_access_token": "GITHUB_PERSONAL_ACCESS_TOKEN",
+            },
+            "openai": {"api_key": "OPENAI_API_KEY"},
+            "anthropic": {"api_key": "ANTHROPIC_API_KEY"},
+        }
+
+        server_type = config.get("type", "")
+        if server_type in env_mappings:
+            for config_key, env_var in env_mappings[server_type].items():
+                # If the config value is null/None or missing, try to get from environment
+                if config.get(config_key) is None:
+                    env_value = os.getenv(env_var)
+                    if env_value:
+                        config[config_key] = env_value
+                        logger.info(
+                            f"Injected {env_var} environment variable into {server_type}.{config_key}"
+                        )
+
+        return config
 
     def save_servers_config(
         self, server_configs: list[ServerConfig], config_file: str | Path | None = None

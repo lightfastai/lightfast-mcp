@@ -26,3 +26,20 @@ servers:
   transport: streamable-http
   type: mock
   version: 1.0.0
+- config:
+    api_token: FIGMA_API_TOKEN  # Set via FIGMA_API_TOKEN environment variable  
+    # Alternative: api_token: "your_figma_token_here"  # Direct value (not recommended for security)
+    timeout: 30
+    type: figma
+  dependencies:
+  - aiohttp
+  description: Figma MCP Server for web design and collaborative design workflows
+  host: localhost
+  name: figma-server
+  path: /mcp
+  port: 8003
+  required_apps:
+  - Figma
+  transport: streamable-http
+  type: figma
+  version: 1.0.0
