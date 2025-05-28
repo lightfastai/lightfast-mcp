@@ -6,18 +6,20 @@ A comprehensive WebSocket Mock MCP server for testing WebSocket communications a
 
 ### 🔌 WebSocket Server
 - **Real WebSocket Server**: Runs a full WebSocket server that clients can connect to
+- **Automatic Startup**: WebSocket server starts automatically when the MCP server starts
 - **Multiple Client Support**: Handles multiple concurrent WebSocket connections
 - **Message Broadcasting**: Supports broadcasting messages between connected clients
 - **Client Management**: Tracks and manages connected clients with unique IDs
 - **Statistics Tracking**: Monitors connections, messages, and server performance
 - **Error Simulation**: Built-in error testing and simulation capabilities
+- **Port Auto-Discovery**: Automatically finds an available port if the default is in use
 
 ### 🤖 MCP Integration
 - **MCP Tools**: Full set of MCP tools for controlling the WebSocket server
 - **AI Model Ready**: Designed for AI model interactions and testing
 - **Configuration Driven**: Flexible configuration options
 - **Health Monitoring**: Built-in health checks and status monitoring
-- **Auto-start Support**: Optional automatic WebSocket server startup
+- **Robust Startup**: Automatic retry logic with port fallback for reliable startup
 
 ### 🧪 Testing & Development
 - **Comprehensive Test Suite**: Unit, integration, and end-to-end tests
@@ -39,6 +41,8 @@ uv run lightfast-mcp-orchestrator start
 # Or via task runner
 uv run task websocket_mock_server
 ```
+
+The WebSocket server will start automatically on `ws://localhost:9004` (or the next available port if 9004 is in use).
 
 ### 2. Connect WebSocket Clients
 
@@ -66,11 +70,11 @@ ws.send(JSON.stringify({type: 'ping'}));
 The server provides MCP tools for AI models to interact with the WebSocket server:
 
 - `get_websocket_server_status` - Get server status and statistics
-- `start_websocket_server` - Start the WebSocket server
-- `stop_websocket_server` - Stop the WebSocket server
 - `send_websocket_message` - Send messages to connected clients
 - `get_websocket_clients` - Get list of connected clients
 - `test_websocket_connection` - Test WebSocket connections
+
+**Note**: The WebSocket server starts automatically when the MCP server starts and runs continuously. There are no manual start/stop tools needed.
 
 ## Configuration
 
@@ -88,7 +92,6 @@ websocket_mock:
   config:
     websocket_host: "localhost"
     websocket_port: 9004
-    auto_start_websocket: true
 ```
 
 ### Configuration Options
@@ -96,8 +99,9 @@ websocket_mock:
 | Option | Default | Description |
 |--------|---------|-------------|
 | `websocket_host` | `localhost` | Host for the WebSocket server |
-| `websocket_port` | `9004` | Port for the WebSocket server |
-| `auto_start_websocket` | `true` | Auto-start WebSocket server on MCP server startup |
+| `websocket_port` | `9004` | Port for the WebSocket server (will auto-increment if in use) |
+
+**Note**: The WebSocket server now starts automatically when the MCP server starts. There's no need for manual startup or configuration flags.
 
 ## WebSocket Protocol
 
@@ -243,31 +247,6 @@ Get comprehensive status information about the WebSocket server.
     "mcp_server_type": "websocket_mock",
     "mcp_server_version": "1.0.0"
   }
-}
-```
-
-### `start_websocket_server`
-
-Start the WebSocket server if it's not already running.
-
-**Returns:**
-```json
-{
-  "status": "started|already_running|failed|error",
-  "message": "Status message",
-  "server_info": {...}
-}
-```
-
-### `stop_websocket_server`
-
-Stop the WebSocket server if it's running.
-
-**Returns:**
-```json
-{
-  "status": "stopped|already_stopped|error",
-  "message": "Status message"
 }
 ```
 

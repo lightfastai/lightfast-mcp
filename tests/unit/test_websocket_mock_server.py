@@ -187,7 +187,6 @@ class TestWebSocketMockMCPServer:
                 "type": "websocket_mock",
                 "websocket_host": "localhost",
                 "websocket_port": 9999,
-                "auto_start_websocket": False,  # Don't auto-start for tests
             },
         )
 
@@ -205,7 +204,6 @@ class TestWebSocketMockMCPServer:
         assert mcp_server.websocket_server is not None
         assert mcp_server.websocket_server.host == "localhost"
         assert mcp_server.websocket_server.port == 9999
-        assert mcp_server.auto_start_websocket is False
 
     def test_mcp_server_tools_registration(self, mcp_server):
         """Test that tools are properly registered."""
@@ -214,11 +212,9 @@ class TestWebSocketMockMCPServer:
         mcp_server._register_tools()
 
         # Check that tools were registered
-        assert len(mcp_server.info.tools) == 6
+        assert len(mcp_server.info.tools) == 4
         expected_tools = [
             "get_websocket_server_status",
-            "start_websocket_server",
-            "stop_websocket_server",
             "send_websocket_message",
             "get_websocket_clients",
             "test_websocket_connection",
@@ -227,15 +223,19 @@ class TestWebSocketMockMCPServer:
             assert tool in mcp_server.info.tools
 
     @pytest.mark.asyncio
-    async def test_mcp_server_startup_no_auto_start(self, mcp_server):
-        """Test MCP server startup without auto-starting WebSocket server."""
-        await mcp_server._on_startup()
-        assert not mcp_server.websocket_server.is_running
+    async def test_mcp_server_startup_always_starts_websocket(self, mcp_server):
+        """Test MCP server startup always starts WebSocket server."""
+        with patch.object(
+            mcp_server.websocket_server, "start", return_value=True
+        ) as mock_start:
+            await mcp_server._on_startup()
+            mock_start.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_mcp_server_startup_with_auto_start(self, server_config):
         """Test MCP server startup with auto-starting WebSocket server."""
-        server_config.config["auto_start_websocket"] = True
+        # This test is now redundant since WebSocket server always starts
+        # but keeping for backward compatibility
         mcp_server = WebSocketMockMCPServer(server_config)
 
         with patch.object(
@@ -260,12 +260,7 @@ class TestWebSocketMockMCPServer:
         # Set server as running
         mcp_server.info.is_running = True
 
-        # Test with WebSocket server not running (auto_start_websocket is False)
-        health = await mcp_server._perform_health_check()
-        assert health is True
-
-        # Test with auto_start_websocket enabled but WebSocket server not running
-        mcp_server.auto_start_websocket = True
+        # Test with WebSocket server not running - should fail since it should always be running
         health = await mcp_server._perform_health_check()
         assert health is False
 
@@ -331,56 +326,6 @@ class TestWebSocketMockTools:
 
         assert result["error"] == "WebSocket server not available"
         assert result["status"] == "not_initialized"
-
-    @pytest.mark.asyncio
-    async def test_start_websocket_server(self, mock_server, mock_context):
-        """Test start_websocket_server tool."""
-        tools.set_current_server(mock_server)
-        mock_server.websocket_server.is_running = False
-        mock_server.websocket_server.start = AsyncMock(return_value=True)
-
-        result = await tools.start_websocket_server(mock_context)
-
-        assert result["status"] == "started"
-        assert result["message"] == "WebSocket server started successfully"
-        mock_server.websocket_server.start.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_start_websocket_server_already_running(
-        self, mock_server, mock_context
-    ):
-        """Test start_websocket_server tool when already running."""
-        tools.set_current_server(mock_server)
-        mock_server.websocket_server.is_running = True
-
-        result = await tools.start_websocket_server(mock_context)
-
-        assert result["status"] == "already_running"
-        assert result["message"] == "WebSocket server is already running"
-
-    @pytest.mark.asyncio
-    async def test_stop_websocket_server(self, mock_server, mock_context):
-        """Test stop_websocket_server tool."""
-        tools.set_current_server(mock_server)
-        mock_server.websocket_server.is_running = True
-        mock_server.websocket_server.stop = AsyncMock()
-
-        result = await tools.stop_websocket_server(mock_context)
-
-        assert result["status"] == "stopped"
-        assert result["message"] == "WebSocket server stopped successfully"
-        mock_server.websocket_server.stop.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_stop_websocket_server_not_running(self, mock_server, mock_context):
-        """Test stop_websocket_server tool when not running."""
-        tools.set_current_server(mock_server)
-        mock_server.websocket_server.is_running = False
-
-        result = await tools.stop_websocket_server(mock_context)
-
-        assert result["status"] == "already_stopped"
-        assert result["message"] == "WebSocket server is not running"
 
     @pytest.mark.asyncio
     async def test_send_websocket_message(self, mock_server, mock_context):

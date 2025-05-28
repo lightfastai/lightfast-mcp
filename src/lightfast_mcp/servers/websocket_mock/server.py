@@ -30,9 +30,6 @@ class WebSocketMockMCPServer(BaseServer):
         # Create the WebSocket server instance
         self.websocket_server = WebSocketMockServer(host=ws_host, port=ws_port)
 
-        # Auto-start configuration
-        self.auto_start_websocket = config.config.get("auto_start_websocket", True)
-
         # Set this server instance in tools module for access
         tools.set_current_server(self)
 
@@ -47,8 +44,6 @@ class WebSocketMockMCPServer(BaseServer):
 
         # Register tools from the tools module
         self.mcp.tool()(tools.get_websocket_server_status)
-        self.mcp.tool()(tools.start_websocket_server)
-        self.mcp.tool()(tools.stop_websocket_server)
         self.mcp.tool()(tools.send_websocket_message)
         self.mcp.tool()(tools.get_websocket_clients)
         self.mcp.tool()(tools.test_websocket_connection)
@@ -56,8 +51,6 @@ class WebSocketMockMCPServer(BaseServer):
         # Update the server info with available tools
         self.info.tools = [
             "get_websocket_server_status",
-            "start_websocket_server",
-            "stop_websocket_server",
             "send_websocket_message",
             "get_websocket_clients",
             "test_websocket_connection",
@@ -68,17 +61,45 @@ class WebSocketMockMCPServer(BaseServer):
         """WebSocket mock server startup logic."""
         logger.info(f"WebSocket Mock server '{self.config.name}' starting up...")
 
-        # Auto-start WebSocket server if configured
-        if self.auto_start_websocket:
-            logger.info("Auto-starting WebSocket server...")
+        # Always start the WebSocket server
+        logger.info("Starting WebSocket server...")
+        max_retries = 3
+        retry_count = 0
+
+        while retry_count < max_retries:
             try:
                 success = await self.websocket_server.start()
                 if success:
-                    logger.info("✅ WebSocket server auto-started successfully")
+                    logger.info("✅ WebSocket server started successfully")
+                    break
                 else:
-                    logger.warning("⚠️ Failed to auto-start WebSocket server")
+                    retry_count += 1
+                    if retry_count < max_retries:
+                        logger.warning(
+                            f"⚠️ Failed to start WebSocket server, retrying ({retry_count}/{max_retries})..."
+                        )
+                        # Try a different port if the default one is in use
+                        self.websocket_server.port += 1
+                        logger.info(f"Trying port {self.websocket_server.port}")
+                    else:
+                        logger.error(
+                            "❌ Failed to start WebSocket server after all retries"
+                        )
+                        raise RuntimeError("Could not start WebSocket server")
             except Exception as e:
-                logger.error(f"❌ Error auto-starting WebSocket server: {e}")
+                retry_count += 1
+                if retry_count < max_retries:
+                    logger.warning(
+                        f"⚠️ Error starting WebSocket server, retrying ({retry_count}/{max_retries}): {e}"
+                    )
+                    # Try a different port if there's a port conflict
+                    self.websocket_server.port += 1
+                    logger.info(f"Trying port {self.websocket_server.port}")
+                else:
+                    logger.error(
+                        f"❌ Failed to start WebSocket server after all retries: {e}"
+                    )
+                    raise RuntimeError(f"Could not start WebSocket server: {e}")
 
         logger.info("WebSocket Mock server startup complete")
 
@@ -104,17 +125,15 @@ class WebSocketMockMCPServer(BaseServer):
             if not self.info.is_running:
                 return False
 
-            # Check WebSocket server status
-            if self.auto_start_websocket and not self.websocket_server.is_running:
+            # Check WebSocket server status - it should always be running
+            if not self.websocket_server.is_running:
+                logger.warning("Health check failed: WebSocket server is not running")
                 return False
 
             # If WebSocket server is running, check if it's responsive
-            if self.websocket_server.is_running:
-                # Simple check - verify server object state
-                server_info = self.websocket_server.get_server_info()
-                return server_info.get("is_running", False)
+            server_info = self.websocket_server.get_server_info()
+            return server_info.get("is_running", False)
 
-            return True
         except Exception as e:
             logger.debug(f"Health check failed: {e}")
             return False
@@ -130,7 +149,6 @@ def main():
             "type": "websocket_mock",
             "websocket_host": "localhost",
             "websocket_port": 9004,
-            "auto_start_websocket": True,
         },
     )
 

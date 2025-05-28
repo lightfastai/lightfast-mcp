@@ -46,7 +46,6 @@ def main():
                         "type": "websocket_mock",
                         "websocket_host": "localhost",
                         "websocket_port": 9004,
-                        "auto_start_websocket": True,
                     },
                 ),
             )
@@ -78,7 +77,6 @@ def _get_default_config() -> ServerConfig:
             "type": "websocket_mock",
             "websocket_host": "localhost",
             "websocket_port": 9004,
-            "auto_start_websocket": True,
         },
     )
 
