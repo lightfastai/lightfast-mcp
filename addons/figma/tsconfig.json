@@ -1,16 +1,23 @@
 {
   "compilerOptions": {
-    "target": "es6",
-    "lib": ["es6", "dom"],
+    "target": "ES2020",
+    "lib": ["ES2020"],
+    "module": "CommonJS",
+    "moduleResolution": "node",
     "strict": true,
+    "esModuleInterop": true,
     "skipLibCheck": true,
-    "noImplicitAny": false,
-    "typeRoots": [
-      "./node_modules/@types",
-      "./node_modules/@figma"
-    ]
+    "forceConsistentCasingInFileNames": true,
+    "declaration": false,
+    "outDir": "./dist",
+    "rootDir": "./",
+    "typeRoots": ["./node_modules/@types", "./node_modules/@figma"]
   },
   "include": [
     "code.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
   ]
 }
