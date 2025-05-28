@@ -37,8 +37,15 @@ class FigmaMCPServer(BaseServer):
             f"Figma server configured for WebSocket server at {figma_host}:{figma_port}"
         )
 
+        # Track the WebSocket thread for proper cleanup
+        self._websocket_thread = None
+        self._websocket_loop = None
+
         # Start WebSocket server immediately in a background task
         self._start_websocket_server_background()
+
+        # Register signal handler for proper cleanup on process termination
+        self._register_signal_handlers()
 
     def _register_tools(self):
         """Register Figma server tools."""
@@ -92,17 +99,13 @@ class FigmaMCPServer(BaseServer):
 
     async def _on_shutdown(self):
         """Figma server shutdown logic."""
+
         logger.info(f"Figma server '{self.config.name}' shutting down...")
 
-        # Stop the WebSocket server
-        try:
-            if self.websocket_server.is_running:
-                logger.info("Stopping Figma WebSocket server...")
-                await self.websocket_server.stop()
-                logger.info("✅ Figma WebSocket server stopped")
-        except Exception as e:
-            logger.error(f"❌ Error stopping Figma WebSocket server: {e}")
-
+        # Don't stop the WebSocket server during normal MCP client disconnections
+        # The WebSocket server should stay running for Figma plugins
+        # Only stop it during actual server shutdown (e.g., SIGTERM)
+        logger.info("WebSocket server will continue running for Figma plugins")
         logger.info("Figma server shutdown complete")
 
     async def _perform_health_check(self) -> bool:
@@ -138,6 +141,7 @@ class FigmaMCPServer(BaseServer):
                 # Create a new event loop for this thread
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
+                self._websocket_loop = loop
 
                 logger.info("Starting Figma WebSocket server in background...")
 
@@ -164,13 +168,22 @@ class FigmaMCPServer(BaseServer):
                 )
             finally:
                 try:
-                    loop.close()
-                except:
-                    pass
+                    # Clean up pending tasks
+                    if loop and not loop.is_closed():
+                        pending = asyncio.all_tasks(loop)
+                        for task in pending:
+                            task.cancel()
+                        if pending:
+                            loop.run_until_complete(
+                                asyncio.gather(*pending, return_exceptions=True)
+                            )
+                        loop.close()
+                except Exception as e:
+                    logger.debug(f"Error during loop cleanup: {e}")
 
         # Start in daemon thread so it doesn't prevent shutdown
-        thread = threading.Thread(target=start_websocket, daemon=True)
-        thread.start()
+        self._websocket_thread = threading.Thread(target=start_websocket, daemon=True)
+        self._websocket_thread.start()
         logger.info("🚀 WebSocket server startup initiated in background thread")
 
     async def _start_websocket_with_retry(self):
@@ -216,6 +229,46 @@ class FigmaMCPServer(BaseServer):
                     return False
 
         return False
+
+    def _register_signal_handlers(self):
+        """Register signal handlers for proper WebSocket server cleanup."""
+        import signal
+        import threading
+
+        def signal_handler(signum, frame):
+            """Handle termination signals by stopping WebSocket server."""
+            logger.info(f"Received signal {signum}, shutting down WebSocket server...")
+
+            def stop_websocket_safely():
+                """Stop WebSocket server in its own thread."""
+                try:
+                    if self._websocket_loop and not self._websocket_loop.is_closed():
+                        import asyncio
+
+                        # Stop the WebSocket server
+                        future = asyncio.run_coroutine_threadsafe(
+                            self.websocket_server.stop(), self._websocket_loop
+                        )
+                        future.result(timeout=5.0)  # Wait up to 5 seconds
+
+                        # Stop the event loop
+                        self._websocket_loop.call_soon_threadsafe(
+                            self._websocket_loop.stop
+                        )
+                        logger.info("✅ WebSocket server stopped due to signal")
+                except Exception as e:
+                    logger.debug(
+                        f"Error during signal-triggered WebSocket shutdown: {e}"
+                    )
+
+            # Run the shutdown in a separate thread to avoid blocking signal handler
+            shutdown_thread = threading.Thread(target=stop_websocket_safely)
+            shutdown_thread.start()
+
+        # Register handlers for common termination signals
+        signal.signal(signal.SIGTERM, signal_handler)
+        signal.signal(signal.SIGINT, signal_handler)
+        logger.debug("Signal handlers registered for WebSocket server cleanup")
 
 
 def main():
