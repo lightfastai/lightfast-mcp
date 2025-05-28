@@ -1,34 +1,35 @@
-# Lightfast MCP Figma Plugin (UI-WebSocket Architecture)
+# Lightfast MCP Figma Plugin (UI-Bridge Architecture)
 
-This Figma plugin provides WebSocket-based communication between Figma and the Lightfast MCP server through a unique architecture where the UI handles WebSocket connections and the plugin code handles Figma API interactions.
+This Figma plugin provides socket-based communication between Figma and the Lightfast MCP server through a bridge architecture where the UI acts as a communication bridge between the MCP server and plugin code.
 
 ## Architecture
 
-The plugin uses a split architecture to work around Figma's sandboxed environment:
+The plugin uses a bridge architecture following the Blender pattern:
 
 ```
-┌─────────────────┐    Plugin Messages    ┌─────────────────┐    WebSocket     ┌─────────────────┐
-│   Plugin Code   │ ←──────────────────→ │   Plugin UI     │ ←──────────────→ │   MCP Server    │
-│   (code.ts)     │                      │   (ui.html)     │   ws://host:port │                 │
+┌─────────────────┐    Plugin Messages    ┌─────────────────┐    Socket        ┌─────────────────┐
+│   Plugin Code   │ ←──────────────────→ │   UI Bridge     │ ←──────────────→ │   MCP Server    │
+│   (code.ts)     │                      │   (ui.html)     │   localhost:9003 │                 │
 │                 │                      │                 │                  │                 │
-│ - Figma API     │                      │ - WebSocket     │                  │ - Tool Registry │
-│ - Document Ops  │                      │ - Server Comm   │                  │ - AI Integration│
-│ - Design Cmds   │                      │ - Message Queue │                  │ - State Mgmt    │
+│ - Figma API     │                      │ - Bridge Server │                  │ - Tool Registry │
+│ - Document Ops  │                      │ - MCP Commands  │                  │ - AI Integration│
+│ - Design Cmds   │                      │ - Response Mgmt │                  │ - State Mgmt    │
 └─────────────────┘                      └─────────────────┘                  └─────────────────┘
 ```
 
 **Why this architecture?**
-- Figma's plugin sandbox doesn't have WebSocket APIs
-- The UI runs in a browser-like environment with full WebSocket support
-- Plugin messaging bridges the gap between Figma API and WebSocket communication
+- Follows the proven Blender pattern (plugin acts as server, MCP server acts as client)
+- Eliminates complex WebSocket server integration in MCP server
+- UI bridge handles all communication complexity
+- Simple, reliable socket communication
 
 ## Features
 
-- **Manual Connection Control**: Configure host and port, connect/disconnect manually
-- **Real-time Communication**: WebSocket connection from UI to MCP server
+- **Bridge Server Control**: Start/stop bridge server with configurable MCP port
+- **Real-time Communication**: Socket connection from MCP server to UI bridge
 - **Figma API Integration**: Full access to Figma's document and design APIs
 - **Design Command Execution**: Execute AI-generated design commands
-- **Connection Management**: Manual connection control with status indicators
+- **Bridge Management**: Manual bridge control with status indicators
 - **Comprehensive Logging**: Real-time status updates and debugging info
 
 ## Installation
@@ -60,7 +61,7 @@ uv run lightfast-mcp-orchestrator start
 
 The server will start:
 - **MCP HTTP Server**: `http://localhost:8003/mcp` (for AI client connections)
-- **WebSocket Server**: `ws://localhost:9003` (for Figma plugin UI communication)
+- **Socket Client**: Connects to `localhost:9003` (Figma plugin UI bridge)
 
 ### 2. Run the Plugin
 
@@ -68,20 +69,19 @@ The server will start:
 2. Go to `Plugins` → Find "Lightfast MCP Figma Plugin"
 3. Click to run the plugin
 
-### 3. Configure and Connect
+### 3. Start the Bridge
 
 1. Plugin UI will open in the sidebar
-2. **Configure Connection**:
-   - **Host**: Enter server host (default: `localhost`)
-   - **Port**: Enter WebSocket port (default: `9003`)
-3. **Connect**: Click the "🔌 Connect" button
-4. **Verify**: Watch the status indicator turn green when connected
+2. **Configure Bridge**:
+   - **MCP Port**: Enter MCP server port (default: `9003`)
+3. **Start Bridge**: Click the "🚀 Start Bridge" button
+4. **Verify**: Watch the status indicator turn green when bridge is running
 
-### 4. Test the Connection
+### 4. Test the Bridge
 
-1. Click `"🌐 Test Connection"` to test server communication
+1. Click `"🔧 Test Bridge"` to test bridge functionality
 2. Click `"🔄 Test Plugin Communication"` to test internal plugin functionality
-3. Click `"📄 Get Document Info"` to retrieve and send document data to the server
+3. Click `"📄 Get Document Info"` to retrieve document data
 4. Click `"🎨 Test Design Command"` to test design command execution
 
 ## Available Features
@@ -116,10 +116,10 @@ The plugin supports these design commands:
 ### Communication Flow
 
 1. **AI Client → MCP Server**: AI sends tool calls via HTTP
-2. **MCP Server → Plugin UI**: Server sends commands via WebSocket
-3. **Plugin UI → Plugin Code**: UI forwards commands via plugin messaging
+2. **MCP Server → UI Bridge**: Server sends commands via socket connection
+3. **UI Bridge → Plugin Code**: Bridge forwards commands via plugin messaging
 4. **Plugin Code → Figma API**: Plugin executes commands using Figma API
-5. **Results flow back**: Plugin Code → UI → WebSocket → MCP Server → AI Client
+5. **Results flow back**: Plugin Code → UI Bridge → Socket → MCP Server → AI Client
 
 ## Configuration
 

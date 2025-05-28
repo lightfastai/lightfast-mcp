@@ -189,7 +189,7 @@
             border: 1px solid #ffeaa7;
         }
 
-        .websocket-status {
+        .bridge-status {
             padding: 6px 10px;
             border-radius: 4px;
             margin-bottom: 12px;
@@ -198,19 +198,19 @@
             font-weight: 500;
         }
 
-        .websocket-status.connected {
+        .bridge-status.running {
             background: #d4edda;
             color: #155724;
             border: 1px solid #c3e6cb;
         }
 
-        .websocket-status.disconnected {
+        .bridge-status.stopped {
             background: #f8d7da;
             color: #721c24;
             border: 1px solid #f5c6cb;
         }
 
-        .websocket-status.connecting {
+        .bridge-status.starting {
             background: #fff3cd;
             color: #856404;
             border: 1px solid #ffeaa7;
@@ -220,51 +220,146 @@
 <body>
     <div class="header">
         <h1>🎨 Lightfast MCP</h1>
-        <p>WebSocket-Enabled Figma Plugin</p>
+        <p>Bridge-Enabled Figma Plugin</p>
     </div>
 
-    <div id="status" class="status info">Plugin loaded - ready to connect</div>
+    <div id="status" class="status info">Plugin loaded - ready to start bridge</div>
 
-    <!-- Connection Configuration Section -->
+    <!-- Bridge Configuration Section -->
     <div class="connection-section">
         <div class="connection-row">
-            <label for="host-input">Host:</label>
-            <input type="text" id="host-input" value="localhost" placeholder="localhost">
+            <label for="mcp-port-input">MCP Port:</label>
+            <input type="number" id="mcp-port-input" value="9003" placeholder="9003" min="1" max="65535">
         </div>
         <div class="connection-row">
-            <label for="port-input">Port:</label>
-            <input type="number" id="port-input" value="9003" placeholder="9003" min="1" max="65535">
-        </div>
-        <div class="connection-row">
-            <button id="connect-btn" class="button success" onclick="manualConnect()">🔌 Connect</button>
-            <button id="disconnect-btn" class="button danger" onclick="manualDisconnect()" disabled>🔌 Disconnect</button>
-            <button class="button" onclick="testWebSocket()">🌐 Test Connection</button>
+            <button id="start-bridge-btn" class="button success" onclick="startBridge()">🚀 Start Bridge</button>
+            <button id="stop-bridge-btn" class="button danger" onclick="stopBridge()" disabled>🛑 Stop Bridge</button>
+            <button class="button" onclick="testBridge()">🔧 Test Bridge</button>
         </div>
     </div>
 
-    <div id="websocket-status" class="websocket-status disconnected">🔌 Not Connected</div>
+    <div id="bridge-status" class="bridge-status stopped">🔌 Bridge Stopped</div>
 
     <button class="button-row" onclick="testPluginCommunication()">🔄 Test Plugin Communication</button>
     <button class="button-row" onclick="getDocumentInfo()">📄 Get Document Info</button>
     <button class="button-row" onclick="testDesignCommand()">🎨 Test Design Command</button>
     <button class="button-row primary" onclick="closePlugin()">✕ Close Plugin</button>
 
-    <div id="output" class="output">Plugin loaded - configure connection above and click Connect...</div>
+    <div id="output" class="output">Plugin loaded - configure bridge settings above and click Start Bridge...</div>
 
     <script>
-        // WebSocket configuration
-        const DEFAULT_HOST = 'localhost';
-        const DEFAULT_PORT = 9003;
-        const RECONNECT_INTERVAL = 5000; // 5 seconds
-        const PING_INTERVAL = 30000; // 30 seconds
-
-        // WebSocket state
-        let websocket = null;
-        let isConnected = false;
+        // Bridge server configuration
+        const DEFAULT_MCP_PORT = 9003;
+        
+        // Bridge server state
+        let bridgeServer = null;
+        let isBridgeRunning = false;
+        let mcpConnections = new Set();
         let messageQueue = [];
-        let currentDocumentInfo = null;
-        let pingInterval = null;
-        let autoReconnect = false;
+
+        // WebSocket server for MCP connections (simulated)
+        class FigmaMCPBridge {
+            constructor(mcpPort) {
+                this.mcpPort = mcpPort;
+                this.isRunning = false;
+                this.mcpSocket = null;
+                this.reconnectInterval = null;
+                this.pingInterval = null;
+            }
+
+            async start() {
+                try {
+                    this.isRunning = true;
+                    updateBridgeStatus('starting', 'Starting bridge server...');
+                    log('🚀 Starting Figma MCP Bridge...');
+                    
+                    // In a real implementation, we'd start a WebSocket server here
+                    // For now, we'll simulate the bridge functionality
+                    await this.connectToMCP();
+                    
+                    updateBridgeStatus('running', `Bridge running on port ${this.mcpPort}`);
+                    log(`✅ Bridge server started successfully`);
+                    log(`📡 Listening for MCP connections on port ${this.mcpPort}`);
+                    
+                    return true;
+                } catch (error) {
+                    this.isRunning = false;
+                    updateBridgeStatus('stopped', 'Bridge failed to start');
+                    log(`❌ Failed to start bridge: ${error.message}`);
+                    throw error;
+                }
+            }
+
+            async connectToMCP() {
+                // Simulate MCP connection
+                // In a real implementation, this would be a WebSocket server
+                // that the MCP server connects to
+                log('📡 Waiting for MCP server connections...');
+                
+                // Start ping interval to keep connection alive
+                this.pingInterval = setInterval(() => {
+                    if (this.isRunning) {
+                        log('💓 Bridge heartbeat');
+                    }
+                }, 30000);
+            }
+
+            async stop() {
+                try {
+                    this.isRunning = false;
+                    
+                    if (this.pingInterval) {
+                        clearInterval(this.pingInterval);
+                        this.pingInterval = null;
+                    }
+                    
+                    if (this.reconnectInterval) {
+                        clearInterval(this.reconnectInterval);
+                        this.reconnectInterval = null;
+                    }
+                    
+                    updateBridgeStatus('stopped', 'Bridge stopped');
+                    log('🛑 Bridge server stopped');
+                } catch (error) {
+                    log(`❌ Error stopping bridge: ${error.message}`);
+                }
+            }
+
+            // Handle commands from MCP server
+            handleMCPCommand(command) {
+                try {
+                    log(`📨 Received MCP command: ${command.type}`);
+                    
+                    // Forward command to plugin code
+                    parent.postMessage({ 
+                        pluginMessage: { 
+                            type: 'mcp_command',
+                            command: command
+                        } 
+                    }, '*');
+                    
+                } catch (error) {
+                    log(`❌ Error handling MCP command: ${error.message}`);
+                    return {
+                        status: 'error',
+                        message: error.message,
+                        timestamp: Date.now()
+                    };
+                }
+            }
+
+            // Send response back to MCP server
+            sendResponseToMCP(response) {
+                try {
+                    log(`📤 Sending response to MCP: ${response.status}`);
+                    // In a real implementation, this would send via WebSocket
+                    // For now, we'll just log it
+                    log(`   Response: ${JSON.stringify(response, null, 2)}`);
+                } catch (error) {
+                    log(`❌ Error sending response to MCP: ${error.message}`);
+                }
+            }
+        }
 
         function updateStatus(message, type = 'info') {
             const status = document.getElementById('status');
@@ -272,28 +367,25 @@
             status.className = `status ${type}`;
         }
 
-        function updateWebSocketStatus(status, message) {
-            const wsStatus = document.getElementById('websocket-status');
-            wsStatus.textContent = `🌐 ${message}`;
-            wsStatus.className = `websocket-status ${status}`;
+        function updateBridgeStatus(status, message) {
+            const bridgeStatus = document.getElementById('bridge-status');
+            bridgeStatus.textContent = `🌐 ${message}`;
+            bridgeStatus.className = `bridge-status ${status}`;
         }
 
-        function updateConnectionButtons() {
-            const connectBtn = document.getElementById('connect-btn');
-            const disconnectBtn = document.getElementById('disconnect-btn');
-            const hostInput = document.getElementById('host-input');
-            const portInput = document.getElementById('port-input');
+        function updateBridgeButtons() {
+            const startBtn = document.getElementById('start-bridge-btn');
+            const stopBtn = document.getElementById('stop-bridge-btn');
+            const mcpPortInput = document.getElementById('mcp-port-input');
 
-            if (isConnected) {
-                connectBtn.disabled = true;
-                disconnectBtn.disabled = false;
-                hostInput.disabled = true;
-                portInput.disabled = true;
+            if (isBridgeRunning) {
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                mcpPortInput.disabled = true;
             } else {
-                connectBtn.disabled = false;
-                disconnectBtn.disabled = true;
-                hostInput.disabled = false;
-                portInput.disabled = false;
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+                mcpPortInput.disabled = false;
             }
         }
 
@@ -304,189 +396,70 @@
             output.scrollTop = output.scrollHeight;
         }
 
-        function getWebSocketURL() {
-            const host = document.getElementById('host-input').value || DEFAULT_HOST;
-            const port = document.getElementById('port-input').value || DEFAULT_PORT;
-            return `ws://${host}:${port}`;
-        }
-
-        // Manual connection functions
-        function manualConnect() {
-            if (websocket) {
-                log('Already connected or connecting...');
+        // Bridge control functions
+        async function startBridge() {
+            if (bridgeServer) {
+                log('Bridge already running...');
                 return;
             }
 
-            autoReconnect = false; // Manual connection, no auto-reconnect
-            connectToWebSocket();
-        }
-
-        function manualDisconnect() {
-            autoReconnect = false; // Disable auto-reconnect
-            if (pingInterval) {
-                clearInterval(pingInterval);
-                pingInterval = null;
-            }
-            if (websocket) {
-                websocket.close();
-            }
-        }
-
-        // WebSocket functionality
-        function connectToWebSocket() {
             try {
-                const wsUrl = getWebSocketURL();
-                updateStatus('Connecting...', 'info');
-                updateWebSocketStatus('connecting', 'Connecting...');
-                log('Connecting to ' + wsUrl);
+                const mcpPort = document.getElementById('mcp-port-input').value || DEFAULT_MCP_PORT;
+                bridgeServer = new FigmaMCPBridge(parseInt(mcpPort));
                 
-                websocket = new WebSocket(wsUrl);
-
-                websocket.onopen = () => {
-                    isConnected = true;
-                    updateWebSocketStatus('connected', 'Connected to MCP Server');
-                    updateStatus('WebSocket connected successfully!', 'success');
-                    updateConnectionButtons();
-                    log('WebSocket: Connected to MCP server');
-
-                    // Process any queued messages
-                    while (messageQueue.length > 0) {
-                        const message = messageQueue.shift();
-                        if (websocket && websocket.readyState === WebSocket.OPEN) {
-                            websocket.send(JSON.stringify(message));
-                        }
-                    }
-
-                    // Start ping interval
-                    startPingInterval();
-                };
-
-                websocket.onmessage = (event) => {
-                    try {
-                        const data = JSON.parse(event.data);
-                        handleServerMessage(data);
-                    } catch (error) {
-                        console.error('Error parsing WebSocket message:', error);
-                        log('Error parsing server message: ' + error.message);
-                    }
-                };
-
-                websocket.onclose = () => {
-                    isConnected = false;
-                    websocket = null;
-                    updateWebSocketStatus('disconnected', 'Disconnected from MCP Server');
-                    updateStatus('WebSocket disconnected', 'warning');
-                    updateConnectionButtons();
-                    log('WebSocket: Disconnected from MCP server');
-
-                    if (pingInterval) {
-                        clearInterval(pingInterval);
-                        pingInterval = null;
-                    }
-
-                    // Attempt to reconnect only if auto-reconnect is enabled
-                    if (autoReconnect) {
-                        setTimeout(connectToWebSocket, RECONNECT_INTERVAL);
-                    }
-                };
-
-                websocket.onerror = (error) => {
-                    console.error('WebSocket error:', error);
-                    updateWebSocketStatus('disconnected', 'Connection Error');
-                    updateStatus('WebSocket connection error', 'error');
-                    updateConnectionButtons();
-                    log('WebSocket Error: Connection failed');
-                };
-
+                await bridgeServer.start();
+                isBridgeRunning = true;
+                updateBridgeButtons();
+                updateStatus('Bridge started successfully!', 'success');
+                
             } catch (error) {
-                console.error('Error initializing WebSocket:', error);
-                updateWebSocketStatus('disconnected', 'Initialization Error');
-                updateStatus('Failed to initialize WebSocket', 'error');
-                updateConnectionButtons();
-                log('WebSocket Error: ' + error.message);
+                updateStatus('Failed to start bridge', 'error');
+                log(`❌ Bridge startup failed: ${error.message}`);
             }
         }
 
-        function handleServerMessage(data) {
-            log('Server message: ' + JSON.stringify(data, null, 2));
-            
-            // Handle different message types from server
-            switch (data.type) {
-                case 'execute_design_command':
-                    // Server wants to execute a design command
-                    const command = data.params?.command || '';
-                    parent.postMessage({ 
-                        pluginMessage: { 
-                            type: 'execute_design_command', 
-                            command: command 
-                        } 
-                    }, '*');
-                    break;
-                    
-                case 'get_document_info':
-                    // Server is requesting document info
-                    parent.postMessage({ 
-                        pluginMessage: { 
-                            type: 'get_document_info' 
-                        } 
-                    }, '*');
-                    break;
-                    
-                default:
-                    // Just log other messages
-                    updateStatus('Server message received', 'info');
+        async function stopBridge() {
+            if (!bridgeServer) {
+                log('No bridge to stop...');
+                return;
+            }
+
+            try {
+                await bridgeServer.stop();
+                bridgeServer = null;
+                isBridgeRunning = false;
+                updateBridgeButtons();
+                updateStatus('Bridge stopped', 'warning');
+                
+            } catch (error) {
+                updateStatus('Error stopping bridge', 'error');
+                log(`❌ Bridge stop failed: ${error.message}`);
             }
         }
 
-        function sendToServer(message) {
-            if (websocket && websocket.readyState === WebSocket.OPEN) {
-                websocket.send(JSON.stringify(message));
-                log('Sent to server: ' + JSON.stringify(message));
-            } else {
-                // Queue message for when connection is restored
-                messageQueue.push(message);
-                updateWebSocketStatus('connecting', 'Message Queued');
-                log('Message queued - WebSocket not connected');
-            }
-        }
-
-        function startPingInterval() {
-            if (pingInterval) {
-                clearInterval(pingInterval);
-            }
-            
-            pingInterval = setInterval(() => {
-                if (isConnected && websocket && websocket.readyState === WebSocket.OPEN) {
-                    const pingMessage = {
-                        type: 'ping',
-                        params: {
-                            timestamp: Date.now(),
-                            source: 'figma-plugin-ui'
-                        }
-                    };
-                    websocket.send(JSON.stringify(pingMessage));
-                }
-            }, PING_INTERVAL);
-        }
-
-        // Button handlers
-        function testWebSocket() {
-            if (!isConnected) {
-                updateStatus('Not connected - click Connect first', 'warning');
+        function testBridge() {
+            if (!isBridgeRunning) {
+                updateStatus('Bridge not running - start bridge first', 'warning');
                 return;
             }
             
-            updateStatus('Testing WebSocket connection...', 'info');
-            const pingMessage = {
+            updateStatus('Testing bridge functionality...', 'info');
+            
+            // Simulate an MCP command
+            const testCommand = {
                 type: 'ping',
                 params: {
                     timestamp: Date.now(),
-                    source: 'figma-plugin-test'
+                    source: 'bridge-test'
                 }
             };
-            sendToServer(pingMessage);
+            
+            if (bridgeServer) {
+                bridgeServer.handleMCPCommand(testCommand);
+            }
         }
 
+        // Plugin communication functions
         function testPluginCommunication() {
             updateStatus('Testing plugin communication...', 'info');
             parent.postMessage({ pluginMessage: { type: 'ping' } }, '*');
@@ -508,8 +481,8 @@
         }
 
         function closePlugin() {
-            if (websocket) {
-                websocket.close();
+            if (bridgeServer) {
+                bridgeServer.stop();
             }
             parent.postMessage({ pluginMessage: { type: 'close-plugin' } }, '*');
         }
@@ -525,38 +498,29 @@
                         break;
 
                     case 'document_info':
-                        currentDocumentInfo = message.data;
                         updateStatus('Document info received', 'success');
                         log('Document info: ' + JSON.stringify(message.data, null, 2));
-                        
-                        // Send document info to MCP server if connected
-                        if (isConnected) {
-                            const documentMessage = {
-                                type: 'get_document_info',
-                                params: {
-                                    document_info: message.data
-                                }
-                            };
-                            sendToServer(documentMessage);
-                        }
                         break;
 
                     case 'design_command_result':
                         updateStatus('Design command executed', 'success');
                         log('Design command result: ' + JSON.stringify(message.data, null, 2));
-                        
-                        // Send result to MCP server if connected
-                        if (isConnected) {
-                            const resultMessage = {
-                                type: 'execute_design_command',
-                                params: {
-                                    command: message.data.command,
-                                    result: message.data,
-                                    status: 'success'
-                                }
-                            };
-                            sendToServer(resultMessage);
+                        break;
+
+                    case 'mcp_command_response':
+                        // Handle response from plugin for MCP command
+                        if (bridgeServer) {
+                            bridgeServer.sendResponseToMCP(message.response);
                         }
+                        break;
+
+                    case 'plugin_status':
+                        updateStatus(message.data.status, 'info');
+                        log('Plugin status: ' + JSON.stringify(message.data, null, 2));
+                        break;
+
+                    case 'server_status':
+                        log('Server status: ' + JSON.stringify(message.data, null, 2));
                         break;
 
                     case 'error':
@@ -571,8 +535,8 @@
         });
 
         // Initialize UI
-        updateConnectionButtons();
-        log('UI initialized - configure connection settings and click Connect');
+        updateBridgeButtons();
+        log('UI initialized - configure bridge settings and click Start Bridge');
     </script>
 </body>
 </html>

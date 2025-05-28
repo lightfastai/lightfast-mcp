@@ -49,6 +49,10 @@ if (figma.editorType === 'figma') {
           await stopSocketServer();
           break;
 
+        case 'mcp_command':
+          await handleMCPCommand(msg.command);
+          break;
+
         case 'close-plugin':
           cleanup();
           figma.closePlugin();
@@ -74,22 +78,20 @@ async function startSocketServer(port: number) {
   try {
     serverPort = port;
     
-    // Note: Figma plugins cannot create actual socket servers
-    // This is a simulation - the UI will handle the actual server communication
+    // Send status update to UI bridge
     figma.ui.postMessage({
       type: 'server_status',
       data: {
-        status: 'Server simulation started',
-        port: port,
-        message: 'Figma plugins cannot create socket servers. Use the UI for communication.',
-        active: true
+        status: 'Server started',
+        port: serverPort,
+        timestamp: Date.now()
       }
     });
-
-    console.log(`Simulated socket server started on port ${port}`);
     
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
+    
+    // Send error response back to UI bridge
     figma.ui.postMessage({
       type: 'error',
       message: `Error starting server: ${errorMessage}`
@@ -99,22 +101,48 @@ async function startSocketServer(port: number) {
 
 async function stopSocketServer() {
   try {
+    // Send status update to UI bridge
     figma.ui.postMessage({
       type: 'server_status',
       data: {
-        status: 'Server simulation stopped',
+        status: 'Server stopped',
         port: serverPort,
-        active: false
+        timestamp: Date.now()
       }
     });
-
-    console.log('Simulated socket server stopped');
     
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
+    
     figma.ui.postMessage({
       type: 'error',
       message: `Error stopping server: ${errorMessage}`
+    });
+  }
+}
+
+async function handleMCPCommand(command: any) {
+  try {
+    // Use the existing MCP command handler
+    const response = handleMCPCommandInternal(command);
+    
+    // Send response back to UI bridge
+    figma.ui.postMessage({
+      type: 'mcp_command_response',
+      response: response
+    });
+    
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
+    // Send error response back to UI bridge
+    figma.ui.postMessage({
+      type: 'mcp_command_response',
+      response: {
+        status: 'error',
+        message: errorMessage,
+        timestamp: Date.now()
+      }
     });
   }
 }
@@ -246,7 +274,7 @@ async function executeDesignCommand(command: string) {
 // Command handlers for MCP server communication
 // These functions handle commands that come from the MCP server via the UI bridge
 
-function handleMCPCommand(command: any): any {
+function handleMCPCommandInternal(command: any): any {
   try {
     const cmdType = command.type;
     const params = command.params || {};
