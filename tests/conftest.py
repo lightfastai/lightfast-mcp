@@ -54,6 +54,18 @@ def sample_mock_config():
 
 
 @pytest.fixture
+def sample_figma_config():
+    """Provide a sample Figma server configuration."""
+    from lightfast_mcp.core.base_server import ServerConfig
+
+    return ServerConfig(
+        name="test-figma",
+        description="Test Figma server",
+        config={"type": "figma", "figma_host": "localhost", "figma_port": 9003},
+    )
+
+
+@pytest.fixture
 def sample_multi_server_configs():
     """Provide multiple server configurations for testing."""
     from lightfast_mcp.core.base_server import ServerConfig

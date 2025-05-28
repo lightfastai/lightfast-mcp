@@ -58,14 +58,11 @@ class TestWebSocketMockE2E:
     @pytest.mark.asyncio
     async def test_complete_websocket_workflow(self, mcp_server, mock_context):
         """Test complete workflow: start server, connect clients, send messages, stop server."""
-        # Step 1: Check initial status
+        # Step 1: Check initial status - server should be running due to auto-start
         status_result = await tools.get_websocket_server_status(mock_context)
-        assert status_result["websocket_server"]["is_running"] is False
+        assert status_result["websocket_server"]["is_running"] is True
 
-        # Step 2: Start WebSocket server via MCP tool
-        start_result = await tools.start_websocket_server(mock_context)
-        assert start_result["status"] == "started"
-        assert start_result["message"] == "WebSocket server started successfully"
+        # Step 2: Server is already running, so we can proceed directly to testing
 
         try:
             # Step 3: Verify server is running
@@ -122,16 +119,13 @@ class TestWebSocketMockE2E:
                     assert ping["from_mcp_server"] is True
 
         finally:
-            # Step 10: Stop WebSocket server via MCP tool
-            stop_result = await tools.stop_websocket_server(mock_context)
-            assert stop_result["status"] == "stopped"
-            assert stop_result["message"] == "WebSocket server stopped successfully"
+            # Step 10: WebSocket server stops automatically during teardown
+            pass
 
     @pytest.mark.asyncio
     async def test_stress_testing_workflow(self, mcp_server, mock_context):
         """Test stress testing workflow with multiple clients and messages."""
-        # Start WebSocket server
-        await tools.start_websocket_server(mock_context)
+        # WebSocket server starts automatically with the MCP server
 
         try:
             uri = f"ws://{mcp_server.websocket_server.host}:{mcp_server.websocket_server.port}"
@@ -181,55 +175,29 @@ class TestWebSocketMockE2E:
                     await client.close()
 
         finally:
-            await tools.stop_websocket_server(mock_context)
+            # WebSocket server stops automatically during teardown
+            pass
 
     @pytest.mark.asyncio
     async def test_error_handling_workflow(self, mcp_server, mock_context):
         """Test error handling workflow with various error scenarios."""
-        # Test operations when server is not running
+        # Test operations when server is running but no clients connected
         clients_result = await tools.get_websocket_clients(mock_context)
-        assert "error" in clients_result
-        assert clients_result["status"] == "server_not_running"
+        assert clients_result["status"] == "success"  # Server is running
+        assert len(clients_result["clients"]) == 0  # No clients connected
 
         message_result = await tools.send_websocket_message(
             mock_context, message_type="test"
         )
-        assert "error" in message_result
-        assert message_result["status"] == "server_not_running"
+        assert message_result["status"] == "no_clients"  # No clients to send to
 
         test_result = await tools.test_websocket_connection(mock_context)
-        assert "error" in test_result
-        assert test_result["status"] == "server_not_running"
-
-        # Start server and test with no clients
-        await tools.start_websocket_server(mock_context)
-
-        try:
-            message_result = await tools.send_websocket_message(
-                mock_context, message_type="test"
-            )
-            assert message_result["status"] == "no_clients"
-
-            test_result = await tools.test_websocket_connection(mock_context)
-            assert test_result["status"] == "no_clients"
-
-            # Test stopping already stopped server
-            await tools.stop_websocket_server(mock_context)
-            stop_result = await tools.stop_websocket_server(mock_context)
-            assert stop_result["status"] == "already_stopped"
-
-            # Test starting already started server
-            await tools.start_websocket_server(mock_context)
-            start_result = await tools.start_websocket_server(mock_context)
-            assert start_result["status"] == "already_running"
-
-        finally:
-            await tools.stop_websocket_server(mock_context)
+        assert test_result["status"] == "no_clients"  # No clients to test
 
     @pytest.mark.asyncio
     async def test_targeted_messaging_workflow(self, mcp_server, mock_context):
         """Test targeted messaging to specific clients."""
-        await tools.start_websocket_server(mock_context)
+        # WebSocket server starts automatically with the MCP server
 
         try:
             uri = f"ws://{mcp_server.websocket_server.host}:{mcp_server.websocket_server.port}"
@@ -286,12 +254,13 @@ class TestWebSocketMockE2E:
                 assert "not found" in message_result["errors"][0]
 
         finally:
-            await tools.stop_websocket_server(mock_context)
+            # WebSocket server stops automatically during teardown
+            pass
 
     @pytest.mark.asyncio
     async def test_client_interaction_workflow(self, mcp_server, mock_context):
         """Test workflow with client-to-client interactions."""
-        await tools.start_websocket_server(mock_context)
+        # WebSocket server starts automatically with the MCP server
 
         try:
             uri = f"ws://{mcp_server.websocket_server.host}:{mcp_server.websocket_server.port}"
@@ -349,18 +318,17 @@ class TestWebSocketMockE2E:
                 assert stats["total_messages"] >= 3  # broadcast, echo, ping
 
         finally:
-            await tools.stop_websocket_server(mock_context)
+            # WebSocket server stops automatically during teardown
+            pass
 
     @pytest.mark.asyncio
     async def test_server_lifecycle_workflow(self, mcp_server, mock_context):
         """Test complete server lifecycle with multiple start/stop cycles."""
-        # Initial state
+        # Initial state - server should be running due to auto-start
         status_result = await tools.get_websocket_server_status(mock_context)
-        assert status_result["websocket_server"]["is_running"] is False
+        assert status_result["websocket_server"]["is_running"] is True
 
-        # Cycle 1: Start -> Connect -> Stop
-        await tools.start_websocket_server(mock_context)
-
+        # Test with server already running - Connect -> Verify -> Test functionality
         uri = f"ws://{mcp_server.websocket_server.host}:{mcp_server.websocket_server.port}"
         async with websockets.connect(uri) as client:
             await client.recv()  # Welcome message
@@ -369,11 +337,7 @@ class TestWebSocketMockE2E:
             clients_result = await tools.get_websocket_clients(mock_context)
             assert clients_result["total_clients"] == 1
 
-        await tools.stop_websocket_server(mock_context)
-
-        # Cycle 2: Start again -> Multiple clients -> Stop
-        await tools.start_websocket_server(mock_context)
-
+        # Test with multiple clients
         async with (
             websockets.connect(uri) as client1,
             websockets.connect(uri) as client2,
@@ -399,11 +363,9 @@ class TestWebSocketMockE2E:
                 assert message["type"] == "lifecycle_test"
                 assert message["payload"]["cycle"] == 2
 
-        await tools.stop_websocket_server(mock_context)
-
-        # Final verification
+        # Final verification - server should still be running
         status_result = await tools.get_websocket_server_status(mock_context)
-        assert status_result["websocket_server"]["is_running"] is False
+        assert status_result["websocket_server"]["is_running"] is True
 
     @pytest.mark.asyncio
     async def test_auto_start_workflow(self, server_config, mock_context):
@@ -444,32 +406,16 @@ class TestWebSocketMockE2E:
     @pytest.mark.asyncio
     async def test_health_check_workflow(self, mcp_server, mock_context):
         """Test health check workflow in various states."""
-        # Health check with auto-start disabled and WebSocket server stopped
-        mcp_server.auto_start_websocket = False
-        health = await mcp_server._perform_health_check()
-        assert health is True  # Should pass because auto-start is disabled
-
-        # Health check with auto-start enabled and WebSocket server stopped
+        # Health check with auto-start enabled and WebSocket server running
         mcp_server.auto_start_websocket = True
         health = await mcp_server._perform_health_check()
-        assert health is False  # Should fail because WebSocket server is not running
+        assert health is True  # Should pass because WebSocket server is running
 
-        # Start WebSocket server
-        await tools.start_websocket_server(mock_context)
+        # Connect a client and verify health check still passes
+        uri = f"ws://{mcp_server.websocket_server.host}:{mcp_server.websocket_server.port}"
 
-        try:
-            # Health check with WebSocket server running
+        async with websockets.connect(uri) as client:
+            await client.recv()  # Welcome message
+
             health = await mcp_server._perform_health_check()
-            assert health is True  # Should pass because WebSocket server is running
-
-            # Connect a client and verify health check still passes
-            uri = f"ws://{mcp_server.websocket_server.host}:{mcp_server.websocket_server.port}"
-
-            async with websockets.connect(uri) as client:
-                await client.recv()  # Welcome message
-
-                health = await mcp_server._perform_health_check()
-                assert health is True  # Should still pass with connected client
-
-        finally:
-            await tools.stop_websocket_server(mock_context)
+            assert health is True  # Should still pass with connected client

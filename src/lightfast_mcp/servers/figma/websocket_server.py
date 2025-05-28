@@ -522,6 +522,7 @@ class FigmaWebSocketServer:
             "is_running": self.is_running,
             "url": f"ws://{self.host}:{self.port}",
             "clients_connected": len(self.clients),
+            "total_clients": len(self.clients),
             "stats": {
                 **self.stats,
                 "start_time": self.stats["start_time"].isoformat()

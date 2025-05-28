@@ -390,7 +390,7 @@ async def broadcast_design_command(ctx: Context, command: str) -> Dict[str, Any]
         )
 
         return {
-            "status": "broadcast_sent",
+            "status": "command_broadcast",
             "command": command,
             "sent_to_plugins": sent_count,
             "total_plugins": len(ws_server.clients),

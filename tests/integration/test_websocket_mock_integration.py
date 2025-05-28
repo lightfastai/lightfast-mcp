@@ -277,6 +277,10 @@ class TestWebSocketMockIntegration:
     @pytest.mark.asyncio
     async def test_mcp_server_health_check_integration(self, mcp_server):
         """Test MCP server health check with real WebSocket server."""
+        # First, stop the WebSocket server to test failure case
+        if mcp_server.websocket_server.is_running:
+            await mcp_server.websocket_server.stop()
+
         # Test health check with WebSocket server stopped
         mcp_server.auto_start_websocket = True
         health = await mcp_server._perform_health_check()
