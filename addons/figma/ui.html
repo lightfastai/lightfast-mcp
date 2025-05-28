@@ -189,7 +189,7 @@
             border: 1px solid #ffeaa7;
         }
 
-        .bridge-status {
+        .connection-status {
             padding: 6px 10px;
             border-radius: 4px;
             margin-bottom: 12px;
@@ -198,19 +198,19 @@
             font-weight: 500;
         }
 
-        .bridge-status.running {
+        .connection-status.connected {
             background: #d4edda;
             color: #155724;
             border: 1px solid #c3e6cb;
         }
 
-        .bridge-status.stopped {
+        .connection-status.disconnected {
             background: #f8d7da;
             color: #721c24;
             border: 1px solid #f5c6cb;
         }
 
-        .bridge-status.starting {
+        .connection-status.connecting {
             background: #fff3cd;
             color: #856404;
             border: 1px solid #ffeaa7;
@@ -220,40 +220,40 @@
 <body>
     <div class="header">
         <h1>🎨 Lightfast MCP</h1>
-        <p>Plugin-Based WebSocket Server</p>
+        <p>Plugin-Based WebSocket Client</p>
     </div>
 
-    <div id="status" class="status info">Plugin loaded - WebSocket server in plugin code</div>
+    <div id="status" class="status info">Plugin loaded - WebSocket client ready to connect</div>
 
-    <!-- WebSocket Server Configuration Section -->
+    <!-- WebSocket Client Configuration Section -->
     <div class="connection-section">
         <div class="connection-row">
-            <label for="ws-port-input">WS Port:</label>
-            <input type="number" id="ws-port-input" value="9003" placeholder="9003" min="1" max="65535">
+            <label for="server-url-input">Server URL:</label>
+            <input type="text" id="server-url-input" value="ws://localhost:9003" placeholder="ws://localhost:9003">
         </div>
         <div class="connection-row">
-            <button id="start-server-btn" class="button success" onclick="startWebSocketServer()">🚀 Start Server</button>
-            <button id="stop-server-btn" class="button danger" onclick="stopWebSocketServer()" disabled>🛑 Stop Server</button>
-            <button class="button" onclick="testWebSocketServer()">🔧 Test Server</button>
+            <button id="connect-btn" class="button success" onclick="connectToServer()">🔌 Connect</button>
+            <button id="disconnect-btn" class="button danger" onclick="disconnectFromServer()" disabled>🔌 Disconnect</button>
+            <button class="button" onclick="testConnection()">🔧 Test Connection</button>
         </div>
     </div>
 
-    <div id="server-status" class="server-status stopped">🔌 WebSocket Server Stopped</div>
+    <div id="connection-status" class="connection-status disconnected">🔌 Disconnected from MCP Server</div>
 
     <button class="button-row" onclick="testPluginCommunication()">🔄 Test Plugin Communication</button>
     <button class="button-row" onclick="getDocumentInfo()">📄 Get Document Info</button>
     <button class="button-row" onclick="testDesignCommand()">🎨 Test Design Command</button>
-    <button class="button-row" onclick="simulateMCPConnection()">🤖 Simulate MCP Connection</button>
+    <button class="button-row" onclick="simulateServerCommand()">🤖 Simulate Server Command</button>
     <button class="button-row primary" onclick="closePlugin()">✕ Close Plugin</button>
 
-    <div id="output" class="output">Plugin loaded - WebSocket server implemented in plugin code...</div>
+    <div id="output" class="output">Plugin loaded - WebSocket client ready to connect to MCP server...</div>
 
     <script>
-        // WebSocket server configuration
-        const DEFAULT_WS_PORT = 9003;
+        // WebSocket client configuration
+        const DEFAULT_SERVER_URL = "ws://localhost:9003";
         
-        // WebSocket server state
-        let isServerRunning = false;
+        // Connection state
+        let isConnected = false;
 
         function updateStatus(message, type = 'info') {
             const status = document.getElementById('status');
@@ -261,25 +261,25 @@
             status.className = `status ${type}`;
         }
 
-        function updateServerStatus(status, message) {
-            const serverStatus = document.getElementById('server-status');
-            serverStatus.textContent = `🌐 ${message}`;
-            serverStatus.className = `bridge-status ${status}`;
+        function updateConnectionStatus(status, message) {
+            const connectionStatus = document.getElementById('connection-status');
+            connectionStatus.textContent = `🔌 ${message}`;
+            connectionStatus.className = `connection-status ${status}`;
         }
 
-        function updateServerButtons() {
-            const startBtn = document.getElementById('start-server-btn');
-            const stopBtn = document.getElementById('stop-server-btn');
-            const wsPortInput = document.getElementById('ws-port-input');
+        function updateConnectionButtons() {
+            const connectBtn = document.getElementById('connect-btn');
+            const disconnectBtn = document.getElementById('disconnect-btn');
+            const serverUrlInput = document.getElementById('server-url-input');
 
-            if (isServerRunning) {
-                startBtn.disabled = true;
-                stopBtn.disabled = false;
-                wsPortInput.disabled = true;
+            if (isConnected) {
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+                serverUrlInput.disabled = true;
             } else {
-                startBtn.disabled = false;
-                stopBtn.disabled = true;
-                wsPortInput.disabled = false;
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+                serverUrlInput.disabled = false;
             }
         }
 
@@ -290,48 +290,56 @@
             output.scrollTop = output.scrollHeight;
         }
 
-        // WebSocket Server control functions (delegated to plugin code)
-        function startWebSocketServer() {
-            const wsPort = document.getElementById('ws-port-input').value || DEFAULT_WS_PORT;
+        // WebSocket Client control functions
+        function connectToServer() {
+            const serverUrl = document.getElementById('server-url-input').value || DEFAULT_SERVER_URL;
             
-            updateStatus('Starting WebSocket server in plugin...', 'info');
-            updateServerStatus('starting', 'Starting WebSocket server...');
+            updateStatus('Connecting to MCP server...', 'info');
+            updateConnectionStatus('connecting', 'Connecting to MCP server...');
             
             parent.postMessage({ 
                 pluginMessage: { 
-                    type: 'start_websocket_server',
-                    port: parseInt(wsPort)
+                    type: 'connect_to_server',
+                    url: serverUrl
                 } 
             }, '*');
         }
 
-        function stopWebSocketServer() {
-            updateStatus('Stopping WebSocket server...', 'warning');
-            updateServerStatus('stopping', 'Stopping WebSocket server...');
+        function disconnectFromServer() {
+            updateStatus('Disconnecting from MCP server...', 'warning');
+            updateConnectionStatus('disconnecting', 'Disconnecting from MCP server...');
             
             parent.postMessage({ 
                 pluginMessage: { 
-                    type: 'stop_websocket_server'
+                    type: 'disconnect_from_server'
                 } 
             }, '*');
         }
 
-        function testWebSocketServer() {
-            updateStatus('Testing WebSocket server...', 'info');
+        function testConnection() {
+            updateStatus('Testing connection to MCP server...', 'info');
             
             parent.postMessage({ 
                 pluginMessage: { 
-                    type: 'test_websocket_server'
+                    type: 'test_connection'
                 } 
             }, '*');
         }
 
-        function simulateMCPConnection() {
-            updateStatus('Simulating MCP connection...', 'info');
+        function simulateServerCommand() {
+            updateStatus('Simulating server command...', 'info');
+            
+            // Simulate a design command from the MCP server
+            const testCommand = {
+                type: 'execute_design_command',
+                command: 'create rectangle',
+                request_id: Date.now()
+            };
             
             parent.postMessage({ 
                 pluginMessage: { 
-                    type: 'simulate_mcp_connection'
+                    type: 'simulate_server_command',
+                    command: testCommand
                 } 
             }, '*');
         }
@@ -371,30 +379,30 @@
                         log('Pong received - plugin communication working');
                         break;
 
-                    case 'websocket_server_started':
-                        isServerRunning = true;
-                        updateServerButtons();
-                        updateServerStatus('running', 'WebSocket Server Running (Simulation)');
-                        updateStatus('WebSocket server started in plugin!', 'success');
-                        log('WebSocket server started: ' + JSON.stringify(message.data, null, 2));
+                    case 'websocket_connected':
+                        isConnected = true;
+                        updateConnectionButtons();
+                        updateConnectionStatus('connected', 'Connected to MCP Server');
+                        updateStatus('Connected to MCP server!', 'success');
+                        log('WebSocket client connected: ' + JSON.stringify(message.data, null, 2));
                         break;
 
-                    case 'websocket_server_stopped':
-                        isServerRunning = false;
-                        updateServerButtons();
-                        updateServerStatus('stopped', 'WebSocket Server Stopped');
-                        updateStatus('WebSocket server stopped', 'warning');
-                        log('WebSocket server stopped: ' + JSON.stringify(message.data, null, 2));
+                    case 'websocket_disconnected':
+                        isConnected = false;
+                        updateConnectionButtons();
+                        updateConnectionStatus('disconnected', 'Disconnected from MCP Server');
+                        updateStatus('Disconnected from MCP server', 'warning');
+                        log('WebSocket client disconnected: ' + JSON.stringify(message.data, null, 2));
                         break;
 
-                    case 'websocket_test_result':
-                        updateStatus('WebSocket server test completed!', 'success');
-                        log('WebSocket test result: ' + JSON.stringify(message.data, null, 2));
+                    case 'connection_test_result':
+                        updateStatus('Connection test completed!', 'success');
+                        log('Connection test result: ' + JSON.stringify(message.data, null, 2));
                         break;
 
-                    case 'mcp_simulation_result':
-                        updateStatus('MCP connection simulation completed!', 'success');
-                        log('MCP simulation result: ' + JSON.stringify(message.data, null, 2));
+                    case 'server_command_simulated':
+                        updateStatus('Server command simulation completed!', 'success');
+                        log('Server command simulation result: ' + JSON.stringify(message.data, null, 2));
                         break;
 
                     case 'document_info':
@@ -407,24 +415,24 @@
                         log('Design command result: ' + JSON.stringify(message.data, null, 2));
                         break;
 
-                    case 'server_status':
-                        log('Server status update: ' + JSON.stringify(message.data, null, 2));
-                        if (message.data.isRunning) {
-                            isServerRunning = true;
-                            updateServerStatus('running', message.data.status);
+                    case 'connection_status':
+                        log('Connection status update: ' + JSON.stringify(message.data, null, 2));
+                        if (message.data.isConnected) {
+                            isConnected = true;
+                            updateConnectionStatus('connected', message.data.status);
                         } else {
-                            isServerRunning = false;
-                            updateServerStatus('stopped', message.data.status);
+                            isConnected = false;
+                            updateConnectionStatus('disconnected', message.data.status);
                         }
-                        updateServerButtons();
+                        updateConnectionButtons();
                         break;
 
                     case 'plugin_status':
                         updateStatus(message.data.status, 'info');
                         log('Plugin status: ' + JSON.stringify(message.data, null, 2));
-                        if (message.data.serverRunning !== undefined) {
-                            isServerRunning = message.data.serverRunning;
-                            updateServerButtons();
+                        if (message.data.connected !== undefined) {
+                            isConnected = message.data.connected;
+                            updateConnectionButtons();
                         }
                         break;
 
@@ -440,10 +448,10 @@
         });
 
         // Initialize UI
-        updateServerButtons();
-        log('UI initialized - WebSocket server implemented in plugin code');
-        log('💡 The WebSocket server runs as a simulation in the plugin code');
-        log('🔧 Use the buttons above to control and test the server');
+        updateConnectionButtons();
+        log('UI initialized - WebSocket client ready to connect to MCP server');
+        log('💡 The plugin acts as a WebSocket client connecting to the MCP server');
+        log('🔧 Use the buttons above to connect and test the client');
     </script>
 </body>
 </html>

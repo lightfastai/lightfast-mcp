@@ -11,9 +11,10 @@
   ],
   "networkAccess": {
     "allowedDomains": [
-      "ws://localhost:9003"
+      "ws://localhost:9003",
+      "ws://localhost:8003"
     ],
-    "reasoning": "Plugin needs to communicate with local WebSocket server for real-time MCP communication"
+    "reasoning": "Plugin needs to connect as WebSocket client to local MCP server for real-time design automation"
   },
   "ui": "ui.html"
 }
