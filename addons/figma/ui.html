@@ -480,6 +480,11 @@
                         log('🏓 Received pong from server');
                         break;
                         
+                    case 'plugin_info_received':
+                        log('✅ Plugin info acknowledged by server');
+                        updateStatus('Plugin registered with server', 'success');
+                        break;
+                        
                     case 'get_document_info':
                         // Request document info from plugin
                         parent.postMessage({ 
@@ -626,6 +631,21 @@
                     case 'error':
                         updateStatus('Error occurred', 'error');
                         log('Plugin Error: ' + message.message);
+                        break;
+
+                    case 'websocket_connected':
+                        updateStatus('WebSocket connection confirmed by plugin', 'success');
+                        log('✅ Plugin confirmed WebSocket connection');
+                        break;
+
+                    case 'websocket_disconnected':
+                        updateStatus('WebSocket disconnection confirmed by plugin', 'warning');
+                        log('⚠️ Plugin confirmed WebSocket disconnection');
+                        break;
+
+                    case 'connection_test_result':
+                        updateStatus('Connection test completed', 'success');
+                        log('🔧 Connection test result: ' + JSON.stringify(message.data, null, 2));
                         break;
 
                     default:

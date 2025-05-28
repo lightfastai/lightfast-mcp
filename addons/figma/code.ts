@@ -30,6 +30,8 @@ if (figma.editorType === 'figma') {
   // Handle messages from the UI
   figma.ui.onmessage = async (msg: any) => {
     try {
+      console.log('Plugin received message:', msg.type, msg);
+      
       switch (msg.type) {
         case 'ping':
           figma.ui.postMessage({ type: 'pong', timestamp: Date.now() });
