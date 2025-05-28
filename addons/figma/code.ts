@@ -246,66 +246,66 @@ function executeCodeSync(code: string): any {
   try {
     console.log('Executing JavaScript code synchronously:', code);
     
-    // Create a sandbox context with commonly used variables
-    // Similar to how Blender provides bpy, mathutils, etc.
-    const sandbox = {
-      figma: figma,
-      console: console,
-      // Add common utilities
-      createRectangle: () => figma.createRectangle(),
-      createEllipse: () => figma.createEllipse(),
-      createText: () => figma.createText(),
-      createFrame: () => figma.createFrame(),
-      currentPage: figma.currentPage,
-      selection: figma.currentPage.selection,
-      viewport: figma.viewport,
-      root: figma.root,
-      // Math utilities
-      Math: Math,
-      // JSON utilities for data manipulation
-      JSON: JSON,
-      // Result storage
-      result: undefined
+    // Capture console output
+    let output: string[] = [];
+    const originalLog = console.log;
+    console.log = (...args: any[]) => {
+      output.push(args.join(' '));
+      originalLog(...args);
     };
     
-    // Wrap the code in a function to provide better control and capture output
-    const wrappedCode = `
-      (() => {
-        let output = [];
-        const originalLog = console.log;
-        console.log = (...args) => {
-          output.push(args.join(' '));
-          originalLog(...args);
+    let result: any = undefined;
+    let executed = true;
+    let error: string | undefined = undefined;
+    
+    try {
+      // Execute code directly in the main context
+      // This is necessary for Figma API calls to work properly
+      eval(code);
+      
+      // If code sets a result variable, use it
+      if (typeof result !== 'undefined') {
+        return {
+          code_executed: true,
+          original_code: code,
+          execution_result: { 
+            executed: true, 
+            result: result, 
+            output: output.join('\n') || 'Code executed successfully' 
+          },
+          timestamp: Date.now()
         };
-        
-        try {
-          ${code}
-          
-          // If code sets a result variable, use it
-          if (typeof result !== 'undefined') {
-            return { executed: true, result: result, output: output.join('\\n') || 'Code executed successfully' };
-          }
-          
-          return { executed: true, result: 'Code executed successfully', output: output.join('\\n') || 'No output' };
-        } catch (error) {
-          return { executed: false, error: error.message, output: output.join('\\n') };
-        } finally {
-          console.log = originalLog;
-        }
-      })()
-    `;
-    
-    // Execute the code in the sandbox context
-    // Note: In a production environment, you might want additional security measures
-    const executeInContext = new Function(...Object.keys(sandbox), `return ${wrappedCode}`);
-    const executionResult = executeInContext(...Object.values(sandbox));
-    
-    return {
-      code_executed: true,
-      original_code: code,
-      execution_result: executionResult,
-      timestamp: Date.now()
-    };
+      }
+      
+      return {
+        code_executed: true,
+        original_code: code,
+        execution_result: { 
+          executed: true, 
+          result: 'Code executed successfully', 
+          output: output.join('\n') || 'No output' 
+        },
+        timestamp: Date.now()
+      };
+      
+    } catch (execError) {
+      executed = false;
+      error = execError instanceof Error ? execError.message : String(execError);
+      
+      return {
+        code_executed: false,
+        original_code: code,
+        execution_result: { 
+          executed: false, 
+          error: error, 
+          output: output.join('\n') 
+        },
+        timestamp: Date.now()
+      };
+      
+    } finally {
+      console.log = originalLog;
+    }
     
   } catch (error) {
     console.error('Code execution error:', error);
