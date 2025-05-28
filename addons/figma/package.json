@@ -7,7 +7,8 @@
     "build": "tsc -p tsconfig.json",
     "lint": "eslint --ext .ts,.tsx --ignore-pattern node_modules .",
     "lint:fix": "eslint --ext .ts,.tsx --ignore-pattern node_modules --fix .",
-    "watch": "npm run build -- --watch"
+    "watch": "npm run build -- --watch",
+    "test-server": "node websocket-server.js"
   },
   "keywords": [
     "figma",
@@ -19,6 +20,10 @@
   ],
   "author": "Lightfast AI",
   "license": "MIT",
+
+  "dependencies": {
+    "ws": "^8.18.2"
+  },
 
   "devDependencies": {
     "@figma/eslint-plugin-figma-plugins": "*",

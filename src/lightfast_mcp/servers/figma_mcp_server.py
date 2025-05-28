@@ -42,7 +42,7 @@ def main():
                 f"Using environment configuration: {config.transport}://{config.host}:{config.port}"
             )
             logger.info(
-                f"WebSocket server will run on port: {config.config.get('websocket_port', 9003)}"
+                f"WebSocket client will connect to: {config.config.get('figma_host', 'localhost')}:{config.config.get('figma_port', 9003)}"
             )
         except (json.JSONDecodeError, KeyError) as e:
             logger.warning(f"Invalid environment configuration: {e}, using defaults")
@@ -60,10 +60,9 @@ def _get_default_figma_config() -> dict:
     """Get default Figma-specific configuration."""
     return {
         "type": "figma",
-        "websocket_host": "localhost",
-        "websocket_port": 9003,
+        "figma_host": "localhost",
+        "figma_port": 9003,
         "command_timeout": 30.0,
-        "plugin_channel": "default",
     }
 
 

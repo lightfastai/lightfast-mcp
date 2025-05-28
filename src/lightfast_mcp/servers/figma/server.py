@@ -1,14 +1,14 @@
 """
-Figma MCP Server with socket communication for plugin integration.
+Figma MCP Server with WebSocket communication for plugin integration.
 Following the Blender pattern: Plugin acts as server, MCP server acts as client.
 """
 
 import asyncio
 import json
-import socket
 import time
 from typing import Any, ClassVar
 
+import websockets
 from fastmcp import Context
 
 from ...core.base_server import BaseServer, ServerConfig
@@ -17,112 +17,126 @@ from ...utils.logging_utils import get_logger
 logger = get_logger("FigmaMCPServer")
 
 
-class FigmaConnection:
-    """Handles connection to Figma plugin socket server."""
+class FigmaWebSocketConnection:
+    """Handles WebSocket connection to Figma plugin server."""
 
     def __init__(self, host: str = "localhost", port: int = 9003):
         self.host = host
         self.port = port
-        self.sock: socket.socket | None = None
+        self.websocket = None
+        self.is_connected = False
+        self.connection_lock = asyncio.Lock()
 
-    def connect(self) -> bool:
-        """Connect to the Figma plugin socket server."""
-        if self.sock:
+    async def connect(self) -> bool:
+        """Connect to the Figma plugin WebSocket server."""
+        if self.is_connected and self.websocket:
             return True
 
-        try:
-            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.sock.connect((self.host, self.port))
-            logger.info(f"Connected to Figma plugin at {self.host}:{self.port}")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to connect to Figma plugin: {e}")
-            self.sock = None
-            return False
-
-    def disconnect(self):
-        """Disconnect from the Figma plugin."""
-        if self.sock:
+        async with self.connection_lock:
             try:
-                self.sock.close()
-                logger.info("Disconnected from Figma plugin.")
+                uri = f"ws://{self.host}:{self.port}"
+                logger.info(f"Connecting to Figma plugin WebSocket at {uri}")
+
+                self.websocket = await websockets.connect(
+                    uri, timeout=10, ping_interval=30, ping_timeout=10
+                )
+
+                self.is_connected = True
+                logger.info(f"Connected to Figma plugin WebSocket at {uri}")
+
+                # Listen for welcome message
+                try:
+                    welcome_msg = await asyncio.wait_for(
+                        self.websocket.recv(), timeout=5.0
+                    )
+                    welcome_data = json.loads(welcome_msg)
+                    if welcome_data.get("type") == "welcome":
+                        logger.info(
+                            f"Received welcome from Figma plugin: {welcome_data}"
+                        )
+                    else:
+                        logger.warning(f"Unexpected first message: {welcome_data}")
+                except asyncio.TimeoutError:
+                    logger.warning("No welcome message received from Figma plugin")
+
+                return True
+
             except Exception as e:
-                logger.error(f"Error during disconnect: {e}")
-            finally:
-                self.sock = None
+                logger.error(f"Failed to connect to Figma plugin WebSocket: {e}")
+                self.websocket = None
+                self.is_connected = False
+                return False
 
-    def is_connected(self) -> bool:
-        """Check if connected to Figma plugin."""
-        return self.sock is not None
+    async def disconnect(self):
+        """Disconnect from the Figma plugin WebSocket."""
+        async with self.connection_lock:
+            if self.websocket:
+                try:
+                    await self.websocket.close()
+                    logger.info("Disconnected from Figma plugin WebSocket.")
+                except Exception as e:
+                    logger.error(f"Error during WebSocket disconnect: {e}")
+                finally:
+                    self.websocket = None
+                    self.is_connected = False
 
-    def send_command(
+    def is_websocket_connected(self) -> bool:
+        """Check if connected to Figma plugin WebSocket."""
+        return self.is_connected and self.websocket is not None
+
+    async def send_command(
         self, command_type: str, params: dict[str, Any] | None = None
     ) -> dict[str, Any]:
-        """Send a command to Figma plugin and return the response."""
-        if not self.sock:
-            if not self.connect():
-                raise ConnectionError("Failed to connect to Figma plugin")
+        """Send a command to Figma plugin WebSocket and return the response."""
+        if not self.is_connected:
+            if not await self.connect():
+                raise ConnectionError("Failed to connect to Figma plugin WebSocket")
 
-        command = {"type": command_type, "params": params or {}}
+        command = {
+            "type": command_type,
+            "params": params or {},
+            "id": int(time.time() * 1000000),  # Microsecond timestamp as ID
+        }
 
         try:
-            logger.info(f"Sending command to Figma plugin: {command_type}")
-            if not self.sock:
-                raise ConnectionError("Connection to Figma plugin failed")
+            logger.info(f"Sending WebSocket command to Figma plugin: {command_type}")
 
-            self.sock.sendall(json.dumps(command).encode("utf-8"))
+            if not self.websocket:
+                raise ConnectionError("WebSocket connection lost")
 
-            # Receive response
-            response_data = self._receive_response()
-            response = json.loads(response_data.decode("utf-8"))
+            # Send command
+            await self.websocket.send(json.dumps(command))
 
-            if response.get("status") == "error":
-                error_message = response.get(
-                    "message", "Unknown error from Figma plugin"
-                )
-                raise RuntimeError(error_message)
+            # Wait for response with timeout
+            response_data = await asyncio.wait_for(self.websocket.recv(), timeout=30.0)
 
-            return response.get("result", {})
+            response = json.loads(response_data)
+            logger.debug(f"Received WebSocket response: {response}")
 
+            # Check if this is the response to our command
+            if response.get("requestId") == command["id"]:
+                if response.get("status") == "error":
+                    error_message = response.get(
+                        "error", "Unknown error from Figma plugin"
+                    )
+                    raise RuntimeError(error_message)
+
+                return response.get("result", {})
+            else:
+                # This might be a different message, log and try again
+                logger.warning(f"Received unexpected message: {response}")
+                # For now, return the response anyway
+                return response.get("result", response)
+
+        except asyncio.TimeoutError:
+            raise TimeoutError("Timeout waiting for Figma plugin WebSocket response")
         except json.JSONDecodeError as e:
             raise RuntimeError(f"Invalid JSON response from Figma plugin: {e}") from e
         except Exception as e:
-            self.disconnect()
-            raise ConnectionError(f"Error communicating with Figma plugin: {e}") from e
-
-    def _receive_response(self, buffer_size: int = 8192) -> bytes:
-        """Receive the complete response from Figma plugin."""
-        if not self.sock:
-            raise ConnectionError("Not connected to Figma plugin")
-
-        chunks = []
-        self.sock.settimeout(15.0)
-
-        try:
-            while True:
-                chunk = self.sock.recv(buffer_size)
-                if not chunk:
-                    break
-
-                chunks.append(chunk)
-
-                # Try to parse as complete JSON
-                try:
-                    data_so_far = b"".join(chunks)
-                    json.loads(data_so_far.decode("utf-8"))
-                    return data_so_far
-                except json.JSONDecodeError:
-                    continue
-
-        except TimeoutError:
-            raise TimeoutError("Timeout waiting for Figma plugin response") from None
-        except Exception as e:
-            raise ConnectionError(f"Error receiving response: {e}") from e
-
-        if chunks:
-            return b"".join(chunks)
-        else:
-            raise RuntimeError("No response received from Figma plugin")
+            await self.disconnect()
+            raise ConnectionError(
+                f"Error communicating with Figma plugin WebSocket: {e}"
+            ) from e
 
 
 class FigmaMCPServer(BaseServer):
@@ -131,7 +145,7 @@ class FigmaMCPServer(BaseServer):
     # Server metadata
     SERVER_TYPE: ClassVar[str] = "figma"
     SERVER_VERSION: ClassVar[str] = "1.0.0"
-    REQUIRED_DEPENDENCIES: ClassVar[list[str]] = []
+    REQUIRED_DEPENDENCIES: ClassVar[list[str]] = ["websockets"]
     REQUIRED_APPS: ClassVar[list[str]] = ["Figma"]
 
     def __init__(self, config: ServerConfig):
@@ -142,10 +156,12 @@ class FigmaMCPServer(BaseServer):
         figma_host = config.config.get("figma_host", "localhost")
         figma_port = config.config.get("figma_port", 9003)
 
-        self.figma_connection = FigmaConnection(figma_host, figma_port)
+        self.figma_connection = FigmaWebSocketConnection(figma_host, figma_port)
         self.command_timeout = config.config.get("command_timeout", 30.0)
 
-        logger.info(f"Figma server configured for {figma_host}:{figma_port}")
+        logger.info(
+            f"Figma server configured for WebSocket at {figma_host}:{figma_port}"
+        )
 
     def _register_tools(self):
         """Register Figma server tools."""
@@ -176,16 +192,15 @@ class FigmaMCPServer(BaseServer):
         return True
 
     async def _check_figma_connection(self) -> bool:
-        """Check if Figma plugin is accessible."""
+        """Check if Figma plugin WebSocket is accessible."""
         try:
-            # Quick socket check
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(2.0)
-            result = sock.connect_ex(
-                (self.figma_connection.host, self.figma_connection.port)
-            )
-            sock.close()
-            return result == 0
+            # Try to connect to WebSocket
+            uri = f"ws://{self.figma_connection.host}:{self.figma_connection.port}"
+            async with websockets.connect(uri, timeout=2) as websocket:
+                # Send a quick ping
+                await websocket.send(json.dumps({"type": "ping"}))
+                # Don't wait for response, just check if connection works
+                return True
         except Exception:
             return False
 
@@ -193,17 +208,17 @@ class FigmaMCPServer(BaseServer):
         """Figma server startup logic."""
         logger.info(f"Figma server '{self.config.name}' starting up...")
 
-        # Test connection to Figma plugin
+        # Test connection to Figma plugin WebSocket
         try:
             connection_available = await self._check_figma_connection()
             if connection_available:
-                logger.info("Figma plugin connection test successful")
+                logger.info("Figma plugin WebSocket connection test successful")
             else:
                 logger.warning(
-                    "Figma plugin not accessible. Ensure Figma is running with the plugin active."
+                    "Figma plugin WebSocket not accessible. Ensure Figma is running with the plugin active and WebSocket server started."
                 )
         except Exception as e:
-            logger.warning(f"Figma plugin connection test failed: {e}")
+            logger.warning(f"Figma plugin WebSocket connection test failed: {e}")
 
         logger.info("Figma server startup complete")
 
@@ -211,27 +226,25 @@ class FigmaMCPServer(BaseServer):
         """Figma server shutdown logic."""
         logger.info(f"Figma server '{self.config.name}' shutting down...")
 
-        # Disconnect from Figma plugin
+        # Disconnect from Figma plugin WebSocket
         try:
-            self.figma_connection.disconnect()
+            await self.figma_connection.disconnect()
         except Exception as e:
-            logger.error(f"Error during Figma plugin disconnect: {e}")
+            logger.error(f"Error during Figma plugin WebSocket disconnect: {e}")
 
         logger.info("Figma server shutdown complete")
 
     async def _perform_health_check(self) -> bool:
         """Perform Figma server health check."""
         try:
-            # Check if we can reach Figma plugin
+            # Check if we can reach Figma plugin WebSocket
             is_reachable = await self._check_figma_connection()
             if not is_reachable:
                 return False
 
             # Try a simple ping command
-            await asyncio.get_event_loop().run_in_executor(
-                None, self.figma_connection.send_command, "ping"
-            )
-            return True
+            result = await self.figma_connection.send_command("ping")
+            return result.get("message") == "pong"
         except Exception as e:
             logger.debug(f"Health check failed: {e}")
             return False
@@ -252,7 +265,8 @@ class FigmaMCPServer(BaseServer):
                 "figma_connection": {
                     "host": self.figma_connection.host,
                     "port": self.figma_connection.port,
-                    "is_connected": self.figma_connection.is_connected(),
+                    "is_connected": self.figma_connection.is_websocket_connected(),
+                    "connection_type": "websocket",
                 },
                 "tools": self.info.tools,
             }
@@ -275,9 +289,10 @@ class FigmaMCPServer(BaseServer):
                 if hasattr(ctx, "session")
                 else "unknown",
                 "figma_status": {
-                    "connected": self.figma_connection.is_connected(),
+                    "connected": self.figma_connection.is_websocket_connected(),
                     "host": self.figma_connection.host,
                     "port": self.figma_connection.port,
+                    "connection_type": "websocket",
                 },
             }
             return json.dumps(response, indent=2)
@@ -291,15 +306,11 @@ class FigmaMCPServer(BaseServer):
         Returns:
             JSON string with document information
         """
-        loop = asyncio.get_event_loop()
-
         try:
-            logger.info("Requesting document state from Figma plugin")
+            logger.info("Requesting document state from Figma plugin via WebSocket")
 
-            # Run the Figma command in executor to avoid blocking
-            result = await loop.run_in_executor(
-                None, self.figma_connection.send_command, "get_document_info"
-            )
+            # Send command via WebSocket
+            result = await self.figma_connection.send_command("get_document_info")
 
             # Add diagnostic information
             result["_connection_info"] = {
@@ -308,15 +319,16 @@ class FigmaMCPServer(BaseServer):
                 "port": self.figma_connection.port,
                 "server_name": self.config.name,
                 "request_time": time.time(),
+                "connection_type": "websocket",
             }
 
             return json.dumps(result, indent=2)
 
         except ConnectionError as e:
-            logger.error(f"Connection error getting document state: {e}")
+            logger.error(f"WebSocket connection error getting document state: {e}")
             return json.dumps(
                 {
-                    "error": f"Figma plugin not connected: {str(e)}",
+                    "error": f"Figma plugin WebSocket not connected: {str(e)}",
                     "type": "ConnectionError",
                     "server_name": self.config.name,
                 },
@@ -342,15 +354,13 @@ class FigmaMCPServer(BaseServer):
         Returns:
             JSON string with execution result
         """
-        loop = asyncio.get_event_loop()
-
         try:
-            logger.info(f"Executing design command: {design_command[:100]}...")
+            logger.info(
+                f"Executing design command via WebSocket: {design_command[:100]}..."
+            )
 
-            # Run the Figma command in executor
-            result = await loop.run_in_executor(
-                None,
-                self.figma_connection.send_command,
+            # Send command via WebSocket
+            result = await self.figma_connection.send_command(
                 "execute_design_command",
                 {"command": design_command},
             )
@@ -360,15 +370,16 @@ class FigmaMCPServer(BaseServer):
                 "server_name": self.config.name,
                 "server_type": self.SERVER_TYPE,
                 "execution_time": time.time(),
+                "connection_type": "websocket",
             }
 
             return json.dumps(result, indent=2)
 
         except ConnectionError as e:
-            logger.error(f"Connection error executing design command: {e}")
+            logger.error(f"WebSocket connection error executing design command: {e}")
             return json.dumps(
                 {
-                    "error": f"Figma plugin not connected: {str(e)}",
+                    "error": f"Figma plugin WebSocket not connected: {str(e)}",
                     "type": "ConnectionError",
                     "server_name": self.config.name,
                 },
