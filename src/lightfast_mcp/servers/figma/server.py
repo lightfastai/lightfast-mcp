@@ -222,11 +222,17 @@ class FigmaWebSocketHandler:
             self.websocket_server = await websockets.serve(
                 self.client_handler, host, port, ping_interval=20, ping_timeout=10
             )
+            logger.info(
+                f"FigmaWebSocketHandler: WebSocket server object created: {bool(self.websocket_server)}"
+            )
             logger.info(f"WebSocket server started on ws://{host}:{port}")
             # Server is now running and will accept connections
             # Don't block here - let the server run in the background
         except Exception as e:
             logger.error(f"Failed to start WebSocket server: {e}")
+            import traceback
+
+            logger.error(f"Traceback: {traceback.format_exc()}")
             raise
 
     async def stop_websocket_server(self):
@@ -310,7 +316,10 @@ class FigmaMCPServer(BaseServer):
 
     async def _on_startup(self):
         """Figma server startup logic."""
-        logger.info(f"Figma server '{self.config.name}' starting up...")
+        logger.info(f"FigmaMCPServer '{self.config.name}' _on_startup called.")
+        logger.info(
+            f"  Attempting to start WebSocket on host={self.config.host}, port={self.websocket_port}"
+        )
 
         # Start WebSocket server
         try:
@@ -331,6 +340,9 @@ class FigmaMCPServer(BaseServer):
 
         except Exception as e:
             logger.error(f"Failed to start WebSocket server: {e}")
+            import traceback
+
+            logger.error(f"Traceback: {traceback.format_exc()}")
 
         logger.info("Plugin-based Figma server ready for MCP communication")
         logger.info("Figma server startup complete")

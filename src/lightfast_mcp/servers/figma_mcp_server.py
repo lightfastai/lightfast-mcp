@@ -23,6 +23,9 @@ def main():
     env_config = os.getenv("LIGHTFAST_MCP_SERVER_CONFIG")
 
     if env_config:
+        logger.info(
+            f"Orchestrator ENV_CONFIG received: {env_config[:500]}..."
+        )  # Log received env config
         try:
             # Parse configuration from environment
             config_data = json.loads(env_config)
@@ -57,6 +60,9 @@ def main():
             )
             logger.info(
                 f"Using environment configuration: {config.transport}://{config.host}:{config.port}"
+            )
+            logger.info(
+                f"ServerConfig internal websocket_port: {config.config.get('websocket_port')}, main port: {config.port}"
             )
         except (json.JSONDecodeError, KeyError) as e:
             logger.warning(f"Invalid environment configuration: {e}, using defaults")
