@@ -9,13 +9,5 @@
   "editorType": [
     "figma"
   ],
-  "ui": "ui.html",
-  "networkAccess": {
-    "allowedDomains": [
-      "https://localhost",
-      "http://localhost",
-      "ws://localhost:9003"
-    ],
-    "reasoning": "Plugin needs to communicate with local WebSocket server for real-time MCP communication"
-  }
+  "ui": "ui.html"
 }

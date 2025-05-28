@@ -1,6 +1,4 @@
-"""
-Figma MCP Server for design manipulation via plugin communication.
-"""
+"""Figma MCP server module."""
 
 from .server import FigmaMCPServer
 

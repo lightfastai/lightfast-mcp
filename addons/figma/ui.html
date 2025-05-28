@@ -15,17 +15,12 @@
             background: #ffffff;
             color: #333;
             line-height: 1.4;
-            overflow-x: hidden;
-        }
-
-        .container {
             padding: 16px;
-            max-width: 100%;
         }
 
         .header {
-            margin-bottom: 20px;
             text-align: center;
+            margin-bottom: 20px;
         }
 
         .header h1 {
@@ -40,841 +35,143 @@
             color: #666;
         }
 
-        .status-section {
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 16px;
-            border: 1px solid #e9ecef;
-        }
-
-        .status-indicator {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 8px;
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #dc3545;
-        }
-
-        .status-dot.connected {
-            background: #28a745;
-        }
-
-        .status-dot.connecting {
-            background: #ffc107;
-            animation: pulse 1.5s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        .status-text {
-            font-size: 12px;
-            font-weight: 500;
-        }
-
-        .connection-section {
-            margin-bottom: 16px;
-        }
-
-        .input-group {
-            margin-bottom: 12px;
-        }
-
-        .input-group label {
-            display: block;
-            font-size: 11px;
-            font-weight: 500;
-            color: #666;
-            margin-bottom: 4px;
-        }
-
-        .input-group input {
+        .button {
             width: 100%;
-            padding: 8px 10px;
+            padding: 12px;
+            margin-bottom: 8px;
             border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 12px;
+            border-radius: 6px;
             background: white;
-        }
-
-        .input-group input:focus {
-            outline: none;
-            border-color: #007bff;
-            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
-        }
-
-        .button-group {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 16px;
-        }
-
-        .btn {
-            flex: 1;
-            padding: 8px 12px;
-            border: none;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: 500;
+            font-size: 14px;
             cursor: pointer;
             transition: all 0.2s;
         }
 
-        .btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        .button:hover {
+            background: #f8f9fa;
+            border-color: #007bff;
         }
 
-        .btn:active {
-            transform: translateY(0);
+        .button:active {
+            transform: translateY(1px);
         }
 
-        .btn-primary {
+        .button.primary {
             background: #007bff;
             color: white;
+            border-color: #007bff;
         }
 
-        .btn-primary:hover {
+        .button.primary:hover {
             background: #0056b3;
         }
 
-        .btn-primary:disabled {
-            background: #6c757d;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        .btn-success {
-            background: #28a745;
-            color: white;
-        }
-
-        .btn-success:hover {
-            background: #1e7e34;
-        }
-
-        .btn-danger {
-            background: #dc3545;
-            color: white;
-        }
-
-        .btn-danger:hover {
-            background: #c82333;
-        }
-
-        .tools-section {
-            margin-bottom: 16px;
-        }
-
-        .section-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: #1a1a1a;
-            margin-bottom: 8px;
-            padding-bottom: 4px;
-            border-bottom: 1px solid #e9ecef;
-        }
-
-        .tool-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-        }
-
-        .tool-btn {
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            background: white;
-            font-size: 11px;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-align: center;
-        }
-
-        .tool-btn:hover {
-            background: #f8f9fa;
-            border-color: #007bff;
-        }
-
-        .tool-btn:disabled {
-            background: #f8f9fa;
-            color: #6c757d;
-            cursor: not-allowed;
-            border-color: #e9ecef;
-        }
-
-        .logs-section {
-            margin-top: 16px;
-        }
-
-        .logs-container {
+        .output {
             background: #f8f9fa;
             border: 1px solid #e9ecef;
             border-radius: 4px;
-            height: 120px;
-            overflow-y: auto;
-            padding: 8px;
-            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-            font-size: 10px;
-            line-height: 1.3;
-        }
-
-        .log-entry {
-            margin-bottom: 2px;
-        }
-
-        .log-timestamp {
-            color: #666;
-        }
-
-        .log-info {
-            color: #0066cc;
-        }
-
-        .log-error {
-            color: #dc3545;
-        }
-
-        .log-success {
-            color: #28a745;
-        }
-
-        .clear-logs {
-            margin-top: 4px;
-            padding: 4px 8px;
-            font-size: 10px;
-            background: #6c757d;
-            color: white;
-            border: none;
-            border-radius: 3px;
-            cursor: pointer;
-        }
-
-        .advanced-section {
+            padding: 12px;
             margin-top: 16px;
-            padding-top: 16px;
-            border-top: 1px solid #e9ecef;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 11px;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
         }
 
-        .collapsible {
-            background: #f8f9fa;
-            border: none;
-            width: 100%;
-            text-align: left;
-            padding: 8px;
+        .status {
+            padding: 8px 12px;
             border-radius: 4px;
-            cursor: pointer;
+            margin-bottom: 16px;
             font-size: 12px;
-            font-weight: 500;
+            text-align: center;
         }
 
-        .collapsible:hover {
-            background: #e9ecef;
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
         }
 
-        .collapsible-content {
-            display: none;
-            padding: 12px 0;
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
         }
 
-        .collapsible-content.active {
-            display: block;
-        }
-
-        .form-row {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 8px;
-        }
-
-        .form-row .input-group {
-            flex: 1;
-            margin-bottom: 0;
-        }
-
-        .color-input {
-            width: 40px !important;
-            height: 32px;
-            padding: 2px;
-            border-radius: 4px;
-        }
-
-        .hidden {
-            display: none;
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <h1>🎨 Lightfast MCP</h1>
-            <p>AI-powered Figma automation</p>
-        </div>
-
-        <!-- Status Section -->
-        <div class="status-section">
-            <div class="status-indicator">
-                <div class="status-dot" id="statusDot"></div>
-                <span class="status-text" id="statusText">Disconnected</span>
-            </div>
-            <div style="font-size: 10px; color: #666;" id="statusDetails">
-                Ready to connect to MCP server
-            </div>
-        </div>
-
-        <!-- Connection Section -->
-        <div class="connection-section">
-            <div class="input-group">
-                <label for="serverUrl">WebSocket Server URL</label>
-                <input type="text" id="serverUrl" value="ws://localhost:9003" placeholder="ws://localhost:9003">
-            </div>
-            
-            <div class="button-group">
-                <button class="btn btn-primary" id="connectBtn">Connect</button>
-                <button class="btn btn-danger hidden" id="disconnectBtn">Disconnect</button>
-                <button class="btn" id="testBtn" disabled>Test</button>
-            </div>
-        </div>
-
-        <!-- Quick Tools Section -->
-        <div class="tools-section">
-            <div class="section-title">Quick Tools</div>
-            <div class="tool-grid">
-                <button class="tool-btn" id="getDocInfoBtn" disabled>📄 Document Info</button>
-                <button class="tool-btn" id="getSelectionBtn" disabled>🎯 Get Selection</button>
-                <button class="tool-btn" id="createRectBtn" disabled>⬜ Rectangle</button>
-                <button class="tool-btn" id="createFrameBtn" disabled>🖼️ Frame</button>
-                <button class="tool-btn" id="createTextBtn" disabled>📝 Text</button>
-                <button class="tool-btn" id="serverStatusBtn" disabled>🔍 Server Status</button>
-            </div>
-        </div>
-
-        <!-- Advanced Tools Section -->
-        <div class="advanced-section">
-            <button class="collapsible" id="advancedToggle">⚙️ Advanced Tools</button>
-            <div class="collapsible-content" id="advancedContent">
-                <!-- Create Rectangle Form -->
-                <div class="input-group">
-                    <label>Create Rectangle</label>
-                    <div class="form-row">
-                        <div class="input-group">
-                            <label>X</label>
-                            <input type="number" id="rectX" value="0" step="1">
-                        </div>
-                        <div class="input-group">
-                            <label>Y</label>
-                            <input type="number" id="rectY" value="0" step="1">
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="input-group">
-                            <label>Width</label>
-                            <input type="number" id="rectWidth" value="100" step="1">
-                        </div>
-                        <div class="input-group">
-                            <label>Height</label>
-                            <input type="number" id="rectHeight" value="100" step="1">
-                        </div>
-                    </div>
-                    <button class="btn btn-primary" id="createAdvRectBtn" disabled>Create Rectangle</button>
-                </div>
-
-                <!-- Create Text Form -->
-                <div class="input-group">
-                    <label>Create Text</label>
-                    <input type="text" id="textContent" placeholder="Enter text content" value="Hello World">
-                    <div class="form-row">
-                        <div class="input-group">
-                            <label>Font Size</label>
-                            <input type="number" id="fontSize" value="16" step="1" min="8" max="72">
-                        </div>
-                        <div class="input-group">
-                            <label>Font Family</label>
-                            <input type="text" id="fontFamily" value="Inter" placeholder="Inter">
-                        </div>
-                    </div>
-                    <button class="btn btn-primary" id="createAdvTextBtn" disabled>Create Text</button>
-                </div>
-
-                <!-- Color Tools -->
-                <div class="input-group">
-                    <label>Set Fill Color</label>
-                    <div class="form-row">
-                        <div class="input-group">
-                            <label>Node ID</label>
-                            <input type="text" id="colorNodeId" placeholder="Select node first">
-                        </div>
-                        <div class="input-group">
-                            <label>Color</label>
-                            <input type="color" id="fillColor" class="color-input" value="#ff0000">
-                        </div>
-                    </div>
-                    <button class="btn btn-primary" id="setColorBtn" disabled>Set Color</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Logs Section -->
-        <div class="logs-section">
-            <div class="section-title">Activity Log</div>
-            <div class="logs-container" id="logsContainer">
-                <div class="log-entry">
-                    <span class="log-timestamp">[Ready]</span> Plugin loaded successfully
-                </div>
-            </div>
-            <button class="clear-logs" id="clearLogsBtn">Clear Logs</button>
-        </div>
+    <div class="header">
+        <h1>🎨 Lightfast MCP</h1>
+        <p>Simplified Figma Plugin</p>
     </div>
 
+    <div id="status" class="status info">Ready</div>
+
+    <button class="button" onclick="testConnection()">🔄 Test Connection</button>
+    <button class="button" onclick="getDocumentInfo()">📄 Get Document Info</button>
+    <button class="button primary" onclick="closePlugin()">✕ Close Plugin</button>
+
+    <div id="output" class="output">Plugin loaded successfully.</div>
+
     <script>
-        // Plugin state
-        let isConnected = false;
-        let serverUrl = 'ws://localhost:9003';
-        let currentSelection = [];
-        let websocket = null;
-        let reconnectAttempts = 0;
-        let maxReconnectAttempts = 5;
-        let reconnectDelay = 1000;
-
-        // DOM elements
-        const statusDot = document.getElementById('statusDot');
-        const statusText = document.getElementById('statusText');
-        const statusDetails = document.getElementById('statusDetails');
-        const serverUrlInput = document.getElementById('serverUrl');
-        const connectBtn = document.getElementById('connectBtn');
-        const disconnectBtn = document.getElementById('disconnectBtn');
-        const testBtn = document.getElementById('testBtn');
-        const logsContainer = document.getElementById('logsContainer');
-
-        // Tool buttons
-        const toolButtons = [
-            'getDocInfoBtn', 'getSelectionBtn', 'createRectBtn', 'createFrameBtn', 
-            'createTextBtn', 'serverStatusBtn', 'createAdvRectBtn', 'createAdvTextBtn', 
-            'setColorBtn'
-        ];
-
-        // Advanced section
-        const advancedToggle = document.getElementById('advancedToggle');
-        const advancedContent = document.getElementById('advancedContent');
-
-        // Initialize plugin
-        function init() {
-            log('Plugin initialized', 'info');
-            setupEventListeners();
-            updateConnectionUI();
+        function updateStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
         }
 
-        function setupEventListeners() {
-            // Connection controls
-            connectBtn.addEventListener('click', connect);
-            disconnectBtn.addEventListener('click', disconnect);
-            testBtn.addEventListener('click', testConnection);
-            
-            // Server URL updates
-            serverUrlInput.addEventListener('change', (e) => {
-                serverUrl = e.target.value;
-                log(`Server URL updated: ${serverUrl}`, 'info');
-            });
-
-            // Quick tool buttons
-            document.getElementById('getDocInfoBtn').addEventListener('click', () => callTool('get_document_info'));
-            document.getElementById('getSelectionBtn').addEventListener('click', () => callTool('get_selection'));
-            document.getElementById('createRectBtn').addEventListener('click', () => callTool('create_rectangle'));
-            document.getElementById('createFrameBtn').addEventListener('click', () => callTool('create_frame'));
-            document.getElementById('createTextBtn').addEventListener('click', () => callTool('create_text', { text: 'Hello World' }));
-            document.getElementById('serverStatusBtn').addEventListener('click', () => callTool('get_server_status'));
-
-            // Advanced tool buttons
-            document.getElementById('createAdvRectBtn').addEventListener('click', createAdvancedRectangle);
-            document.getElementById('createAdvTextBtn').addEventListener('click', createAdvancedText);
-            document.getElementById('setColorBtn').addEventListener('click', setFillColor);
-
-            // Advanced section toggle
-            advancedToggle.addEventListener('click', () => {
-                advancedContent.classList.toggle('active');
-                const isOpen = advancedContent.classList.contains('active');
-                advancedToggle.textContent = isOpen ? '⚙️ Advanced Tools ▲' : '⚙️ Advanced Tools ▼';
-            });
-
-            // Clear logs
-            document.getElementById('clearLogsBtn').addEventListener('click', clearLogs);
-
-            // Listen for Figma selection changes
-            parent.postMessage({ pluginMessage: { type: 'selection-changed' } }, '*');
-        }
-
-        async function connect() {
-            setConnectionStatus('connecting');
-            log(`Connecting to ${serverUrl}...`, 'info');
-
-            try {
-                // Close existing connection if any
-                if (websocket) {
-                    websocket.close();
-                }
-
-                // Create new WebSocket connection
-                websocket = new WebSocket(serverUrl);
-
-                websocket.onopen = () => {
-                    log('WebSocket connected successfully!', 'success');
-                    setConnectionStatus('connected');
-                    reconnectAttempts = 0;
-                    
-                    // Send initial server status request
-                    sendWebSocketMessage({
-                        type: 'plugin_status_request',
-                        id: generateMessageId()
-                    });
-                };
-
-                websocket.onmessage = (event) => {
-                    try {
-                        const message = JSON.parse(event.data);
-                        handleWebSocketMessage(message);
-                    } catch (error) {
-                        log(`Error parsing WebSocket message: ${error.message}`, 'error');
-                    }
-                };
-
-                websocket.onerror = (error) => {
-                    log(`WebSocket error: ${error}`, 'error');
-                };
-
-                websocket.onclose = (event) => {
-                    log(`WebSocket closed: ${event.code} ${event.reason}`, 'info');
-                    setConnectionStatus('disconnected');
-                    
-                    // Attempt reconnection if not intentional
-                    if (event.code !== 1000 && reconnectAttempts < maxReconnectAttempts) {
-                        attemptReconnect();
-                    }
-                };
-
-            } catch (error) {
-                log(`Connection failed: ${error.message}`, 'error');
-                setConnectionStatus('disconnected');
-            }
-        }
-
-        function disconnect() {
-            reconnectAttempts = maxReconnectAttempts; // Prevent reconnection
-            if (websocket) {
-                websocket.close(1000, 'User disconnected');
-                websocket = null;
-            }
-            setConnectionStatus('disconnected');
-            log('Disconnected from server', 'info');
-        }
-
-        async function testConnection() {
-            if (!isConnected || !websocket) {
-                log('Not connected to server', 'error');
-                return;
-            }
-
-            try {
-                sendWebSocketMessage({
-                    type: 'ping',
-                    id: generateMessageId(),
-                    timestamp: Date.now()
-                });
-                log('Ping sent to server', 'info');
-            } catch (error) {
-                log(`Test failed: ${error.message}`, 'error');
-                setConnectionStatus('disconnected');
-            }
-        }
-
-        async function callTool(toolName, params = {}) {
-            if (!isConnected || !websocket) {
-                log('Not connected to server', 'error');
-                return;
-            }
-
-            try {
-                log(`Calling tool: ${toolName}`, 'info');
-                
-                const messageId = generateMessageId();
-                sendWebSocketMessage({
-                    type: 'tool_call',
-                    id: messageId,
-                    tool: toolName,
-                    params: params
-                });
-
-                // For now, we'll handle responses in handleWebSocketMessage
-                // In a more advanced implementation, you could return a Promise that resolves when the response arrives
-                
-            } catch (error) {
-                log(`Tool error: ${error.message}`, 'error');
-                throw error;
-            }
-        }
-
-        async function createAdvancedRectangle() {
-            const params = {
-                x: parseFloat(document.getElementById('rectX').value) || 0,
-                y: parseFloat(document.getElementById('rectY').value) || 0,
-                width: parseFloat(document.getElementById('rectWidth').value) || 100,
-                height: parseFloat(document.getElementById('rectHeight').value) || 100,
-                name: 'Rectangle'
-            };
-
-            await callTool('create_rectangle', params);
-        }
-
-        async function createAdvancedText() {
-            const params = {
-                text: document.getElementById('textContent').value || 'Hello World',
-                x: 0,
-                y: 0,
-                font_size: parseFloat(document.getElementById('fontSize').value) || 16,
-                font_family: document.getElementById('fontFamily').value || 'Inter',
-                name: 'Text'
-            };
-
-            await callTool('create_text', params);
-        }
-
-        async function setFillColor() {
-            const nodeId = document.getElementById('colorNodeId').value;
-            const color = document.getElementById('fillColor').value;
-            
-            if (!nodeId) {
-                log('Please enter a node ID', 'error');
-                return;
-            }
-
-            // Convert hex color to RGB
-            const r = parseInt(color.substr(1, 2), 16);
-            const g = parseInt(color.substr(3, 2), 16);
-            const b = parseInt(color.substr(5, 2), 16);
-
-            const params = {
-                node_id: nodeId,
-                r: r,
-                g: g,
-                b: b,
-                a: 1.0
-            };
-
-            await callTool('set_fill_color', params);
-        }
-
-        function setConnectionStatus(status) {
-            isConnected = status === 'connected';
-            
-            statusDot.className = `status-dot ${status}`;
-            
-            switch (status) {
-                case 'connected':
-                    statusText.textContent = 'Connected';
-                    statusDetails.textContent = `Connected to ${serverUrl}`;
-                    connectBtn.classList.add('hidden');
-                    disconnectBtn.classList.remove('hidden');
-                    break;
-                case 'connecting':
-                    statusText.textContent = 'Connecting...';
-                    statusDetails.textContent = 'Establishing connection...';
-                    break;
-                case 'disconnected':
-                default:
-                    statusText.textContent = 'Disconnected';
-                    statusDetails.textContent = 'Ready to connect to MCP server';
-                    connectBtn.classList.remove('hidden');
-                    disconnectBtn.classList.add('hidden');
-                    break;
-            }
-
-            updateToolsUI();
-        }
-
-        function updateToolsUI() {
-            toolButtons.forEach(buttonId => {
-                const button = document.getElementById(buttonId);
-                if (button) {
-                    button.disabled = !isConnected;
-                }
-            });
-            testBtn.disabled = !isConnected;
-        }
-
-        function updateSelectionUI() {
-            if (currentSelection.length > 0) {
-                const firstSelected = currentSelection[0];
-                if (firstSelected.id) {
-                    document.getElementById('colorNodeId').value = firstSelected.id;
-                    log(`Selection updated: ${currentSelection.length} node(s)`, 'info');
-                }
-            }
-        }
-
-        function updateConnectionUI() {
-            setConnectionStatus('disconnected');
-        }
-
-        function log(message, type = 'info') {
+        function log(message) {
+            const output = document.getElementById('output');
             const timestamp = new Date().toLocaleTimeString();
-            const logEntry = document.createElement('div');
-            logEntry.className = 'log-entry';
-            
-            const timestampSpan = document.createElement('span');
-            timestampSpan.className = 'log-timestamp';
-            timestampSpan.textContent = `[${timestamp}]`;
-            
-            const messageSpan = document.createElement('span');
-            messageSpan.className = `log-${type}`;
-            messageSpan.textContent = ` ${message}`;
-            
-            logEntry.appendChild(timestampSpan);
-            logEntry.appendChild(messageSpan);
-            
-            logsContainer.appendChild(logEntry);
-            logsContainer.scrollTop = logsContainer.scrollHeight;
-
-            // Keep only last 50 log entries
-            while (logsContainer.children.length > 50) {
-                logsContainer.removeChild(logsContainer.firstChild);
-            }
+            output.textContent += `\n[${timestamp}] ${message}`;
+            output.scrollTop = output.scrollHeight;
         }
 
-        function clearLogs() {
-            logsContainer.innerHTML = '<div class="log-entry"><span class="log-timestamp">[Cleared]</span> Logs cleared</div>';
+        function testConnection() {
+            updateStatus('Testing connection...', 'info');
+            parent.postMessage({ pluginMessage: { type: 'ping' } }, '*');
         }
 
-        // WebSocket utility functions
-        function generateMessageId() {
-            return `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        function getDocumentInfo() {
+            updateStatus('Getting document info...', 'info');
+            parent.postMessage({ pluginMessage: { type: 'get_document_info' } }, '*');
         }
 
-        function sendWebSocketMessage(message) {
-            if (websocket && websocket.readyState === WebSocket.OPEN) {
-                websocket.send(JSON.stringify(message));
-            } else {
-                throw new Error('WebSocket is not connected');
-            }
+        function closePlugin() {
+            parent.postMessage({ pluginMessage: { type: 'close-plugin' } }, '*');
         }
 
-        function handleWebSocketMessage(message) {
-            switch (message.type) {
-                case 'tool_response':
-                    handleToolResponse(message);
-                    break;
-                case 'plugin_status_response':
-                    handlePluginStatusResponse(message);
-                    break;
-                case 'pong':
-                    log(`Pong received (latency: ${Date.now() - message.timestamp}ms)`, 'success');
-                    break;
-                case 'figma_command':
-                    // Forward command to Figma plugin main thread
-                    parent.postMessage({ pluginMessage: message }, '*');
-                    break;
-                case 'error':
-                    log(`Server error: ${message.error}`, 'error');
-                    break;
-                default:
-                    log(`Unknown message type: ${message.type}`, 'info');
-            }
-        }
-
-        function handlePluginStatusResponse(message) {
-            const { success, data, error } = message;
-            if (success && data) {
-                log(`Plugin status received: ${data.server_name} v${data.server_version}`, 'success');
-                // You can update UI elements with server info if needed here
-                // e.g., statusDetails.textContent = `Connected to ${data.server_name} (${data.websocket_url})`;
-            } else {
-                log(`Error receiving plugin status: ${error || 'Unknown error'}`, 'error');
-            }
-        }
-
-        function handleToolResponse(message) {
-            const { tool, success, data, error } = message;
-            
-            if (success) {
-                log(`✓ ${tool} completed`, 'success');
-                
-                // Handle specific tool responses
-                if (tool === 'get_selection' && data && data.selection) {
-                    currentSelection = data.selection;
-                    updateSelectionUI();
-                }
-
-                // Display result in logs
-                if (data) {
-                    const content = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
-                    log(`Response: ${content.substring(0, 200)}${content.length > 200 ? '...' : ''}`, 'info');
-                }
-
-                // Send successful response to plugin main thread
-                parent.postMessage({ 
-                    pluginMessage: { 
-                        type: tool, 
-                        params: data,
-                        success: true 
-                    } 
-                }, '*');
-            } else {
-                log(`✗ ${tool} failed: ${error}`, 'error');
-            }
-        }
-
-        function attemptReconnect() {
-            if (reconnectAttempts >= maxReconnectAttempts) {
-                log('Max reconnection attempts reached', 'error');
-                return;
-            }
-
-            reconnectAttempts++;
-            const delay = reconnectDelay * reconnectAttempts;
-            
-            log(`Reconnecting in ${delay}ms (attempt ${reconnectAttempts}/${maxReconnectAttempts})`, 'info');
-            
-            setTimeout(() => {
-                if (!isConnected) {
-                    connect();
-                }
-            }, delay);
-        }
-
-        // Handle messages from main plugin thread
+        // Handle messages from the plugin
         window.addEventListener('message', (event) => {
             const message = event.data.pluginMessage;
             if (message) {
                 switch (message.type) {
-                    case 'selection-changed':
-                        if (message.selection) {
-                            currentSelection = message.selection;
-                            updateSelectionUI();
-                        }
+                    case 'pong':
+                        updateStatus('Connection test successful!', 'success');
+                        log('Pong received - connection working');
                         break;
-                    case 'tool-response':
-                        log(`Tool response: ${message.data}`, 'info');
+                    case 'response':
+                        updateStatus('Response received', 'success');
+                        log('Response: ' + JSON.stringify(message.data, null, 2));
                         break;
+                    case 'error':
+                        updateStatus('Error occurred', 'error');
+                        log('Error: ' + message.message);
+                        break;
+                    default:
+                        log('Unknown message: ' + JSON.stringify(message));
                 }
             }
         });
 
-        // Initialize when DOM is ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', init);
-        } else {
-            init();
-        }
+        log('UI initialized');
     </script>
 </body>
 </html>
