@@ -66,6 +66,16 @@
             background: #0056b3;
         }
 
+        .button.websocket {
+            background: #28a745;
+            color: white;
+            border-color: #28a745;
+        }
+
+        .button.websocket:hover {
+            background: #218838;
+        }
+
         .output {
             background: #f8f9fa;
             border: 1px solid #e9ecef;
@@ -104,27 +114,83 @@
             color: #0c5460;
             border: 1px solid #bee5eb;
         }
+
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .websocket-status {
+            padding: 6px 10px;
+            border-radius: 4px;
+            margin-bottom: 12px;
+            font-size: 11px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .websocket-status.connected {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .websocket-status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .websocket-status.connecting {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>🎨 Lightfast MCP</h1>
-        <p>Simplified Figma Plugin</p>
+        <p>WebSocket-Enabled Figma Plugin</p>
     </div>
 
-    <div id="status" class="status info">Ready</div>
+    <div id="status" class="status info">Plugin loaded - connecting to MCP server...</div>
+    <div id="websocket-status" class="websocket-status connecting">🔄 Connecting to WebSocket...</div>
 
-    <button class="button" onclick="testConnection()">🔄 Test Connection</button>
+    <button class="button websocket" onclick="testWebSocket()">🌐 Test WebSocket Connection</button>
+    <button class="button" onclick="testPluginCommunication()">🔄 Test Plugin Communication</button>
     <button class="button" onclick="getDocumentInfo()">📄 Get Document Info</button>
+    <button class="button" onclick="testDesignCommand()">🎨 Test Design Command</button>
     <button class="button primary" onclick="closePlugin()">✕ Close Plugin</button>
 
-    <div id="output" class="output">Plugin loaded successfully.</div>
+    <div id="output" class="output">Plugin loaded - initializing WebSocket connection...</div>
 
     <script>
+        // WebSocket configuration
+        const WEBSOCKET_URL = 'ws://localhost:9003';
+        const RECONNECT_INTERVAL = 5000; // 5 seconds
+        const PING_INTERVAL = 30000; // 30 seconds
+
+        // WebSocket state
+        let websocket = null;
+        let isConnected = false;
+        let messageQueue = [];
+        let currentDocumentInfo = null;
+
+        // Initialize WebSocket connection when UI loads
+        initializeWebSocket();
+
         function updateStatus(message, type = 'info') {
             const status = document.getElementById('status');
             status.textContent = message;
             status.className = `status ${type}`;
+        }
+
+        function updateWebSocketStatus(status, message) {
+            const wsStatus = document.getElementById('websocket-status');
+            wsStatus.textContent = `🌐 ${message}`;
+            wsStatus.className = `websocket-status ${status}`;
         }
 
         function log(message) {
@@ -134,8 +200,137 @@
             output.scrollTop = output.scrollHeight;
         }
 
-        function testConnection() {
-            updateStatus('Testing connection...', 'info');
+        // WebSocket functionality
+        function initializeWebSocket() {
+            try {
+                websocket = new WebSocket(WEBSOCKET_URL);
+
+                websocket.onopen = () => {
+                    isConnected = true;
+                    updateWebSocketStatus('connected', 'Connected to MCP Server');
+                    updateStatus('WebSocket connected successfully!', 'success');
+                    log('WebSocket: Connected to MCP server');
+
+                    // Process any queued messages
+                    while (messageQueue.length > 0) {
+                        const message = messageQueue.shift();
+                        if (websocket && websocket.readyState === WebSocket.OPEN) {
+                            websocket.send(JSON.stringify(message));
+                        }
+                    }
+
+                    // Start ping interval
+                    startPingInterval();
+                };
+
+                websocket.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        handleServerMessage(data);
+                    } catch (error) {
+                        console.error('Error parsing WebSocket message:', error);
+                        log('Error parsing server message: ' + error.message);
+                    }
+                };
+
+                websocket.onclose = () => {
+                    isConnected = false;
+                    updateWebSocketStatus('disconnected', 'Disconnected from MCP Server');
+                    updateStatus('WebSocket disconnected', 'warning');
+                    log('WebSocket: Disconnected from MCP server');
+
+                    // Attempt to reconnect
+                    setTimeout(initializeWebSocket, RECONNECT_INTERVAL);
+                };
+
+                websocket.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    updateWebSocketStatus('disconnected', 'Connection Error');
+                    updateStatus('WebSocket connection error', 'error');
+                    log('WebSocket Error: Connection failed');
+                };
+
+            } catch (error) {
+                console.error('Error initializing WebSocket:', error);
+                updateWebSocketStatus('disconnected', 'Initialization Error');
+                updateStatus('Failed to initialize WebSocket', 'error');
+                log('WebSocket Error: ' + error.message);
+            }
+        }
+
+        function handleServerMessage(data) {
+            log('Server message: ' + JSON.stringify(data, null, 2));
+            
+            // Handle different message types from server
+            switch (data.type) {
+                case 'execute_design_command':
+                    // Server wants to execute a design command
+                    const command = data.params?.command || '';
+                    parent.postMessage({ 
+                        pluginMessage: { 
+                            type: 'execute_design_command', 
+                            command: command 
+                        } 
+                    }, '*');
+                    break;
+                    
+                case 'get_document_info':
+                    // Server is requesting document info
+                    parent.postMessage({ 
+                        pluginMessage: { 
+                            type: 'get_document_info' 
+                        } 
+                    }, '*');
+                    break;
+                    
+                default:
+                    // Just log other messages
+                    updateStatus('Server message received', 'info');
+            }
+        }
+
+        function sendToServer(message) {
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                websocket.send(JSON.stringify(message));
+                log('Sent to server: ' + JSON.stringify(message));
+            } else {
+                // Queue message for when connection is restored
+                messageQueue.push(message);
+                updateWebSocketStatus('connecting', 'Message Queued');
+                log('Message queued - WebSocket not connected');
+            }
+        }
+
+        function startPingInterval() {
+            setInterval(() => {
+                if (isConnected && websocket && websocket.readyState === WebSocket.OPEN) {
+                    const pingMessage = {
+                        type: 'ping',
+                        params: {
+                            timestamp: Date.now(),
+                            source: 'figma-plugin-ui'
+                        }
+                    };
+                    websocket.send(JSON.stringify(pingMessage));
+                }
+            }, PING_INTERVAL);
+        }
+
+        // Button handlers
+        function testWebSocket() {
+            updateStatus('Testing WebSocket connection...', 'info');
+            const pingMessage = {
+                type: 'ping',
+                params: {
+                    timestamp: Date.now(),
+                    source: 'figma-plugin-test'
+                }
+            };
+            sendToServer(pingMessage);
+        }
+
+        function testPluginCommunication() {
+            updateStatus('Testing plugin communication...', 'info');
             parent.postMessage({ pluginMessage: { type: 'ping' } }, '*');
         }
 
@@ -144,7 +339,20 @@
             parent.postMessage({ pluginMessage: { type: 'get_document_info' } }, '*');
         }
 
+        function testDesignCommand() {
+            updateStatus('Testing design command...', 'info');
+            parent.postMessage({ 
+                pluginMessage: { 
+                    type: 'execute_design_command', 
+                    command: 'create rectangle' 
+                } 
+            }, '*');
+        }
+
         function closePlugin() {
+            if (websocket) {
+                websocket.close();
+            }
             parent.postMessage({ pluginMessage: { type: 'close-plugin' } }, '*');
         }
 
@@ -154,24 +362,53 @@
             if (message) {
                 switch (message.type) {
                     case 'pong':
-                        updateStatus('Connection test successful!', 'success');
-                        log('Pong received - connection working');
+                        updateStatus('Plugin communication test successful!', 'success');
+                        log('Pong received - plugin communication working');
                         break;
-                    case 'response':
-                        updateStatus('Response received', 'success');
-                        log('Response: ' + JSON.stringify(message.data, null, 2));
+
+                    case 'document_info':
+                        currentDocumentInfo = message.data;
+                        updateStatus('Document info received', 'success');
+                        log('Document info: ' + JSON.stringify(message.data, null, 2));
+                        
+                        // Send document info to MCP server
+                        const documentMessage = {
+                            type: 'get_document_info',
+                            params: {
+                                document_info: message.data
+                            }
+                        };
+                        sendToServer(documentMessage);
                         break;
+
+                    case 'design_command_result':
+                        updateStatus('Design command executed', 'success');
+                        log('Design command result: ' + JSON.stringify(message.data, null, 2));
+                        
+                        // Send result to MCP server
+                        const resultMessage = {
+                            type: 'execute_design_command',
+                            params: {
+                                command: message.data.command,
+                                result: message.data,
+                                status: 'success'
+                            }
+                        };
+                        sendToServer(resultMessage);
+                        break;
+
                     case 'error':
                         updateStatus('Error occurred', 'error');
-                        log('Error: ' + message.message);
+                        log('Plugin Error: ' + message.message);
                         break;
+
                     default:
-                        log('Unknown message: ' + JSON.stringify(message));
+                        log('Unknown plugin message: ' + JSON.stringify(message));
                 }
             }
         });
 
-        log('UI initialized');
+        log('UI initialized - WebSocket connection starting...');
     </script>
 </body>
 </html>

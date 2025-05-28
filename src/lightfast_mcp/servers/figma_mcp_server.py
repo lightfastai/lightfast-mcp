@@ -1,5 +1,5 @@
 """
-Simplified Figma MCP server entry point.
+Figma MCP server entry point with WebSocket communication.
 """
 
 import json
@@ -15,8 +15,8 @@ logger = get_logger("FigmaMCP")
 
 
 def main():
-    """Run the simplified Figma MCP server."""
-    logger.info("Starting simplified Figma MCP server")
+    """Run the Figma MCP server with WebSocket communication."""
+    logger.info("Starting Figma MCP server with WebSocket support")
 
     # Check for environment configuration (from ServerOrchestrator)
     env_config = os.getenv("LIGHTFAST_MCP_SERVER_CONFIG")
@@ -30,16 +30,19 @@ def main():
             config = ServerConfig(
                 name=config_data.get("name", "FigmaMCP"),
                 description=config_data.get(
-                    "description", "Simplified Figma MCP Server"
+                    "description", "Figma MCP Server with WebSocket communication"
                 ),
                 host=config_data.get("host", "localhost"),
                 port=config_data.get("port", 8003),
                 transport=config_data.get("transport", "streamable-http"),
                 path=config_data.get("path", "/mcp"),
-                config=config_data.get("config", {"type": "figma"}),
+                config=config_data.get("config", _get_default_figma_config()),
             )
             logger.info(
                 f"Using environment configuration: {config.transport}://{config.host}:{config.port}"
+            )
+            logger.info(
+                f"WebSocket server will run on port: {config.config.get('websocket_port', 9003)}"
             )
         except (json.JSONDecodeError, KeyError) as e:
             logger.warning(f"Invalid environment configuration: {e}, using defaults")
@@ -53,16 +56,27 @@ def main():
     server.run()
 
 
+def _get_default_figma_config() -> dict:
+    """Get default Figma-specific configuration."""
+    return {
+        "type": "figma",
+        "websocket_host": "localhost",
+        "websocket_port": 9003,
+        "command_timeout": 30.0,
+        "plugin_channel": "default",
+    }
+
+
 def _get_default_config() -> ServerConfig:
     """Get default configuration for standalone running."""
     return ServerConfig(
         name="FigmaMCP",
-        description="Simplified Figma MCP Server",
+        description="Figma MCP Server with WebSocket communication",
         host="localhost",
         port=8003,
         transport="streamable-http",
         path="/mcp",
-        config={"type": "figma"},
+        config=_get_default_figma_config(),
     )
 
 
