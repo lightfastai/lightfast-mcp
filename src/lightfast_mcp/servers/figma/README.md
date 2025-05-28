@@ -1,10 +1,10 @@
 # Figma MCP Server
 
-A comprehensive Figma MCP server that acts as a WebSocket server for real-time design automation and AI integration. This server provides both an MCP interface for AI model interactions and a WebSocket server for Figma plugin connections.
+A comprehensive Figma MCP server that provides design automation and AI integration through a WebSocket server architecture. This server provides an MCP interface for AI model interactions and maintains a WebSocket server for Figma plugin connections.
 
 ## Architecture
 
-The server uses a WebSocket server architecture following the WebSocket Mock pattern:
+The server uses a WebSocket server architecture following the same pattern as other MCP servers:
 
 ```
 ┌─────────────────┐    WebSocket     ┌─────────────────┐    MCP HTTP      ┌─────────────────┐
@@ -29,13 +29,12 @@ The server uses a WebSocket server architecture following the WebSocket Mock pat
 - **Real WebSocket Server**: Runs a full WebSocket server that Figma plugins can connect to
 - **Automatic Startup**: WebSocket server starts automatically when the MCP server starts
 - **Multiple Plugin Support**: Handles multiple concurrent Figma plugin connections
-- **Message Broadcasting**: Supports broadcasting commands to all connected plugins
 - **Client Management**: Tracks and manages connected plugins with unique IDs
 - **Statistics Tracking**: Monitors connections, messages, and server performance
 - **Port Auto-Discovery**: Automatically finds an available port if the default is in use
 
 ### 🤖 MCP Integration
-- **MCP Tools**: Full set of MCP tools for controlling Figma plugins
+- **Two Core Tools**: Simple, focused interface with `get_state` and `execute_command`
 - **AI Model Ready**: Designed for AI model interactions and design automation
 - **Configuration Driven**: Flexible configuration options
 - **Health Monitoring**: Built-in health checks and status monitoring
@@ -45,7 +44,7 @@ The server uses a WebSocket server architecture following the WebSocket Mock pat
 - **Document State Management**: Real-time document information retrieval
 - **Design Command Execution**: Execute AI-generated design commands in Figma
 - **Plugin Communication**: Bidirectional communication with Figma plugins
-- **Multi-plugin Support**: Broadcast commands to multiple Figma instances
+- **Multi-plugin Support**: Handle multiple Figma instances
 
 ## Quick Start
 
@@ -73,16 +72,86 @@ The WebSocket server will start automatically on `ws://localhost:9003` (or the n
 
 ### 3. Use MCP Tools
 
-The server provides MCP tools for AI clients:
+The server provides two core MCP tools for AI clients:
 
-- `get_figma_server_status` - Get server status and connected plugins
-- `get_figma_plugins` - Get list of connected Figma plugins
-- `ping_figma_plugin` - Test connectivity with plugins
-- `get_document_state` - Get current Figma document state
-- `execute_design_command` - Execute design commands in Figma
-- `broadcast_design_command` - Broadcast commands to all plugins
+- `get_state` - Get comprehensive Figma document and plugin state
+- `execute_command` - Execute design commands in Figma
 
-**Note**: The WebSocket server starts automatically when the MCP server starts and runs continuously. There are no manual start/stop tools needed.
+**Note**: The WebSocket server starts automatically when the MCP server starts and runs continuously.
+
+## MCP Tools Reference
+
+### `get_state`
+
+Get comprehensive information about the current Figma document and connected plugins.
+
+**Returns:**
+```json
+{
+  "figma_document_state": {
+    "document": {
+      "name": "My Design",
+      "id": "doc_123",
+      "type": "DOCUMENT"
+    },
+    "currentPage": {
+      "name": "Page 1",
+      "id": "page_456",
+      "children": 3,
+      "selection": 1
+    },
+    "selection": [
+      {
+        "id": "node_789",
+        "name": "Rectangle 1",
+        "type": "RECTANGLE",
+        "visible": true,
+        "locked": false
+      }
+    ],
+    "viewport": {
+      "center": { "x": 0, "y": 0 },
+      "zoom": 1.0
+    }
+  },
+  "plugin_connection": {
+    "plugin_id": "abc123",
+    "connected_at": "2023-01-01T12:00:00Z",
+    "plugin_info": {...}
+  },
+  "websocket_server": {
+    "host": "localhost",
+    "port": 9003,
+    "is_running": true,
+    "total_clients": 1
+  }
+}
+```
+
+### `execute_command`
+
+Execute a design command in Figma.
+
+**Parameters:**
+- `command` (string): The design command to execute
+
+**Supported Commands:**
+- `"create rectangle"` - Creates a rectangle shape
+- `"create circle"` - Creates a circle/ellipse shape  
+- `"create text"` - Creates a text node with default content
+- `"delete selected"` - Deletes selected elements
+- `"select all"` - Selects all elements on current page
+
+**Returns:**
+```json
+{
+  "status": "command_sent",
+  "command": "create rectangle",
+  "plugin_id": "abc123",
+  "message": "Design command sent to Figma plugin",
+  "note": "Check the Figma interface for command execution results"
+}
+```
 
 ## Configuration
 
@@ -198,90 +267,6 @@ The server can be configured via `config/servers.yaml`:
   "type": "ping",
   "request_id": "ghi789",
   "timestamp": 1234567890.123
-}
-```
-
-## MCP Tools Reference
-
-### `get_figma_server_status`
-
-Get comprehensive status information about the Figma WebSocket server.
-
-**Returns:**
-```json
-{
-  "figma_websocket_server": {
-    "host": "localhost",
-    "port": 9003,
-    "is_running": true,
-    "url": "ws://localhost:9003",
-    "clients_connected": 2,
-    "stats": {...}
-  },
-  "mcp_server": {
-    "mcp_server_name": "FigmaMCP",
-    "mcp_server_type": "figma",
-    "mcp_server_version": "1.0.0"
-  }
-}
-```
-
-### `get_figma_plugins`
-
-Get information about all connected Figma plugins.
-
-**Returns:**
-```json
-{
-  "status": "success",
-  "plugins": [
-    {
-      "id": "abc123",
-      "connected_at": "2023-01-01T12:00:00Z",
-      "plugin_info": {...},
-      "remote_address": "127.0.0.1:54321"
-    }
-  ],
-  "total_plugins": 1
-}
-```
-
-### `execute_design_command`
-
-Execute a design command in Figma.
-
-**Parameters:**
-- `command` (string): The design command to execute
-- `plugin_id` (string, optional): Specific plugin ID (if None, uses first available)
-
-**Returns:**
-```json
-{
-  "status": "command_sent",
-  "plugin_id": "abc123",
-  "command": "create rectangle",
-  "message": "Design command sent to Figma plugin"
-}
-```
-
-### `get_document_state`
-
-Get the current document state from Figma plugins.
-
-**Parameters:**
-- `plugin_id` (string, optional): Specific plugin ID (if None, uses first available)
-
-**Returns:**
-```json
-{
-  "status": "success",
-  "plugin_id": "abc123",
-  "document_state": {
-    "document": {...},
-    "currentPage": {...},
-    "selection": [...]
-  },
-  "source": "cached"
 }
 ```
 

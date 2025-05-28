@@ -52,23 +52,12 @@ class FigmaMCPServer(BaseServer):
         if not self.mcp:
             return
 
-        # Register tools from the tools module
-        self.mcp.tool()(tools.get_figma_server_status)
-        self.mcp.tool()(tools.get_figma_plugins)
-        self.mcp.tool()(tools.ping_figma_plugin)
-        self.mcp.tool()(tools.get_document_state)
-        self.mcp.tool()(tools.execute_design_command)
-        self.mcp.tool()(tools.broadcast_design_command)
+        # Register core tools - matching Blender server pattern
+        self.mcp.tool()(tools.get_state)
+        self.mcp.tool()(tools.execute_command)
 
         # Update the server info with available tools
-        self.info.tools = [
-            "get_figma_server_status",
-            "get_figma_plugins",
-            "ping_figma_plugin",
-            "get_document_state",
-            "execute_design_command",
-            "broadcast_design_command",
-        ]
+        self.info.tools = ["get_state", "execute_command"]
         logger.info(f"Registered {len(self.info.tools)} tools: {self.info.tools}")
 
     async def _check_application(self, app: str) -> bool:

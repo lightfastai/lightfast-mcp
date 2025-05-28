@@ -53,3 +53,33 @@ class InvalidCommandTypeError(BlenderMCPError):
     """Raised if an unsupported command type is sent to Blender."""
 
     pass
+
+
+class FigmaMCPError(LightfastMCPError):
+    """Base exception for all Figma MCP Server related errors."""
+
+    pass
+
+
+class FigmaConnectionError(FigmaMCPError):
+    """Raised when there are issues connecting to or maintaining a connection with Figma plugins."""
+
+    pass
+
+
+class FigmaCommandError(FigmaMCPError):
+    """Raised when a command sent to Figma fails during its execution within Figma."""
+
+    pass
+
+
+class FigmaResponseError(FigmaMCPError):
+    """Raised when the response from Figma is unexpected, malformed, or indicates an error."""
+
+    pass
+
+
+class FigmaTimeoutError(FigmaConnectionError):
+    """Raised specifically when a timeout occurs while waiting for a response from Figma."""
+
+    pass

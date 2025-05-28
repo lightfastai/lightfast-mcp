@@ -222,16 +222,9 @@ class TestFigmaMCPServer:
 
                 tools = server.get_tools()
                 assert isinstance(tools, list)
-                assert len(tools) > 0
-                # Should have figma tools
-                expected_tools = [
-                    "get_figma_server_status",
-                    "get_figma_plugins",
-                    "ping_figma_plugin",
-                    "get_document_state",
-                    "execute_design_command",
-                    "broadcast_design_command",
-                ]
+                assert len(tools) == 2
+                # Should have the two core figma tools
+                expected_tools = ["get_state", "execute_command"]
                 for tool in expected_tools:
                     assert tool in tools
 
@@ -243,7 +236,7 @@ class TestFigmaMCPServer:
 
                 # Test that tools are registered during initialization
                 tools = server.info.tools
-                assert len(tools) > 0
+                assert len(tools) == 2  # get_state and execute_command
 
     def test_figma_server_info_property(self):
         """Test FigmaMCPServer info property."""
@@ -271,9 +264,8 @@ class TestFigmaMCPServer:
 
                 # Tools should be registered during init
                 tools = server.info.tools
-                assert "get_figma_server_status" in tools
-                assert "get_figma_plugins" in tools
-                assert "ping_figma_plugin" in tools
+                assert "get_state" in tools
+                assert "execute_command" in tools
 
 
 class TestServerIntegration:

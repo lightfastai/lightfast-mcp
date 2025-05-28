@@ -648,6 +648,11 @@
                         log('🔧 Connection test result: ' + JSON.stringify(message.data, null, 2));
                         break;
 
+                    case 'plugin_status':
+                        updateStatus('Plugin status received', 'info');
+                        log('📋 Plugin status: ' + JSON.stringify(message.data, null, 2));
+                        break;
+
                     default:
                         log('Unknown plugin message: ' + JSON.stringify(message));
                 }
