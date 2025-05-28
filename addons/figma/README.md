@@ -9,7 +9,7 @@ The plugin uses a split architecture to work around Figma's sandboxed environmen
 ```
 ┌─────────────────┐    Plugin Messages    ┌─────────────────┐    WebSocket     ┌─────────────────┐
 │   Plugin Code   │ ←──────────────────→ │   Plugin UI     │ ←──────────────→ │   MCP Server    │
-│   (code.ts)     │                      │   (ui.html)     │   ws://9003      │                 │
+│   (code.ts)     │                      │   (ui.html)     │   ws://host:port │                 │
 │                 │                      │                 │                  │                 │
 │ - Figma API     │                      │ - WebSocket     │                  │ - Tool Registry │
 │ - Document Ops  │                      │ - Server Comm   │                  │ - AI Integration│
@@ -24,10 +24,11 @@ The plugin uses a split architecture to work around Figma's sandboxed environmen
 
 ## Features
 
+- **Manual Connection Control**: Configure host and port, connect/disconnect manually
 - **Real-time Communication**: WebSocket connection from UI to MCP server
 - **Figma API Integration**: Full access to Figma's document and design APIs
 - **Design Command Execution**: Execute AI-generated design commands
-- **Automatic Reconnection**: Robust connection management with message queuing
+- **Connection Management**: Manual connection control with status indicators
 - **Comprehensive Logging**: Real-time status updates and debugging info
 
 ## Installation
@@ -67,23 +68,37 @@ The server will start:
 2. Go to `Plugins` → Find "Lightfast MCP Figma Plugin"
 3. Click to run the plugin
 
-### 3. Test the Connection
+### 3. Configure and Connect
 
 1. Plugin UI will open in the sidebar
-2. Watch the WebSocket status indicator (should show "Connected to MCP Server")
-3. Click `"Test WebSocket Connection"` to test server communication
-4. Click `"Test Plugin Communication"` to test internal plugin functionality
-5. Click `"Get Document Info"` to retrieve and send document data to the server
-6. Click `"Test Design Command"` to test design command execution
+2. **Configure Connection**:
+   - **Host**: Enter server host (default: `localhost`)
+   - **Port**: Enter WebSocket port (default: `9003`)
+3. **Connect**: Click the "🔌 Connect" button
+4. **Verify**: Watch the status indicator turn green when connected
+
+### 4. Test the Connection
+
+1. Click `"🌐 Test Connection"` to test server communication
+2. Click `"🔄 Test Plugin Communication"` to test internal plugin functionality
+3. Click `"📄 Get Document Info"` to retrieve and send document data to the server
+4. Click `"🎨 Test Design Command"` to test design command execution
 
 ## Available Features
 
+### Connection Controls
+- **Host/Port Configuration**: Set custom server address and port
+- **Manual Connect/Disconnect**: Full control over connection state
+- **Connection Status**: Real-time connection status indicators
+- **Test Connection**: Verify WebSocket communication
+
 ### Plugin UI Tools
-- `Test WebSocket Connection` - Tests WebSocket communication with MCP server
-- `Test Plugin Communication` - Tests internal plugin messaging (ping/pong)
-- `Get Document Info` - Retrieves comprehensive document data and sends to server
-- `Test Design Command` - Tests design command execution (creates a rectangle)
-- `Close Plugin` - Closes the plugin and WebSocket connection
+- `🔌 Connect/Disconnect` - Manual connection control
+- `🌐 Test Connection` - Tests WebSocket communication with MCP server
+- `🔄 Test Plugin Communication` - Tests internal plugin messaging (ping/pong)
+- `📄 Get Document Info` - Retrieves comprehensive document data and sends to server
+- `🎨 Test Design Command` - Tests design command execution (creates a rectangle)
+- `✕ Close Plugin` - Closes the plugin and WebSocket connection
 
 ### MCP Server Tools
 The MCP server exposes these tools for AI clients:
@@ -133,7 +148,14 @@ The server can be configured via `config/servers.yaml`:
 
 ### Plugin Configuration
 
-The plugin connects to `ws://localhost:9003` by default. To change this, modify the `WEBSOCKET_URL` constant in `ui.html`.
+The plugin UI allows you to configure:
+- **Host**: Server hostname or IP address (default: `localhost`)
+- **Port**: WebSocket port number (default: `9003`)
+
+For different server configurations:
+- **Local Development**: `localhost:9003`
+- **Remote Server**: `your-server.com:9003`
+- **Custom Port**: `localhost:8080` (if server runs on different port)
 
 ## File Structure
 
@@ -165,8 +187,25 @@ This compiles `code.ts` to `code.js` which is used by the plugin.
 1. **Start the MCP server**: `uv run lightfast-figma-server`
 2. **Verify WebSocket server**: `netstat -an | grep 9003`
 3. **Load the plugin** in Figma Desktop app
-4. **Check connection status** in the plugin UI
-5. **Test all buttons** to verify functionality
+4. **Configure connection** (host: `localhost`, port: `9003`)
+5. **Click Connect** and verify green status
+6. **Test all buttons** to verify functionality
+
+### Testing with Different Servers
+
+To test with different server configurations:
+
+1. **Change server port** in `config/servers.yaml`:
+   ```yaml
+   websocket_port: 8080  # Custom port
+   ```
+
+2. **Restart server**: `uv run lightfast-figma-server`
+
+3. **Update plugin UI**:
+   - Host: `localhost`
+   - Port: `8080`
+   - Click Connect
 
 ### Adding New Design Commands
 
@@ -191,11 +230,16 @@ To add new design commands:
 - Check that `manifest.json` is valid
 - Verify `code.js` exists (run `pnpm run build` if needed)
 
-### WebSocket Connection Issues
+### Connection Issues
+- **"Connection Error"**: Check if MCP server is running
+- **"Connection Refused"**: Verify host and port settings
+- **"Timeout"**: Check firewall settings and network connectivity
+
+### WebSocket Server Issues
 - Ensure MCP server is running: `uv run lightfast-figma-server`
 - Check WebSocket port is open: `netstat -an | grep 9003`
 - Check server logs for WebSocket errors
-- Verify no firewall blocking port 9003
+- Verify no firewall blocking the port
 
 ### Plugin Communication Issues
 - Check Figma console (`Developer` → `Console`) for errors
@@ -223,10 +267,21 @@ result = await server.execute_design_command("create text")
 
 ### Via Plugin UI (Manual Testing)
 
-1. Click "Get Document Info" to see current document structure
-2. Click "Test Design Command" to create a rectangle
-3. Monitor the output area for real-time logs
-4. Check WebSocket status indicator for connection health
+1. **Configure Connection**:
+   - Host: `localhost`
+   - Port: `9003`
+   - Click "🔌 Connect"
+
+2. **Test Functionality**:
+   - Click "🌐 Test Connection" to verify server communication
+   - Click "📄 Get Document Info" to see current document structure
+   - Click "🎨 Test Design Command" to create a rectangle
+   - Monitor the output area for real-time logs
+
+3. **Check Status**:
+   - Green status = Connected and working
+   - Red status = Disconnected or error
+   - Yellow status = Connecting or warning
 
 ## License
 
@@ -239,4 +294,5 @@ For issues and support:
 2. Review server logs: `uv run lightfast-figma-server`
 3. Test WebSocket connectivity: `netstat -an | grep 9003`
 4. Use the MCP orchestrator: `uv run lightfast-mcp-orchestrator start`
-5. Check Figma console for plugin errors 
+5. Check Figma console for plugin errors
+6. Verify connection settings in plugin UI 

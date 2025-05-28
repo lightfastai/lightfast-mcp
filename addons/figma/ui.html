@@ -35,14 +35,46 @@
             color: #666;
         }
 
-        .button {
-            width: 100%;
-            padding: 12px;
-            margin-bottom: 8px;
-            border: 1px solid #ddd;
+        .connection-section {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
             border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 16px;
+        }
+
+        .connection-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .connection-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .connection-row label {
+            font-size: 12px;
+            font-weight: 500;
+            min-width: 60px;
+        }
+
+        .connection-row input {
+            flex: 1;
+            padding: 6px 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .button {
+            padding: 8px 12px;
+            margin: 2px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
             background: white;
-            font-size: 14px;
+            font-size: 12px;
             cursor: pointer;
             transition: all 0.2s;
         }
@@ -66,14 +98,50 @@
             background: #0056b3;
         }
 
-        .button.websocket {
+        .button.success {
             background: #28a745;
             color: white;
             border-color: #28a745;
         }
 
-        .button.websocket:hover {
+        .button.success:hover {
             background: #218838;
+        }
+
+        .button.danger {
+            background: #dc3545;
+            color: white;
+            border-color: #dc3545;
+        }
+
+        .button.danger:hover {
+            background: #c82333;
+        }
+
+        .button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .button-row {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 8px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: white;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .button-row:hover {
+            background: #f8f9fa;
+            border-color: #007bff;
+        }
+
+        .button-row:active {
+            transform: translateY(1px);
         }
 
         .output {
@@ -155,20 +223,38 @@
         <p>WebSocket-Enabled Figma Plugin</p>
     </div>
 
-    <div id="status" class="status info">Plugin loaded - connecting to MCP server...</div>
-    <div id="websocket-status" class="websocket-status connecting">🔄 Connecting to WebSocket...</div>
+    <div id="status" class="status info">Plugin loaded - ready to connect</div>
 
-    <button class="button websocket" onclick="testWebSocket()">🌐 Test WebSocket Connection</button>
-    <button class="button" onclick="testPluginCommunication()">🔄 Test Plugin Communication</button>
-    <button class="button" onclick="getDocumentInfo()">📄 Get Document Info</button>
-    <button class="button" onclick="testDesignCommand()">🎨 Test Design Command</button>
-    <button class="button primary" onclick="closePlugin()">✕ Close Plugin</button>
+    <!-- Connection Configuration Section -->
+    <div class="connection-section">
+        <div class="connection-row">
+            <label for="host-input">Host:</label>
+            <input type="text" id="host-input" value="localhost" placeholder="localhost">
+        </div>
+        <div class="connection-row">
+            <label for="port-input">Port:</label>
+            <input type="number" id="port-input" value="9003" placeholder="9003" min="1" max="65535">
+        </div>
+        <div class="connection-row">
+            <button id="connect-btn" class="button success" onclick="manualConnect()">🔌 Connect</button>
+            <button id="disconnect-btn" class="button danger" onclick="manualDisconnect()" disabled>🔌 Disconnect</button>
+            <button class="button" onclick="testWebSocket()">🌐 Test Connection</button>
+        </div>
+    </div>
 
-    <div id="output" class="output">Plugin loaded - initializing WebSocket connection...</div>
+    <div id="websocket-status" class="websocket-status disconnected">🔌 Not Connected</div>
+
+    <button class="button-row" onclick="testPluginCommunication()">🔄 Test Plugin Communication</button>
+    <button class="button-row" onclick="getDocumentInfo()">📄 Get Document Info</button>
+    <button class="button-row" onclick="testDesignCommand()">🎨 Test Design Command</button>
+    <button class="button-row primary" onclick="closePlugin()">✕ Close Plugin</button>
+
+    <div id="output" class="output">Plugin loaded - configure connection above and click Connect...</div>
 
     <script>
         // WebSocket configuration
-        const WEBSOCKET_URL = 'ws://localhost:9003';
+        const DEFAULT_HOST = 'localhost';
+        const DEFAULT_PORT = 9003;
         const RECONNECT_INTERVAL = 5000; // 5 seconds
         const PING_INTERVAL = 30000; // 30 seconds
 
@@ -177,9 +263,8 @@
         let isConnected = false;
         let messageQueue = [];
         let currentDocumentInfo = null;
-
-        // Initialize WebSocket connection when UI loads
-        initializeWebSocket();
+        let pingInterval = null;
+        let autoReconnect = false;
 
         function updateStatus(message, type = 'info') {
             const status = document.getElementById('status');
@@ -193,6 +278,25 @@
             wsStatus.className = `websocket-status ${status}`;
         }
 
+        function updateConnectionButtons() {
+            const connectBtn = document.getElementById('connect-btn');
+            const disconnectBtn = document.getElementById('disconnect-btn');
+            const hostInput = document.getElementById('host-input');
+            const portInput = document.getElementById('port-input');
+
+            if (isConnected) {
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+                hostInput.disabled = true;
+                portInput.disabled = true;
+            } else {
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+                hostInput.disabled = false;
+                portInput.disabled = false;
+            }
+        }
+
         function log(message) {
             const output = document.getElementById('output');
             const timestamp = new Date().toLocaleTimeString();
@@ -200,15 +304,49 @@
             output.scrollTop = output.scrollHeight;
         }
 
+        function getWebSocketURL() {
+            const host = document.getElementById('host-input').value || DEFAULT_HOST;
+            const port = document.getElementById('port-input').value || DEFAULT_PORT;
+            return `ws://${host}:${port}`;
+        }
+
+        // Manual connection functions
+        function manualConnect() {
+            if (websocket) {
+                log('Already connected or connecting...');
+                return;
+            }
+
+            autoReconnect = false; // Manual connection, no auto-reconnect
+            connectToWebSocket();
+        }
+
+        function manualDisconnect() {
+            autoReconnect = false; // Disable auto-reconnect
+            if (pingInterval) {
+                clearInterval(pingInterval);
+                pingInterval = null;
+            }
+            if (websocket) {
+                websocket.close();
+            }
+        }
+
         // WebSocket functionality
-        function initializeWebSocket() {
+        function connectToWebSocket() {
             try {
-                websocket = new WebSocket(WEBSOCKET_URL);
+                const wsUrl = getWebSocketURL();
+                updateStatus('Connecting...', 'info');
+                updateWebSocketStatus('connecting', 'Connecting...');
+                log('Connecting to ' + wsUrl);
+                
+                websocket = new WebSocket(wsUrl);
 
                 websocket.onopen = () => {
                     isConnected = true;
                     updateWebSocketStatus('connected', 'Connected to MCP Server');
                     updateStatus('WebSocket connected successfully!', 'success');
+                    updateConnectionButtons();
                     log('WebSocket: Connected to MCP server');
 
                     // Process any queued messages
@@ -235,18 +373,28 @@
 
                 websocket.onclose = () => {
                     isConnected = false;
+                    websocket = null;
                     updateWebSocketStatus('disconnected', 'Disconnected from MCP Server');
                     updateStatus('WebSocket disconnected', 'warning');
+                    updateConnectionButtons();
                     log('WebSocket: Disconnected from MCP server');
 
-                    // Attempt to reconnect
-                    setTimeout(initializeWebSocket, RECONNECT_INTERVAL);
+                    if (pingInterval) {
+                        clearInterval(pingInterval);
+                        pingInterval = null;
+                    }
+
+                    // Attempt to reconnect only if auto-reconnect is enabled
+                    if (autoReconnect) {
+                        setTimeout(connectToWebSocket, RECONNECT_INTERVAL);
+                    }
                 };
 
                 websocket.onerror = (error) => {
                     console.error('WebSocket error:', error);
                     updateWebSocketStatus('disconnected', 'Connection Error');
                     updateStatus('WebSocket connection error', 'error');
+                    updateConnectionButtons();
                     log('WebSocket Error: Connection failed');
                 };
 
@@ -254,6 +402,7 @@
                 console.error('Error initializing WebSocket:', error);
                 updateWebSocketStatus('disconnected', 'Initialization Error');
                 updateStatus('Failed to initialize WebSocket', 'error');
+                updateConnectionButtons();
                 log('WebSocket Error: ' + error.message);
             }
         }
@@ -302,7 +451,11 @@
         }
 
         function startPingInterval() {
-            setInterval(() => {
+            if (pingInterval) {
+                clearInterval(pingInterval);
+            }
+            
+            pingInterval = setInterval(() => {
                 if (isConnected && websocket && websocket.readyState === WebSocket.OPEN) {
                     const pingMessage = {
                         type: 'ping',
@@ -318,6 +471,11 @@
 
         // Button handlers
         function testWebSocket() {
+            if (!isConnected) {
+                updateStatus('Not connected - click Connect first', 'warning');
+                return;
+            }
+            
             updateStatus('Testing WebSocket connection...', 'info');
             const pingMessage = {
                 type: 'ping',
@@ -371,30 +529,34 @@
                         updateStatus('Document info received', 'success');
                         log('Document info: ' + JSON.stringify(message.data, null, 2));
                         
-                        // Send document info to MCP server
-                        const documentMessage = {
-                            type: 'get_document_info',
-                            params: {
-                                document_info: message.data
-                            }
-                        };
-                        sendToServer(documentMessage);
+                        // Send document info to MCP server if connected
+                        if (isConnected) {
+                            const documentMessage = {
+                                type: 'get_document_info',
+                                params: {
+                                    document_info: message.data
+                                }
+                            };
+                            sendToServer(documentMessage);
+                        }
                         break;
 
                     case 'design_command_result':
                         updateStatus('Design command executed', 'success');
                         log('Design command result: ' + JSON.stringify(message.data, null, 2));
                         
-                        // Send result to MCP server
-                        const resultMessage = {
-                            type: 'execute_design_command',
-                            params: {
-                                command: message.data.command,
-                                result: message.data,
-                                status: 'success'
-                            }
-                        };
-                        sendToServer(resultMessage);
+                        // Send result to MCP server if connected
+                        if (isConnected) {
+                            const resultMessage = {
+                                type: 'execute_design_command',
+                                params: {
+                                    command: message.data.command,
+                                    result: message.data,
+                                    status: 'success'
+                                }
+                            };
+                            sendToServer(resultMessage);
+                        }
                         break;
 
                     case 'error':
@@ -408,7 +570,9 @@
             }
         });
 
-        log('UI initialized - WebSocket connection starting...');
+        // Initialize UI
+        updateConnectionButtons();
+        log('UI initialized - configure connection settings and click Connect');
     </script>
 </body>
 </html>

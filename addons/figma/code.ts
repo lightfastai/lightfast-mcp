@@ -1,8 +1,10 @@
-// Lightfast MCP Figma Plugin - UI-WebSocket Version
-// This file handles Figma API interactions and communicates with UI via messaging
+// Lightfast MCP Figma Plugin - Socket Server Version
+// This file handles Figma API interactions and acts as a socket server for MCP communication
+// Following the Blender pattern: Plugin acts as server, MCP server acts as client
 
 // Plugin state
 let isPluginActive = true;
+let serverPort = 9003;
 
 // Runs this code if the plugin is run in Figma
 if (figma.editorType === 'figma') {
@@ -13,8 +15,15 @@ if (figma.editorType === 'figma') {
     themeColors: true 
   });
 
-  // Send initial document info to UI
-  sendDocumentInfoToUI();
+  // Send initial status to UI
+  figma.ui.postMessage({
+    type: 'plugin_status',
+    data: {
+      status: 'Plugin loaded - ready to start server',
+      port: serverPort,
+      active: isPluginActive
+    }
+  });
 
   // Handle messages from the UI
   figma.ui.onmessage = async (msg: any) => {
@@ -30,6 +39,14 @@ if (figma.editorType === 'figma') {
 
         case 'execute_design_command':
           await executeDesignCommand(msg.command || '');
+          break;
+
+        case 'start_server':
+          await startSocketServer(msg.port || serverPort);
+          break;
+
+        case 'stop_server':
+          await stopSocketServer();
           break;
 
         case 'close-plugin':
@@ -51,6 +68,55 @@ if (figma.editorType === 'figma') {
       });
     }
   };
+}
+
+async function startSocketServer(port: number) {
+  try {
+    serverPort = port;
+    
+    // Note: Figma plugins cannot create actual socket servers
+    // This is a simulation - the UI will handle the actual server communication
+    figma.ui.postMessage({
+      type: 'server_status',
+      data: {
+        status: 'Server simulation started',
+        port: port,
+        message: 'Figma plugins cannot create socket servers. Use the UI for communication.',
+        active: true
+      }
+    });
+
+    console.log(`Simulated socket server started on port ${port}`);
+    
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    figma.ui.postMessage({
+      type: 'error',
+      message: `Error starting server: ${errorMessage}`
+    });
+  }
+}
+
+async function stopSocketServer() {
+  try {
+    figma.ui.postMessage({
+      type: 'server_status',
+      data: {
+        status: 'Server simulation stopped',
+        port: serverPort,
+        active: false
+      }
+    });
+
+    console.log('Simulated socket server stopped');
+    
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    figma.ui.postMessage({
+      type: 'error',
+      message: `Error stopping server: ${errorMessage}`
+    });
+  }
 }
 
 async function sendDocumentInfoToUI() {
@@ -177,6 +243,153 @@ async function executeDesignCommand(command: string) {
   }
 }
 
+// Command handlers for MCP server communication
+// These functions handle commands that come from the MCP server via the UI bridge
+
+function handleMCPCommand(command: any): any {
+  try {
+    const cmdType = command.type;
+    const params = command.params || {};
+
+    console.log(`Handling MCP command: ${cmdType}`);
+
+    switch (cmdType) {
+      case 'ping':
+        return {
+          status: 'success',
+          result: {
+            message: 'pong',
+            timestamp: Date.now(),
+            server: 'figma-plugin'
+          }
+        };
+
+      case 'get_document_info':
+        return {
+          status: 'success',
+          result: getCurrentDocumentInfo()
+        };
+
+      case 'execute_design_command':
+        const designCommand = params.command || '';
+        return {
+          status: 'success',
+          result: executeDesignCommandSync(designCommand)
+        };
+
+      default:
+        return {
+          status: 'error',
+          message: `Unknown command type: ${cmdType}`
+        };
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return {
+      status: 'error',
+      message: errorMessage
+    };
+  }
+}
+
+function getCurrentDocumentInfo(): any {
+  try {
+    return {
+      document: {
+        name: figma.root.name,
+        id: figma.root.id,
+        type: figma.root.type,
+      },
+      currentPage: {
+        name: figma.currentPage.name,
+        id: figma.currentPage.id,
+        children: figma.currentPage.children.length,
+        selection: figma.currentPage.selection.length
+      },
+      selection: figma.currentPage.selection.map(node => ({
+        id: node.id,
+        name: node.name,
+        type: node.type,
+        visible: node.visible,
+        locked: node.locked
+      })),
+      viewport: {
+        center: figma.viewport.center,
+        zoom: figma.viewport.zoom
+      },
+      timestamp: Date.now()
+    };
+  } catch (error) {
+    throw new Error(`Error getting document info: ${error}`);
+  }
+}
+
+function executeDesignCommandSync(command: string): any {
+  try {
+    console.log('Executing design command synchronously:', command);
+    
+    let result: any = { message: 'Command received but not implemented', command: command };
+    
+    if (command.toLowerCase().includes('create rectangle')) {
+      const rect = figma.createRectangle();
+      rect.name = 'AI Created Rectangle';
+      rect.resize(100, 100);
+      figma.currentPage.appendChild(rect);
+      figma.currentPage.selection = [rect];
+      figma.viewport.scrollAndZoomIntoView([rect]);
+      
+      result = {
+        message: 'Rectangle created successfully',
+        command: command,
+        created_node: {
+          id: rect.id,
+          name: rect.name,
+          type: rect.type
+        }
+      };
+    } else if (command.toLowerCase().includes('create circle')) {
+      const ellipse = figma.createEllipse();
+      ellipse.name = 'AI Created Circle';
+      ellipse.resize(100, 100);
+      figma.currentPage.appendChild(ellipse);
+      figma.currentPage.selection = [ellipse];
+      figma.viewport.scrollAndZoomIntoView([ellipse]);
+      
+      result = {
+        message: 'Circle created successfully',
+        command: command,
+        created_node: {
+          id: ellipse.id,
+          name: ellipse.name,
+          type: ellipse.type
+        }
+      };
+    } else if (command.toLowerCase().includes('create text')) {
+      const text = figma.createText();
+      text.name = 'AI Created Text';
+      text.characters = 'Hello from AI!';
+      figma.currentPage.appendChild(text);
+      figma.currentPage.selection = [text];
+      figma.viewport.scrollAndZoomIntoView([text]);
+      
+      result = {
+        message: 'Text created successfully',
+        command: command,
+        created_node: {
+          id: text.id,
+          name: text.name,
+          type: text.type,
+          text: text.characters
+        }
+      };
+    }
+
+    return result;
+  } catch (error) {
+    throw new Error(`Error executing design command: ${error}`);
+  }
+}
+
 function cleanup() {
   isPluginActive = false;
 }
@@ -185,3 +398,6 @@ function cleanup() {
 figma.on('close', () => {
   cleanup();
 });
+
+// Export the MCP command handler for the UI to use
+(globalThis as any).handleMCPCommand = handleMCPCommand;

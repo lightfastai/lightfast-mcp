@@ -28,9 +28,9 @@ servers:
   version: 1.0.0
 - config:
     type: figma
-    plugin_channel: "default"
+    figma_host: localhost
+    figma_port: 9003
     command_timeout: 30.0
-    websocket_port: 9003 # Default for Figma: MCP port (8003) + 1000
   description: Figma MCP Server for web design and collaborative design workflows
   host: localhost
   name: figma-server
