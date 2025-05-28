@@ -30,15 +30,15 @@ class FigmaMCPServer(BaseServer):
         # Create the WebSocket server instance
         self.websocket_server = FigmaWebSocketServer(host=figma_host, port=figma_port)
 
-        # Auto-start configuration
-        self.auto_start_websocket = config.config.get("auto_start_websocket", True)
-
         # Set this server instance in tools module for access
         tools.set_current_server(self)
 
         logger.info(
             f"Figma server configured for WebSocket server at {figma_host}:{figma_port}"
         )
+
+        # Start WebSocket server immediately in a background task
+        self._start_websocket_server_background()
 
     def _register_tools(self):
         """Register Figma server tools."""
@@ -47,8 +47,6 @@ class FigmaMCPServer(BaseServer):
 
         # Register tools from the tools module
         self.mcp.tool()(tools.get_figma_server_status)
-        self.mcp.tool()(tools.start_figma_server)
-        self.mcp.tool()(tools.stop_figma_server)
         self.mcp.tool()(tools.get_figma_plugins)
         self.mcp.tool()(tools.ping_figma_plugin)
         self.mcp.tool()(tools.get_document_state)
@@ -58,8 +56,6 @@ class FigmaMCPServer(BaseServer):
         # Update the server info with available tools
         self.info.tools = [
             "get_figma_server_status",
-            "start_figma_server",
-            "stop_figma_server",
             "get_figma_plugins",
             "ping_figma_plugin",
             "get_document_state",
@@ -80,20 +76,17 @@ class FigmaMCPServer(BaseServer):
         """Figma server startup logic."""
         logger.info(f"Figma server '{self.config.name}' starting up...")
 
-        # Auto-start WebSocket server if configured
-        if self.auto_start_websocket:
-            logger.info("Auto-starting Figma WebSocket server...")
-            try:
-                success = await self.websocket_server.start()
-                if success:
-                    logger.info("✅ Figma WebSocket server auto-started successfully")
-                    logger.info(
-                        f"🎨 Ready for Figma plugin connections on ws://{self.websocket_server.host}:{self.websocket_server.port}"
-                    )
-                else:
-                    logger.warning("⚠️ Failed to auto-start Figma WebSocket server")
-            except Exception as e:
-                logger.error(f"❌ Error auto-starting Figma WebSocket server: {e}")
+        # WebSocket server is started in background thread during __init__
+        # Just wait a moment to let it initialize
+        import asyncio
+
+        await asyncio.sleep(0.5)
+
+        # Check if WebSocket server started successfully
+        if self.websocket_server.is_running:
+            logger.info("✅ WebSocket server is running and ready for connections")
+        else:
+            logger.warning("⚠️ WebSocket server may still be starting up")
 
         logger.info("Figma server startup complete")
 
@@ -119,20 +112,110 @@ class FigmaMCPServer(BaseServer):
             if not self.info.is_running:
                 return False
 
-            # Check WebSocket server status
-            if self.auto_start_websocket and not self.websocket_server.is_running:
+            # Check WebSocket server status - it should always be running
+            if not self.websocket_server.is_running:
+                logger.warning(
+                    "Health check failed: Figma WebSocket server is not running"
+                )
                 return False
 
             # If WebSocket server is running, check if it's responsive
-            if self.websocket_server.is_running:
-                # Simple check - verify server object state
-                server_info = self.websocket_server.get_server_info()
-                return server_info.get("is_running", False)
+            server_info = self.websocket_server.get_server_info()
+            return server_info.get("is_running", False)
 
-            return True
         except Exception as e:
             logger.debug(f"Health check failed: {e}")
             return False
+
+    def _start_websocket_server_background(self):
+        """Start the WebSocket server in a background thread."""
+        import asyncio
+        import threading
+
+        def start_websocket():
+            """Start WebSocket server in its own event loop."""
+            try:
+                # Create a new event loop for this thread
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+
+                logger.info("Starting Figma WebSocket server in background...")
+
+                # Run the startup logic
+                success = loop.run_until_complete(self._start_websocket_with_retry())
+
+                if success:
+                    logger.info(
+                        "✅ Figma WebSocket server started successfully in background"
+                    )
+                    # Keep the loop running to handle WebSocket connections
+                    loop.run_forever()
+                else:
+                    logger.error(
+                        "❌ Failed to start Figma WebSocket server in background"
+                    )
+
+            except Exception as e:
+                logger.error(f"❌ Error starting WebSocket server in background: {e}")
+                import traceback
+
+                logger.debug(
+                    f"🔍 Background startup traceback: {traceback.format_exc()}"
+                )
+            finally:
+                try:
+                    loop.close()
+                except:
+                    pass
+
+        # Start in daemon thread so it doesn't prevent shutdown
+        thread = threading.Thread(target=start_websocket, daemon=True)
+        thread.start()
+        logger.info("🚀 WebSocket server startup initiated in background thread")
+
+    async def _start_websocket_with_retry(self):
+        """Start WebSocket server with retry logic."""
+        max_retries = 3
+        retry_count = 0
+
+        while retry_count < max_retries:
+            try:
+                success = await self.websocket_server.start()
+                if success:
+                    logger.info(
+                        f"🎨 Ready for Figma plugin connections on ws://{self.websocket_server.host}:{self.websocket_server.port}"
+                    )
+                    return True
+                else:
+                    retry_count += 1
+                    if retry_count < max_retries:
+                        logger.warning(
+                            f"⚠️ Failed to start Figma WebSocket server, retrying ({retry_count}/{max_retries})..."
+                        )
+                        # Try a different port if the default one is in use
+                        self.websocket_server.port += 1
+                        logger.info(f"Trying port {self.websocket_server.port}")
+                    else:
+                        logger.error(
+                            "❌ Failed to start Figma WebSocket server after all retries"
+                        )
+                        return False
+            except Exception as e:
+                retry_count += 1
+                if retry_count < max_retries:
+                    logger.warning(
+                        f"⚠️ Error starting Figma WebSocket server, retrying ({retry_count}/{max_retries}): {e}"
+                    )
+                    # Try a different port if there's a port conflict
+                    self.websocket_server.port += 1
+                    logger.info(f"Trying port {self.websocket_server.port}")
+                else:
+                    logger.error(
+                        f"❌ Failed to start Figma WebSocket server after all retries: {e}"
+                    )
+                    return False
+
+        return False
 
 
 def main():
@@ -145,7 +228,6 @@ def main():
             "type": "figma",
             "figma_host": "localhost",
             "figma_port": 9003,
-            "auto_start_websocket": True,
         },
     )
 

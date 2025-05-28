@@ -27,17 +27,19 @@ The server uses a WebSocket server architecture following the WebSocket Mock pat
 
 ### 🌐 WebSocket Server
 - **Real WebSocket Server**: Runs a full WebSocket server that Figma plugins can connect to
+- **Automatic Startup**: WebSocket server starts automatically when the MCP server starts
 - **Multiple Plugin Support**: Handles multiple concurrent Figma plugin connections
 - **Message Broadcasting**: Supports broadcasting commands to all connected plugins
 - **Client Management**: Tracks and manages connected plugins with unique IDs
 - **Statistics Tracking**: Monitors connections, messages, and server performance
+- **Port Auto-Discovery**: Automatically finds an available port if the default is in use
 
 ### 🤖 MCP Integration
 - **MCP Tools**: Full set of MCP tools for controlling Figma plugins
 - **AI Model Ready**: Designed for AI model interactions and design automation
 - **Configuration Driven**: Flexible configuration options
 - **Health Monitoring**: Built-in health checks and status monitoring
-- **Auto-start Support**: Optional automatic WebSocket server startup
+- **Robust Startup**: Automatic retry logic with port fallback for reliable startup
 
 ### 🎨 Design Automation
 - **Document State Management**: Real-time document information retrieval
@@ -60,6 +62,8 @@ uv run lightfast-mcp-orchestrator start
 uv run task figma_server
 ```
 
+The WebSocket server will start automatically on `ws://localhost:9003` (or the next available port if 9003 is in use).
+
 ### 2. Connect Figma Plugin
 
 1. **Load the Figma Plugin**: Install and run the Lightfast MCP Figma Plugin
@@ -72,13 +76,13 @@ uv run task figma_server
 The server provides MCP tools for AI clients:
 
 - `get_figma_server_status` - Get server status and connected plugins
-- `start_figma_server` - Start the WebSocket server
-- `stop_figma_server` - Stop the WebSocket server
 - `get_figma_plugins` - Get list of connected Figma plugins
 - `ping_figma_plugin` - Test connectivity with plugins
 - `get_document_state` - Get current Figma document state
 - `execute_design_command` - Execute design commands in Figma
 - `broadcast_design_command` - Broadcast commands to all plugins
+
+**Note**: The WebSocket server starts automatically when the MCP server starts and runs continuously. There are no manual start/stop tools needed.
 
 ## Configuration
 
@@ -91,7 +95,6 @@ The server can be configured via `config/servers.yaml`:
     type: figma
     figma_host: "localhost"
     figma_port: 9003
-    auto_start_websocket: true
   description: Figma MCP Server for design automation and collaborative design workflows
   host: localhost
   name: figma-server
@@ -109,8 +112,9 @@ The server can be configured via `config/servers.yaml`:
 | Option | Default | Description |
 |--------|---------|-------------|
 | `figma_host` | `localhost` | Host for the WebSocket server |
-| `figma_port` | `9003` | Port for the WebSocket server |
-| `auto_start_websocket` | `true` | Auto-start WebSocket server on MCP server startup |
+| `figma_port` | `9003` | Port for the WebSocket server (will auto-increment if in use) |
+
+**Note**: The WebSocket server now starts automatically when the MCP server starts. There's no need for manual startup or configuration flags.
 
 ## WebSocket Protocol
 

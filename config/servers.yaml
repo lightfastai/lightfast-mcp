@@ -30,7 +30,6 @@ servers:
     type: figma
     figma_host: localhost
     figma_port: 9003
-    auto_start_websocket: true
   dependencies: []
   description: Figma MCP Server for design automation and collaborative design workflows
   host: localhost

@@ -183,57 +183,12 @@ class BaseServer(ABC):
             )
             self.logger.info(f"Server will be available at: {self.info.url}")
 
-        # Manually trigger startup logic since FastMCP lifespan may not be triggered
-        # for all transport types or configurations
-        import asyncio
+        # Log startup information
+        self.logger.info(
+            f"Starting MCP server '{self.config.name}' with transport '{self.config.transport}' on {self.info.url or 'stdio'}"
+        )
 
-        async def manual_startup():
-            """Manually run startup logic."""
-            try:
-                self.logger.info(
-                    f"Starting MCP server '{self.config.name}' with transport '{self.config.transport}' on {self.info.url or 'stdio'}"
-                )
-                await self._startup_checks()
-                await self._on_startup()
-                self.info.state = ServerState.RUNNING
-                self.info.health_status = HealthStatus.HEALTHY
-            except Exception as e:
-                self.logger.error(f"Server startup failed: {e}")
-                import traceback
-
-                self.logger.error(f"Traceback: {traceback.format_exc()}")
-                raise
-
-        # Run startup logic before starting the server
-        try:
-            # Try to get the current event loop
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                # If we're already in an event loop, we can't use run_until_complete
-                # Instead, we'll schedule the startup as a task
-                # This is a bit tricky because we need to wait for it to complete
-                # For now, we'll use a different approach
-                import concurrent.futures
-
-                def run_startup():
-                    new_loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(new_loop)
-                    try:
-                        new_loop.run_until_complete(manual_startup())
-                    finally:
-                        new_loop.close()
-
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(run_startup)
-                    future.result()  # Wait for completion
-            else:
-                # If no event loop is running, run the startup
-                loop.run_until_complete(manual_startup())
-        except RuntimeError:
-            # No event loop exists, create one
-            asyncio.run(manual_startup())
-
-        # Run with appropriate transport
+        # Run with appropriate transport - let FastMCP handle the event loop
         if self.config.transport == "stdio":
             self.mcp.run()
         elif self.config.transport in ["http", "streamable-http"]:

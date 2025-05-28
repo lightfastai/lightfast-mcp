@@ -105,11 +105,27 @@ class FigmaWebSocketServer:
 
         try:
             logger.info(f"Starting Figma WebSocket server on {self.host}:{self.port}")
+            logger.debug(
+                f"🔧 WebSocket server configuration: host={self.host}, port={self.port}"
+            )
 
             # Create a wrapper to handle the different websockets library versions
             async def client_handler(websocket, path=None):
-                await self._handle_client(websocket, path or "/")
+                logger.debug(
+                    f"🔌 New WebSocket connection attempt from {websocket.remote_address}"
+                )
+                try:
+                    await self._handle_client(websocket, path or "/")
+                except Exception as e:
+                    logger.error(f"❌ Error in client handler: {e}")
+                    import traceback
 
+                    logger.debug(
+                        f"🔍 Client handler traceback: {traceback.format_exc()}"
+                    )
+                    raise
+
+            logger.debug("🔧 Creating WebSocket server...")
             self.server = await websockets.serve(
                 client_handler,
                 self.host,
@@ -125,10 +141,17 @@ class FigmaWebSocketServer:
             logger.info(
                 f"✅ Figma WebSocket server started successfully on ws://{self.host}:{self.port}"
             )
+            logger.debug(f"🔧 Server object: {self.server}")
+            logger.debug(
+                f"🔧 Server is_serving: {getattr(self.server, 'is_serving', 'unknown')()}"
+            )
             return True
 
         except Exception as e:
             logger.error(f"Failed to start Figma WebSocket server: {e}")
+            import traceback
+
+            logger.debug(f"🔍 Server start traceback: {traceback.format_exc()}")
             self.is_running = False
             return False
 
@@ -171,6 +194,8 @@ class FigmaWebSocketServer:
         logger.info(
             f"🎨 New Figma plugin connected: {client_id} from {websocket.remote_address}"
         )
+        logger.debug(f"🔧 Client {client_id} WebSocket state: {websocket.state}")
+        logger.debug(f"🔧 Total clients now: {len(self.clients)}")
 
         # Send welcome message
         welcome_message = {
@@ -185,22 +210,32 @@ class FigmaWebSocketServer:
         }
 
         try:
+            logger.debug(f"📤 Sending welcome message to client {client_id}")
             await websocket.send(json.dumps(welcome_message))
+            logger.debug(f"✅ Welcome message sent to client {client_id}")
 
             # Handle messages from this Figma plugin
+            logger.debug(f"🔄 Starting message loop for client {client_id}")
             async for message in websocket:
+                logger.debug(
+                    f"📥 Raw message from client {client_id}: {message[:100]}..."
+                )
                 await self._process_message(client, message)
 
         except websockets.exceptions.ConnectionClosed:
             logger.info(f"🎨 Figma plugin {client_id} disconnected normally")
         except Exception as e:
             logger.error(f"❌ Error handling Figma plugin {client_id}: {e}")
+            import traceback
+
+            logger.debug(f"🔍 Client handling traceback: {traceback.format_exc()}")
             self.stats["errors"] += 1
         finally:
             # Clean up client
             if client_id in self.clients:
                 del self.clients[client_id]
                 logger.info(f"🧹 Cleaned up Figma plugin {client_id}")
+                logger.debug(f"🔧 Total clients now: {len(self.clients)}")
 
     async def _process_message(self, client: FigmaClient, message: str):
         """Process a message from a Figma plugin."""
@@ -212,17 +247,31 @@ class FigmaWebSocketServer:
             logger.debug(
                 f"📨 Received message from Figma plugin {client.id}: {message_type}"
             )
+            logger.debug(f"📋 Message data: {data}")
 
             # Update client last activity
             client.last_ping = datetime.now()
 
             # Handle the message
             if message_type in self.message_handlers:
+                logger.debug(
+                    f"🔧 Processing message type '{message_type}' with handler"
+                )
                 response = await self.message_handlers[message_type](client, data)
                 if response:
+                    logger.debug(
+                        f"📤 Sending response to client {client.id}: {response}"
+                    )
                     await client.websocket.send(json.dumps(response))
+                else:
+                    logger.debug(
+                        f"📝 No response needed for message type '{message_type}'"
+                    )
             else:
                 # Unknown message type
+                logger.warning(
+                    f"⚠️ Unknown message type '{message_type}' from client {client.id}"
+                )
                 error_response = {
                     "type": "error",
                     "error": f"Unknown message type: {message_type}",
@@ -233,6 +282,7 @@ class FigmaWebSocketServer:
 
         except json.JSONDecodeError as e:
             logger.error(f"❌ Invalid JSON from Figma plugin {client.id}: {e}")
+            logger.debug(f"🔍 Invalid message content: {message}")
             error_response = {
                 "type": "error",
                 "error": f"Invalid JSON: {str(e)}",
@@ -243,6 +293,9 @@ class FigmaWebSocketServer:
             logger.error(
                 f"❌ Error processing message from Figma plugin {client.id}: {e}"
             )
+            import traceback
+
+            logger.debug(f"🔍 Message processing traceback: {traceback.format_exc()}")
             self.stats["errors"] += 1
 
     # Message handlers
