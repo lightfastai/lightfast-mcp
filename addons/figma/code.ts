@@ -55,12 +55,26 @@ if (figma.editorType === 'figma') {
 
         case 'websocket_connected':
           isConnected = true;
-          console.log('WebSocket connected via UI:', msg.data);
+          console.log('✅ WebSocket connected via UI:', msg.data);
+          // Acknowledge the connection
+          figma.ui.postMessage({
+            type: 'websocket_connected',
+            data: { status: 'acknowledged', connected: true }
+          });
           break;
 
         case 'websocket_disconnected':
           isConnected = false;
-          console.log('WebSocket disconnected via UI:', msg.data);
+          console.log('⚠️ WebSocket disconnected via UI:', msg.data);
+          // Acknowledge the disconnection
+          figma.ui.postMessage({
+            type: 'websocket_disconnected',
+            data: { status: 'acknowledged', connected: false }
+          });
+          break;
+
+        case 'connection_test_result':
+          console.log('🔧 Connection test result:', msg.data);
           break;
 
         case 'close-plugin':
@@ -69,6 +83,7 @@ if (figma.editorType === 'figma') {
           break;
 
         default:
+          console.log(`⚠️ Unknown message type: ${msg.type}`);
           figma.ui.postMessage({
             type: 'error',
             message: `Unknown message type: ${msg.type}`,
@@ -77,6 +92,7 @@ if (figma.editorType === 'figma') {
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`❌ Error handling ${msg.type}:`, errorMessage);
       figma.ui.postMessage({
         type: 'error',
         message: `Error handling ${msg.type}: ${errorMessage}`,

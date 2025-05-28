@@ -89,11 +89,14 @@ class FigmaWebSocketServer:
         self.message_handlers.update(
             {
                 "ping": self._handle_ping,
+                "pong": self._handle_pong,
                 "get_document_info": self._handle_get_document_info,
                 "execute_design_command": self._handle_execute_design_command,
                 "get_server_status": self._handle_get_server_status,
                 "plugin_info": self._handle_plugin_info,
                 "document_update": self._handle_document_update,
+                "document_info_response": self._handle_document_info_response,
+                "design_command_response": self._handle_design_command_response,
             }
         )
 
@@ -310,6 +313,15 @@ class FigmaWebSocketServer:
             "server_time": datetime.now().isoformat(),
         }
 
+    async def _handle_pong(
+        self, client: FigmaClient, data: Dict[str, Any]
+    ) -> Optional[Dict[str, Any]]:
+        """Handle pong message from Figma plugin."""
+        logger.debug(f"🏓 Received pong from client {client.id}")
+        client.last_ping = datetime.now()
+        # No response needed for pong
+        return None
+
     async def _handle_get_document_info(
         self, client: FigmaClient, data: Dict[str, Any]
     ) -> Dict[str, Any]:
@@ -405,6 +417,44 @@ class FigmaWebSocketServer:
         client.metadata["last_document_update"] = time.time()
 
         # No response needed for updates
+        return None
+
+    async def _handle_document_info_response(
+        self, client: FigmaClient, data: Dict[str, Any]
+    ) -> Optional[Dict[str, Any]]:
+        """Handle document info response from Figma plugin."""
+        document_info = data.get("document_info", {})
+        request_id = data.get("request_id")
+
+        logger.info(f"📄 Document info response from client {client.id}")
+
+        # Store document info in client metadata
+        client.metadata["last_document_info"] = document_info
+        client.metadata["last_document_update"] = time.time()
+
+        # Log the received document info
+        logger.debug(f"📋 Document info: {document_info}")
+
+        # No response needed - this is a response to our request
+        return None
+
+    async def _handle_design_command_response(
+        self, client: FigmaClient, data: Dict[str, Any]
+    ) -> Optional[Dict[str, Any]]:
+        """Handle design command response from Figma plugin."""
+        result = data.get("result", {})
+        request_id = data.get("request_id")
+
+        logger.info(f"🎨 Design command response from client {client.id}")
+
+        # Store command response in client metadata
+        client.metadata["last_command_response"] = result
+        client.metadata["last_command_response_time"] = time.time()
+
+        # Log the received command result
+        logger.debug(f"📋 Command result: {result}")
+
+        # No response needed - this is a response to our request
         return None
 
     async def send_command_to_plugin(
