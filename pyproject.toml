@@ -25,7 +25,6 @@ dependencies = [
     "anthropic", # Claude AI integration (used by conversation client)
     "openai", # OpenAI integration (used by conversation client)
     "typer", # CLI framework (used by conversation CLI)
-    "websockets", # WebSocket client/server for Figma plugin communication
 ]
 
 [project.optional-dependencies]
@@ -46,12 +45,10 @@ dev = [
 # 🎯 PRIMARY: Individual MCP server entry points (core functionality only)
 lightfast-blender-server = "lightfast_mcp.servers.blender_mcp_server:main"
 lightfast-mock-server = "lightfast_mcp.servers.mock_server:main"
-lightfast-figma-server = "lightfast_mcp.servers.figma_mcp_server:main"
 
 # Direct modular server access
 lightfast-mock = "lightfast_mcp.servers.mock.server:main"
 lightfast-blender = "lightfast_mcp.servers.blender.server:main"
-lightfast-figma = "lightfast_mcp.servers.figma.server:main"
 
 # 🤖 Orchestration: Multi-server management CLI
 lightfast-mcp-orchestrator = "tools.orchestration.cli:main"
@@ -70,7 +67,6 @@ packages = [
     "lightfast_mcp.core", 
     "lightfast_mcp.servers",
     "lightfast_mcp.servers.blender",
-    "lightfast_mcp.servers.figma",
     "lightfast_mcp.servers.mock",
     "lightfast_mcp.utils",
     "common",  # Required by lightfast_mcp.core
@@ -136,7 +132,6 @@ demo = "uv run pytest tests/e2e/test_full_system.py::TestFullSystemWorkflow::tes
 # 🎯 PRIMARY: Individual MCP servers (core functionality)
 blender_server = "uv run lightfast-blender-server"
 mock_server = "uv run lightfast-mock-server"
-figma_server = "uv run lightfast-figma-server"
 
 # 🔧 ORCHESTRATION: Multi-server management
 orchestrator = "uv run lightfast-mcp-orchestrator"

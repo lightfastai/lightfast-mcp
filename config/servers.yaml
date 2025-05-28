@@ -26,18 +26,4 @@ servers:
   transport: streamable-http
   type: mock
   version: 1.0.0
-- config:
-    type: figma
-    figma_host: localhost
-    figma_port: 9003
-    command_timeout: 30.0
-  description: Figma MCP Server for web design and collaborative design workflows
-  host: localhost
-  name: figma-server
-  path: /mcp
-  port: 8003
-  required_apps:
-  - Figma
-  transport: streamable-http
-  type: figma
-  version: 1.0.0
+

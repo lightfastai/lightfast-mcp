@@ -419,7 +419,6 @@ dependencies = [
     { name = "pyyaml" },
     { name = "rich" },
     { name = "typer" },
-    { name = "websockets" },
 ]
 
 [package.optional-dependencies]
@@ -461,7 +460,6 @@ requires-dist = [
     { name = "ruff", marker = "extra == 'dev'" },
     { name = "taskipy", marker = "extra == 'dev'" },
     { name = "typer" },
-    { name = "websockets" },
 ]
 provides-extras = ["dev"]
 

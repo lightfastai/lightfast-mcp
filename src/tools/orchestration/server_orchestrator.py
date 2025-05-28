@@ -143,7 +143,6 @@ class ServerOrchestrator:
             trusted_modules = {
                 "mock": "lightfast_mcp.servers.mock_server",
                 "blender": "lightfast_mcp.servers.blender_mcp_server",
-                "figma": "lightfast_mcp.servers.figma_mcp_server",
             }
 
             if server_type not in trusted_modules:

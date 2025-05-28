@@ -179,7 +179,6 @@ class ConfigLoader:
         # Define environment variable mappings for different server types
         # @todo more modular...
         env_mappings = {
-            "figma": {"api_token": "FIGMA_API_TOKEN"},
             "github": {
                 "api_token": "GITHUB_TOKEN",
                 "personal_access_token": "GITHUB_PERSONAL_ACCESS_TOKEN",
