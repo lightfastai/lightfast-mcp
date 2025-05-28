@@ -11,7 +11,7 @@ logger = get_logger("FigmaMCPServer")
 
 
 class FigmaMCPServer(BaseServer):
-    """Figma MCP server for design automation and collaborative design workflows."""
+    """Figma MCP server for JavaScript code execution and Figma API automation."""
 
     # Server metadata
     SERVER_TYPE: ClassVar[str] = "figma"
@@ -52,12 +52,12 @@ class FigmaMCPServer(BaseServer):
         if not self.mcp:
             return
 
-        # Register core tools - matching Blender server pattern
+        # Register core tools - code execution focused
         self.mcp.tool()(tools.get_state)
-        self.mcp.tool()(tools.execute_command)
+        self.mcp.tool()(tools.execute_code)
 
         # Update the server info with available tools
-        self.info.tools = ["get_state", "execute_command"]
+        self.info.tools = ["get_state", "execute_code"]
         logger.info(f"Registered {len(self.info.tools)} tools: {self.info.tools}")
 
     async def _check_application(self, app: str) -> bool:

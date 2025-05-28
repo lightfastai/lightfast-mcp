@@ -30,7 +30,7 @@ if (figma.editorType === 'figma') {
   // Handle messages from the UI
   figma.ui.onmessage = async (msg: any) => {
     try {
-      console.log('Plugin received message:', msg.type, msg);
+      console.log('Plugin received message:', msg.type, 'Full message:', JSON.stringify(msg));
       
       switch (msg.type) {
         case 'ping':
@@ -38,19 +38,19 @@ if (figma.editorType === 'figma') {
           break;
 
         case 'get_document_info':
-          await sendDocumentInfoToUI();
+          await sendDocumentInfoForServer(msg.request_id);
           break;
 
         case 'get_document_info_for_server':
           await sendDocumentInfoForServer(msg.request_id);
           break;
 
-        case 'execute_design_command':
-          await executeDesignCommand(msg.command || '');
+        case 'execute_code':
+          await executeCodeCommand(msg.code || '', msg.request_id);
           break;
 
-        case 'execute_design_command_from_server':
-          await executeDesignCommandFromServer(msg.command || '', msg.request_id);
+        case 'test_code_execution':
+          await testCodeExecution();
           break;
 
         case 'websocket_connected':
@@ -144,37 +144,15 @@ async function sendDocumentInfoForServer(requestId?: string) {
   }
 }
 
-async function executeDesignCommand(command: string) {
+async function executeCodeCommand(code: string, requestId?: string) {
   try {
-    console.log('Executing design command:', command);
+    console.log('Executing JavaScript code:', code);
     
-    const result = executeDesignCommandSync(command);
+    const result = executeCodeSync(code);
 
     // Send result back to UI
     figma.ui.postMessage({
-      type: 'design_command_result',
-      data: result
-    });
-
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    
-    figma.ui.postMessage({
-      type: 'error',
-      message: `Error executing design command: ${errorMessage}`
-    });
-  }
-}
-
-async function executeDesignCommandFromServer(command: string, requestId?: string) {
-  try {
-    console.log('Executing design command from server:', command);
-    
-    const result = executeDesignCommandSync(command);
-
-    // Send result back to UI with request ID for server forwarding
-    figma.ui.postMessage({
-      type: 'design_command_result',
+      type: 'code_execution_result',
       data: result,
       request_id: requestId
     });
@@ -184,8 +162,45 @@ async function executeDesignCommandFromServer(command: string, requestId?: strin
     
     figma.ui.postMessage({
       type: 'error',
-      message: `Error executing design command from server: ${errorMessage}`,
+      message: `Error executing JavaScript code: ${errorMessage}`,
       request_id: requestId
+    });
+  }
+}
+
+async function testCodeExecution() {
+  try {
+    console.log('Testing code execution with sample JavaScript');
+    
+    // Execute a simple test code that creates a rectangle
+    const testCode = `
+      const rect = figma.createRectangle();
+      rect.name = 'Test Rectangle from Code';
+      rect.resize(100, 50);
+      rect.x = figma.viewport.center.x - 50;
+      rect.y = figma.viewport.center.y - 25;
+      rect.fills = [{type: 'SOLID', color: {r: 0.2, g: 0.7, b: 1.0}}];
+      figma.currentPage.appendChild(rect);
+      figma.currentPage.selection = [rect];
+      figma.viewport.scrollAndZoomIntoView([rect]);
+      console.log('Test rectangle created successfully');
+      result = 'Test rectangle created successfully';
+    `;
+    
+    const result = executeCodeSync(testCode);
+
+    // Send result back to UI
+    figma.ui.postMessage({
+      type: 'code_execution_result',
+      data: result
+    });
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
+    figma.ui.postMessage({
+      type: 'error',
+      message: `Error in test code execution: ${errorMessage}`
     });
   }
 }
@@ -227,118 +242,79 @@ function getCurrentDocumentInfo(): any {
   }
 }
 
-function executeDesignCommandSync(command: string): any {
+function executeCodeSync(code: string): any {
   try {
-    console.log('Executing design command synchronously:', command);
+    console.log('Executing JavaScript code synchronously:', code);
     
-    let result: any = { message: 'Command received but not implemented', command: command };
+    // Create a sandbox context with commonly used variables
+    // Similar to how Blender provides bpy, mathutils, etc.
+    const sandbox = {
+      figma: figma,
+      console: console,
+      // Add common utilities
+      createRectangle: () => figma.createRectangle(),
+      createEllipse: () => figma.createEllipse(),
+      createText: () => figma.createText(),
+      createFrame: () => figma.createFrame(),
+      currentPage: figma.currentPage,
+      selection: figma.currentPage.selection,
+      viewport: figma.viewport,
+      root: figma.root,
+      // Math utilities
+      Math: Math,
+      // JSON utilities for data manipulation
+      JSON: JSON,
+      // Result storage
+      result: undefined
+    };
     
-    if (command.toLowerCase().includes('create rectangle')) {
-      const rect = figma.createRectangle();
-      rect.name = 'AI Created Rectangle';
-      rect.resize(100, 100);
-      rect.x = figma.viewport.center.x - 50;
-      rect.y = figma.viewport.center.y - 50;
-      figma.currentPage.appendChild(rect);
-      figma.currentPage.selection = [rect];
-      figma.viewport.scrollAndZoomIntoView([rect]);
-      
-      result = {
-        message: 'Rectangle created successfully',
-        command: command,
-        created_node: {
-          id: rect.id,
-          name: rect.name,
-          type: rect.type,
-          x: rect.x,
-          y: rect.y,
-          width: rect.width,
-          height: rect.height
-        }
-      };
-    } else if (command.toLowerCase().includes('create circle')) {
-      const ellipse = figma.createEllipse();
-      ellipse.name = 'AI Created Circle';
-      ellipse.resize(100, 100);
-      ellipse.x = figma.viewport.center.x - 50;
-      ellipse.y = figma.viewport.center.y - 50;
-      figma.currentPage.appendChild(ellipse);
-      figma.currentPage.selection = [ellipse];
-      figma.viewport.scrollAndZoomIntoView([ellipse]);
-      
-      result = {
-        message: 'Circle created successfully',
-        command: command,
-        created_node: {
-          id: ellipse.id,
-          name: ellipse.name,
-          type: ellipse.type,
-          x: ellipse.x,
-          y: ellipse.y,
-          width: ellipse.width,
-          height: ellipse.height
-        }
-      };
-    } else if (command.toLowerCase().includes('create text')) {
-      const text = figma.createText();
-      text.name = 'AI Created Text';
-      text.characters = 'Hello from AI!';
-      text.x = figma.viewport.center.x - 50;
-      text.y = figma.viewport.center.y - 10;
-      figma.currentPage.appendChild(text);
-      figma.currentPage.selection = [text];
-      figma.viewport.scrollAndZoomIntoView([text]);
-      
-      result = {
-        message: 'Text created successfully',
-        command: command,
-        created_node: {
-          id: text.id,
-          name: text.name,
-          type: text.type,
-          text: text.characters,
-          x: text.x,
-          y: text.y
-        }
-      };
-    } else if (command.toLowerCase().includes('delete selected')) {
-      const selection = figma.currentPage.selection;
-      if (selection.length > 0) {
-        const deletedNodes = selection.map(node => ({
-          id: node.id,
-          name: node.name,
-          type: node.type
-        }));
-        
-        selection.forEach(node => node.remove());
-        figma.currentPage.selection = [];
-        
-        result = {
-          message: `Deleted ${deletedNodes.length} selected node(s)`,
-          command: command,
-          deleted_nodes: deletedNodes
+    // Wrap the code in a function to provide better control and capture output
+    const wrappedCode = `
+      (() => {
+        let output = [];
+        const originalLog = console.log;
+        console.log = (...args) => {
+          output.push(args.join(' '));
+          originalLog(...args);
         };
-      } else {
-        result = {
-          message: 'No nodes selected to delete',
-          command: command,
-          deleted_nodes: []
-        };
-      }
-    } else if (command.toLowerCase().includes('select all')) {
-      const allNodes = figma.currentPage.children;
-      figma.currentPage.selection = allNodes;
-      
-      result = {
-        message: `Selected ${allNodes.length} node(s)`,
-        command: command,
-        selected_count: allNodes.length
-      };
-    }
-
-    return result;
+        
+        try {
+          ${code}
+          
+          // If code sets a result variable, use it
+          if (typeof result !== 'undefined') {
+            return { executed: true, result: result, output: output.join('\\n') || 'Code executed successfully' };
+          }
+          
+          return { executed: true, result: 'Code executed successfully', output: output.join('\\n') || 'No output' };
+        } catch (error) {
+          return { executed: false, error: error.message, output: output.join('\\n') };
+        } finally {
+          console.log = originalLog;
+        }
+      })()
+    `;
+    
+    // Execute the code in the sandbox context
+    // Note: In a production environment, you might want additional security measures
+    const executeInContext = new Function(...Object.keys(sandbox), `return ${wrappedCode}`);
+    const executionResult = executeInContext(...Object.values(sandbox));
+    
+    return {
+      code_executed: true,
+      original_code: code,
+      execution_result: executionResult,
+      timestamp: Date.now()
+    };
+    
   } catch (error) {
-    throw new Error(`Error executing design command: ${error}`);
+    console.error('Code execution error:', error);
+    return {
+      code_executed: false,
+      original_code: code,
+      error: error instanceof Error ? error.message : String(error),
+      timestamp: Date.now()
+    };
   }
 }
 

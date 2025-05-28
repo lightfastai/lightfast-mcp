@@ -2,7 +2,7 @@
 Tool functions for the Figma MCP server.
 
 These functions implement the actual tools that can be called via the MCP protocol
-to interact with Figma plugins and execute design commands.
+to interact with Figma plugins and execute JavaScript code.
 """
 
 import json
@@ -137,25 +137,21 @@ async def get_state(ctx: Context) -> str:
         )
 
 
-async def execute_command(ctx: Context, command: str) -> str:
+async def execute_code(ctx: Context, code_to_execute: str) -> str:
     """
-    Execute a design command in Figma.
-
-    This sends the command to the connected Figma plugin for execution.
-    The plugin will interpret and execute the command using the Figma API.
+    Execute arbitrary JavaScript code in Figma.
+    This corresponds to the 'execute_code' command in the Figma plugin.
 
     Parameters:
-    - command: The design command to execute (e.g., "create rectangle", "create circle", "create text")
+    - code_to_execute: The JavaScript code string to execute in Figma's context.
+      The code has access to the figma API, standard JavaScript, and plugin utilities.
 
-    Supported commands:
-    - "create rectangle" - Creates a rectangle shape
-    - "create circle" - Creates a circle/ellipse shape
-    - "create text" - Creates a text node
-    - "delete selected" - Deletes selected elements
-    - "select all" - Selects all elements on current page
-    - Custom commands as supported by the Figma plugin
+    Example usage:
+    - Create a rectangle: "const rect = figma.createRectangle(); rect.resize(100, 100); figma.currentPage.appendChild(rect);"
+    - Get selected nodes: "return figma.currentPage.selection.map(n => n.name);"
+    - Complex operations with loops, conditionals, and full JavaScript syntax
     """
-    logger.info(f"Executing Figma command: {command}")
+    logger.info(f"Executing JavaScript code in Figma: {code_to_execute[:100]}...")
 
     try:
         if not _current_server or not hasattr(_current_server, "websocket_server"):
@@ -167,26 +163,26 @@ async def execute_command(ctx: Context, command: str) -> str:
             raise FigmaConnectionError("Figma WebSocket server is not running")
 
         if not ws_server.clients:
-            raise FigmaConnectionError("No Figma plugins connected to execute command")
+            raise FigmaConnectionError("No Figma plugins connected to execute code")
 
         # Get the first available plugin (or we could add plugin_id parameter later)
         target_client = next(iter(ws_server.clients.values()))
 
-        # Send design command to plugin
+        # Send code execution command to plugin
         success = await ws_server.send_command_to_plugin(
-            target_client.id, "execute_design_command", {"command": command}
+            target_client.id, "execute_code", {"code": code_to_execute}
         )
 
         if not success:
-            raise FigmaCommandError(f"Failed to send command '{command}' to plugin")
+            raise FigmaCommandError("Failed to send code execution to plugin")
 
         # Build result information
         result = {
-            "status": "command_sent",
-            "command": command,
+            "status": "code_sent",
+            "code": code_to_execute,
             "plugin_id": target_client.id,
-            "message": "Design command sent to Figma plugin",
-            "note": "Check the Figma interface for command execution results",
+            "message": "JavaScript code sent to Figma plugin for execution",
+            "note": "Check the Figma interface and console for execution results",
             "_server_info": {
                 "server_name": _current_server.config.name,
                 "server_type": "figma",
@@ -197,12 +193,11 @@ async def execute_command(ctx: Context, command: str) -> str:
         return json.dumps(result, indent=2)
 
     except FigmaMCPError as e:
-        logger.error(f"FigmaMCPError in execute_command: {e}")
+        logger.error(f"FigmaMCPError in execute_code: {e}")
         return json.dumps(
             {
-                "error": f"Figma Command Execution Error: {str(e)}",
+                "error": f"Figma Code Execution Error: {str(e)}",
                 "type": type(e).__name__,
-                "command": command,
                 "server_name": _current_server.config.name
                 if _current_server
                 else "FigmaMCP",
@@ -210,12 +205,11 @@ async def execute_command(ctx: Context, command: str) -> str:
             indent=2,
         )
     except Exception as e:
-        logger.error(f"Unexpected error in execute_command: {e}")
+        logger.error(f"Unexpected error in execute_code: {e}")
         return json.dumps(
             {
-                "error": f"Unexpected server error during command execution: {str(e)}",
+                "error": f"Unexpected server error during code execution: {str(e)}",
                 "type": type(e).__name__,
-                "command": command,
                 "server_name": _current_server.config.name
                 if _current_server
                 else "FigmaMCP",

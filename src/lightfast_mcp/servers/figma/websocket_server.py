@@ -91,12 +91,12 @@ class FigmaWebSocketServer:
                 "ping": self._handle_ping,
                 "pong": self._handle_pong,
                 "get_document_info": self._handle_get_document_info,
-                "execute_design_command": self._handle_execute_design_command,
+                "execute_code": self._handle_execute_code,
                 "get_server_status": self._handle_get_server_status,
                 "plugin_info": self._handle_plugin_info,
                 "document_update": self._handle_document_update,
                 "document_info_response": self._handle_document_info_response,
-                "design_command_response": self._handle_design_command_response,
+                "code_execution_response": self._handle_code_execution_response,
             }
         )
 
@@ -334,34 +334,6 @@ class FigmaWebSocketServer:
             "timestamp": time.time(),
         }
 
-    async def _handle_execute_design_command(
-        self, client: FigmaClient, data: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """Handle execute design command request from MCP."""
-        command = data.get("command", "")
-        request_id = data.get("request_id", str(uuid.uuid4()))
-
-        logger.info(f"🎨 Executing design command for client {client.id}: {command}")
-
-        # Send command to Figma plugin
-        command_message = {
-            "type": "execute_design_command",
-            "command": command,
-            "request_id": request_id,
-            "timestamp": time.time(),
-        }
-
-        await client.websocket.send(json.dumps(command_message))
-
-        # Return acknowledgment
-        return {
-            "type": "design_command_sent",
-            "client_id": client.id,
-            "command": command,
-            "request_id": request_id,
-            "timestamp": time.time(),
-        }
-
     async def _handle_get_server_status(
         self, client: FigmaClient, data: Dict[str, Any]
     ) -> Dict[str, Any]:
@@ -438,21 +410,49 @@ class FigmaWebSocketServer:
         # No response needed - this is a response to our request
         return None
 
-    async def _handle_design_command_response(
+    async def _handle_execute_code(
+        self, client: FigmaClient, data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Handle execute code request from Figma plugin."""
+        code = data.get("code", "")
+        request_id = data.get("request_id", str(uuid.uuid4()))
+
+        logger.info(f"🎨 Executing code for client {client.id}: {code}")
+
+        # Send code to Figma plugin
+        code_message = {
+            "type": "execute_code",
+            "code": code,
+            "request_id": request_id,
+            "timestamp": time.time(),
+        }
+
+        await client.websocket.send(json.dumps(code_message))
+
+        # Return acknowledgment
+        return {
+            "type": "code_execution_sent",
+            "client_id": client.id,
+            "code": code,
+            "request_id": request_id,
+            "timestamp": time.time(),
+        }
+
+    async def _handle_code_execution_response(
         self, client: FigmaClient, data: Dict[str, Any]
     ) -> Optional[Dict[str, Any]]:
-        """Handle design command response from Figma plugin."""
+        """Handle code execution response from Figma plugin."""
         result = data.get("result", {})
         request_id = data.get("request_id")
 
-        logger.info(f"🎨 Design command response from client {client.id}")
+        logger.info(f"🎨 Code execution response from client {client.id}")
 
-        # Store command response in client metadata
-        client.metadata["last_command_response"] = result
-        client.metadata["last_command_response_time"] = time.time()
+        # Store code execution result in client metadata
+        client.metadata["last_code_execution_result"] = result
+        client.metadata["last_code_execution_time"] = time.time()
 
-        # Log the received command result
-        logger.debug(f"📋 Command result: {result}")
+        # Log the received code execution result
+        logger.debug(f"📋 Code execution result: {result}")
 
         # No response needed - this is a response to our request
         return None

@@ -4,7 +4,7 @@ Figma MCP Server Entry Point
 
 This script provides a direct entry point for running the Figma MCP server.
 The server acts as a WebSocket server that Figma plugins can connect to for
-real-time design automation and AI integration.
+JavaScript code execution and Figma API automation.
 
 Usage:
     python -m lightfast_mcp.servers.figma_mcp_server
@@ -31,7 +31,7 @@ def create_default_config() -> ServerConfig:
     """Create a default configuration for the Figma server."""
     return ServerConfig(
         name="FigmaMCP",
-        description="Figma MCP Server for design automation and collaborative design workflows",
+        description="Figma MCP Server for JavaScript code execution and Figma API automation",
         config={
             "type": "figma",
             "figma_host": "localhost",
@@ -43,7 +43,7 @@ def create_default_config() -> ServerConfig:
 def parse_arguments():
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
-        description="Figma MCP Server for design automation and collaborative design workflows",
+        description="Figma MCP Server for JavaScript code execution and Figma API automation",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -113,7 +113,7 @@ def main():
         # Create server configuration with command-line overrides
         config = ServerConfig(
             name="FigmaMCP",
-            description="Figma MCP Server for design automation and collaborative design workflows",
+            description="Figma MCP Server for JavaScript code execution and Figma API automation",
             host=args.host,
             port=args.port,
             transport="streamable-http",  # Use HTTP transport for WebSocket support

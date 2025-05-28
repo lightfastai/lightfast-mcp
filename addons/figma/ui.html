@@ -242,8 +242,7 @@
 
     <button class="button-row" onclick="testPluginCommunication()">🔄 Test Plugin Communication</button>
     <button class="button-row" onclick="getDocumentInfo()">📄 Get Document Info</button>
-    <button class="button-row" onclick="testDesignCommand()">🎨 Test Design Command</button>
-    <button class="button-row" onclick="simulateServerCommand()">🤖 Simulate Server Command</button>
+    <button class="button-row" onclick="testCodeExecution()">💻 Test Code Execution</button>
     <button class="button-row primary" onclick="closePlugin()">✕ Close Plugin</button>
 
     <div id="output" class="output">Plugin loaded - WebSocket client ready to connect to MCP server...</div>
@@ -489,18 +488,23 @@
                         // Request document info from plugin
                         parent.postMessage({ 
                             pluginMessage: { 
-                                type: 'get_document_info_for_server',
+                                type: 'get_document_info',
                                 request_id: message.request_id
                             } 
                         }, '*');
                         break;
                         
-                    case 'execute_design_command':
-                        // Forward design command to plugin
+                    case 'execute_code':
+                        // Forward code execution to plugin
+                        log(`📤 Forwarding execute_code to plugin: ${JSON.stringify({
+                            type: 'execute_code',
+                            code: message.code || message.params?.code || '',
+                            request_id: message.request_id
+                        })}`);
                         parent.postMessage({ 
                             pluginMessage: { 
-                                type: 'execute_design_command_from_server',
-                                command: message.command || message.params?.command || '',
+                                type: 'execute_code',
+                                code: message.code || message.params?.code || '',
                                 request_id: message.request_id
                             } 
                         }, '*');
@@ -548,20 +552,6 @@
             }
         }
 
-        function simulateServerCommand() {
-            updateStatus('Simulating server command...', 'info');
-            
-            // Simulate a design command from the MCP server
-            const testCommand = {
-                type: 'execute_design_command',
-                command: 'create rectangle',
-                request_id: Date.now()
-            };
-            
-            log('🤖 Simulating server command...');
-            handleServerMessage(testCommand);
-        }
-
         // Plugin communication functions
         function testPluginCommunication() {
             updateStatus('Testing plugin communication...', 'info');
@@ -573,14 +563,9 @@
             parent.postMessage({ pluginMessage: { type: 'get_document_info' } }, '*');
         }
 
-        function testDesignCommand() {
-            updateStatus('Testing design command...', 'info');
-            parent.postMessage({ 
-                pluginMessage: { 
-                    type: 'execute_design_command', 
-                    command: 'create rectangle' 
-                } 
-            }, '*');
+        function testCodeExecution() {
+            updateStatus('Testing code execution...', 'info');
+            parent.postMessage({ pluginMessage: { type: 'test_code_execution' } }, '*');
         }
 
         function closePlugin() {
@@ -614,14 +599,14 @@
                         }
                         break;
 
-                    case 'design_command_result':
-                        updateStatus('Design command executed', 'success');
-                        log('Design command result: ' + JSON.stringify(message.data, null, 2));
+                    case 'code_execution_result':
+                        updateStatus('Code execution completed', 'success');
+                        log('Code execution result: ' + JSON.stringify(message.data, null, 2));
                         
                         // Forward to server if connected
                         if (websocket && websocket.readyState === WebSocket.OPEN) {
                             sendMessage({
-                                type: 'design_command_response',
+                                type: 'code_execution_response',
                                 request_id: message.request_id,
                                 result: message.data
                             });

@@ -2,7 +2,7 @@
   "name": "lightfast-mcp-figma-plugin",
   "id": "1509155185436575957",
   "api": "1.0.0",
-  "main": "code.js",
+  "main": "dist/code.js",
   "capabilities": [],
   "enableProposedApi": false,
   "documentAccess": "dynamic-page",
