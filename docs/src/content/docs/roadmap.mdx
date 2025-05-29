@@ -11,6 +11,7 @@ This document outlines the comprehensive roadmap for integrating 40+ creative ap
 
 **✅ Implemented:**
 - **Blender MCP Server**: Complete 3D modeling and animation control via socket connection
+- **Figma MCP Server**: Design automation and JavaScript code execution via WebSocket server architecture
 - **Mock MCP Server**: Testing and development server
 - **Modular Architecture**: BaseServer class supporting multiple server types
 
@@ -19,6 +20,7 @@ This document outlines the comprehensive roadmap for integrating 40+ creative ap
 | Application | Category | Connection Method | Priority | Status | GitHub Issue |
 |------------|----------|-------------------|----------|---------|--------------|
 | **Blender** | 3D | Socket-based | ✅ | Implemented | - |
+| **Figma** | Web Design | WebSocket-based | ✅ | Implemented | - |
 | **Maya** | 3D | Python API | High | Planned | [#28](https://github.com/lightfastai/lightfast-mcp/issues/28) |
 | **Cinema 4D** | 3D | Python API | High | Planned | [#27](https://github.com/lightfastai/lightfast-mcp/issues/27) |
 | **Photoshop** | 2D Graphics | ExtendScript/CEP | High | Planned | [#1](https://github.com/lightfastai/lightfast-mcp/issues/1) |
@@ -26,7 +28,6 @@ This document outlines the comprehensive roadmap for integrating 40+ creative ap
 | **Ableton Live** | Audio | OSC/Max for Live | High | Planned | [#31](https://github.com/lightfastai/lightfast-mcp/issues/31) |
 | **Unreal Engine** | Game Dev | Python API | High | Planned | [#32](https://github.com/lightfastai/lightfast-mcp/issues/32) |
 | **3ds Max** | 3D | PyMXS/MaxScript | High | Planned | [#33](https://github.com/lightfastai/lightfast-mcp/issues/33) |
-| **Figma** | Web Design | REST API | High | Planned | [#34](https://github.com/lightfastai/lightfast-mcp/issues/34) |
 | **TouchDesigner** | Interactive | Socket/Python | High | Planned | [#35](https://github.com/lightfastai/lightfast-mcp/issues/35) |
 | **Reaper** | Audio | Python API | High | Planned | [#36](https://github.com/lightfastai/lightfast-mcp/issues/36) |
 | **Houdini** | 3D | Python API | Medium | Planned | - |
@@ -61,8 +62,8 @@ This document outlines the comprehensive roadmap for integrating 40+ creative ap
 |--------|-------------|----------|
 | **Python API** | 12 apps | Cinema 4D, Maya, DaVinci Resolve, Houdini, Nuke, Reaper |
 | **ExtendScript/CEP** | 4 apps | Photoshop, Illustrator, Premiere Pro, After Effects |
-| **Socket-based** | 3 apps | Blender, TouchDesigner, Max/MSP |
-| **REST/HTTP API** | 4 apps | Figma, Canva, Substance 3D, Godot |
+| **WebSocket-based** | 3 apps | Blender, Figma, TouchDesigner |
+| **REST/HTTP API** | 3 apps | Canva, Substance 3D, Godot |
 | **OSC/Network** | 3 apps | Ableton Live, Max/MSP, Resolume |
 | **CLI/Command Line** | 3 apps | Inkscape, Processing, Godot |
 | **Platform Specific** | 3 apps | Logic Pro, Final Cut Pro (AppleScript) |
@@ -212,21 +213,22 @@ class {Application}MCPServer(BaseServer):
 - **Rendering**: V-Ray/Arnold integration, render farm management
 - **Import/Export**: CAD import, game asset export, format conversion
 
-### Figma MCP Server 🎨
+### Figma MCP Server 🎨 ✅
 
 **Target Directory:** `src/lightfast_mcp/servers/figma/`
 
 #### Technical Approach
-- **Connection Method**: HTTP/REST API via Figma Web API
-- **Dependencies**: Figma API authentication, HTTP client
-- **Architecture**: Web API client with real-time collaboration support
+- **Connection Method**: WebSocket server architecture with Figma plugin client
+- **Dependencies**: WebSocket support, Figma plugin runtime
+- **Architecture**: MCP server hosts WebSocket server, Figma plugin connects as client
 
-#### Key Features to Implement
-- **Design Operations**: Component creation, frame management, prototyping
-- **Collaboration**: Team library access, comment management, version control
-- **Asset Export**: Multiple format export, developer handoff
-- **Plugin Integration**: Custom plugin development, automation workflows
-- **Design System**: Component library management, style guide automation
+#### Implemented Features
+- **JavaScript Code Execution**: Execute arbitrary JavaScript code in Figma with full API access
+- **Document State Retrieval**: Get comprehensive document, page, and selection information  
+- **Real-time Communication**: WebSocket-based bidirectional communication
+- **Plugin Integration**: TypeScript Figma plugin with UI and WebSocket client
+- **Design Automation**: Create shapes, modify elements, work with components and styles
+- **Error Handling**: Comprehensive error reporting and connection management
 
 ### TouchDesigner MCP Server 🎭
 

@@ -79,6 +79,7 @@ class BaseServer(ABC):
     @asynccontextmanager
     async def _server_lifespan(self, server: FastMCP) -> AsyncIterator[dict[str, Any]]:
         """Manage server startup and shutdown lifecycle."""
+        self.logger.info(f"BaseServer: Entered _server_lifespan for {self.config.name}")
         try:
             self.logger.info(f"{self.config.name} starting up...")
 
@@ -95,6 +96,9 @@ class BaseServer(ABC):
 
         except Exception as e:
             self.logger.error(f"Error during {self.config.name} startup: {e}")
+            import traceback
+
+            self.logger.error(f"Traceback: {traceback.format_exc()}")
             self.info.error_message = str(e)
             self.info.health_status = HealthStatus.UNHEALTHY
             raise
@@ -179,7 +183,12 @@ class BaseServer(ABC):
             )
             self.logger.info(f"Server will be available at: {self.info.url}")
 
-        # Run with appropriate transport
+        # Log startup information
+        self.logger.info(
+            f"Starting MCP server '{self.config.name}' with transport '{self.config.transport}' on {self.info.url or 'stdio'}"
+        )
+
+        # Run with appropriate transport - let FastMCP handle the event loop
         if self.config.transport == "stdio":
             self.mcp.run()
         elif self.config.transport in ["http", "streamable-http"]:

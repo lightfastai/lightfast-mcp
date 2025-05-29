@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Lightfast MCP Figma Plugin</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            background: #ffffff;
+            color: #333;
+            line-height: 1.4;
+            padding: 16px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 4px;
+        }
+
+        .header p {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .connection-section {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 16px;
+        }
+
+        .connection-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .connection-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .connection-row label {
+            font-size: 12px;
+            font-weight: 500;
+            min-width: 60px;
+        }
+
+        .connection-row input {
+            flex: 1;
+            padding: 6px 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .button {
+            padding: 8px 12px;
+            margin: 2px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .button:hover {
+            background: #f8f9fa;
+            border-color: #007bff;
+        }
+
+        .button:active {
+            transform: translateY(1px);
+        }
+
+        .button.primary {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+
+        .button.primary:hover {
+            background: #0056b3;
+        }
+
+        .button.success {
+            background: #28a745;
+            color: white;
+            border-color: #28a745;
+        }
+
+        .button.success:hover {
+            background: #218838;
+        }
+
+        .button.danger {
+            background: #dc3545;
+            color: white;
+            border-color: #dc3545;
+        }
+
+        .button.danger:hover {
+            background: #c82333;
+        }
+
+        .button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .button-row {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 8px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: white;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .button-row:hover {
+            background: #f8f9fa;
+            border-color: #007bff;
+        }
+
+        .button-row:active {
+            transform: translateY(1px);
+        }
+
+        .output {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 12px;
+            margin-top: 16px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 11px;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        .status {
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin-bottom: 16px;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .connection-status {
+            padding: 6px 10px;
+            border-radius: 4px;
+            margin-bottom: 12px;
+            font-size: 11px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .connection-status.connected {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .connection-status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .connection-status.connecting {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎨 Lightfast MCP</h1>
+        <p>Plugin-Based WebSocket Client</p>
+    </div>
+
+    <div id="status" class="status info">Plugin loaded - WebSocket client ready to connect</div>
+
+    <!-- WebSocket Client Configuration Section -->
+    <div class="connection-section">
+        <div class="connection-row">
+            <label for="server-url-input">Server URL:</label>
+            <input type="text" id="server-url-input" value="ws://localhost:9003" placeholder="ws://localhost:9003">
+        </div>
+        <div class="connection-row">
+            <button id="connect-btn" class="button success" onclick="connectToServer()">🔌 Connect</button>
+            <button id="disconnect-btn" class="button danger" onclick="disconnectFromServer()" disabled>🔌 Disconnect</button>
+            <button class="button" onclick="testConnection()">🔧 Test Connection</button>
+        </div>
+    </div>
+
+    <div id="connection-status" class="connection-status disconnected">🔌 Disconnected from MCP Server</div>
+
+    <button class="button-row" onclick="testPluginCommunication()">🔄 Test Plugin Communication</button>
+    <button class="button-row" onclick="getDocumentInfo()">📄 Get Document Info</button>
+    <button class="button-row" onclick="testCodeExecution()">💻 Test Code Execution</button>
+    <button class="button-row primary" onclick="closePlugin()">✕ Close Plugin</button>
+
+    <div id="output" class="output">Plugin loaded - WebSocket client ready to connect to MCP server...</div>
+
+    <script>
+        // WebSocket client configuration
+        const DEFAULT_SERVER_URL = "ws://localhost:9003";
+        
+        // Connection state
+        let isConnected = false;
+        let websocket = null;
+        let reconnectAttempts = 0;
+        let maxReconnectAttempts = 5;
+        let reconnectDelay = 2000; // 2 seconds
+        let reconnectTimer = null;
+
+        function updateStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+
+        function updateConnectionStatus(status, message) {
+            const connectionStatus = document.getElementById('connection-status');
+            connectionStatus.textContent = `🔌 ${message}`;
+            connectionStatus.className = `connection-status ${status}`;
+        }
+
+        function updateConnectionButtons() {
+            const connectBtn = document.getElementById('connect-btn');
+            const disconnectBtn = document.getElementById('disconnect-btn');
+            const serverUrlInput = document.getElementById('server-url-input');
+
+            if (isConnected) {
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+                serverUrlInput.disabled = true;
+            } else {
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+                serverUrlInput.disabled = false;
+            }
+        }
+
+        function log(message) {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString();
+            output.textContent += `\n[${timestamp}] ${message}`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        // WebSocket Client Implementation
+        function connectToServer() {
+            const serverUrl = document.getElementById('server-url-input').value || DEFAULT_SERVER_URL;
+            
+            if (websocket && websocket.readyState === WebSocket.CONNECTING) {
+                log('Connection already in progress...');
+                return;
+            }
+            
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                log('Already connected to server');
+                return;
+            }
+            
+            updateStatus('Connecting to MCP server...', 'info');
+            updateConnectionStatus('connecting', 'Connecting to MCP server...');
+            log(`🔌 Attempting to connect to ${serverUrl}`);
+            
+            try {
+                websocket = new WebSocket(serverUrl);
+                
+                websocket.onopen = function(event) {
+                    isConnected = true;
+                    reconnectAttempts = 0;
+                    updateConnectionButtons();
+                    updateConnectionStatus('connected', 'Connected to MCP Server');
+                    updateStatus('Connected to MCP server!', 'success');
+                    log('✅ WebSocket connection established');
+                    
+                    // Send initial plugin info
+                    sendMessage({
+                        type: 'plugin_info',
+                        plugin_info: {
+                            name: 'Lightfast MCP Figma Plugin',
+                            version: '1.0.0',
+                            capabilities: ['document_info', 'design_commands'],
+                            platform: 'figma'
+                        }
+                    });
+                    
+                    // Notify plugin code
+                    parent.postMessage({ 
+                        pluginMessage: { 
+                            type: 'websocket_connected',
+                            data: {
+                                status: 'Connected to MCP Server',
+                                url: serverUrl,
+                                connected: true
+                            }
+                        } 
+                    }, '*');
+                };
+                
+                websocket.onmessage = function(event) {
+                    try {
+                        const message = JSON.parse(event.data);
+                        log(`📨 Received: ${JSON.stringify(message, null, 2)}`);
+                        handleServerMessage(message);
+                    } catch (error) {
+                        log(`❌ Error parsing message: ${error.message}`);
+                        log(`Raw message: ${event.data}`);
+                    }
+                };
+                
+                websocket.onclose = function(event) {
+                    isConnected = false;
+                    updateConnectionButtons();
+                    updateConnectionStatus('disconnected', 'Disconnected from MCP Server');
+                    
+                    if (event.wasClean) {
+                        updateStatus('Disconnected from MCP server', 'warning');
+                        log(`🔌 Connection closed cleanly (code: ${event.code})`);
+                    } else {
+                        updateStatus('Connection lost', 'error');
+                        log(`❌ Connection lost unexpectedly (code: ${event.code})`);
+                        
+                        // Attempt to reconnect if not manually disconnected
+                        if (reconnectAttempts < maxReconnectAttempts) {
+                            scheduleReconnect();
+                        } else {
+                            log(`❌ Max reconnection attempts (${maxReconnectAttempts}) reached`);
+                        }
+                    }
+                    
+                    // Notify plugin code
+                    parent.postMessage({ 
+                        pluginMessage: { 
+                            type: 'websocket_disconnected',
+                            data: {
+                                status: 'Disconnected from MCP Server',
+                                url: serverUrl,
+                                connected: false,
+                                code: event.code,
+                                reason: event.reason
+                            }
+                        } 
+                    }, '*');
+                };
+                
+                websocket.onerror = function(error) {
+                    log(`❌ WebSocket error: ${error}`);
+                    updateStatus('Connection error', 'error');
+                };
+                
+            } catch (error) {
+                log(`❌ Failed to create WebSocket connection: ${error.message}`);
+                updateStatus('Failed to connect', 'error');
+                updateConnectionStatus('disconnected', 'Connection failed');
+            }
+        }
+
+        function disconnectFromServer() {
+            if (reconnectTimer) {
+                clearTimeout(reconnectTimer);
+                reconnectTimer = null;
+            }
+            
+            reconnectAttempts = maxReconnectAttempts; // Prevent auto-reconnect
+            
+            if (websocket) {
+                updateStatus('Disconnecting from MCP server...', 'warning');
+                updateConnectionStatus('disconnecting', 'Disconnecting from MCP server...');
+                log('🔌 Disconnecting from server...');
+                
+                websocket.close(1000, 'User requested disconnect');
+                websocket = null;
+            } else {
+                log('No active connection to disconnect');
+            }
+        }
+
+        function scheduleReconnect() {
+            if (reconnectTimer) {
+                clearTimeout(reconnectTimer);
+            }
+            
+            reconnectAttempts++;
+            const delay = reconnectDelay * Math.pow(2, reconnectAttempts - 1); // Exponential backoff
+            
+            log(`🔄 Scheduling reconnection attempt ${reconnectAttempts}/${maxReconnectAttempts} in ${delay}ms`);
+            updateStatus(`Reconnecting in ${delay/1000}s... (${reconnectAttempts}/${maxReconnectAttempts})`, 'warning');
+            
+            reconnectTimer = setTimeout(() => {
+                log(`🔄 Reconnection attempt ${reconnectAttempts}/${maxReconnectAttempts}`);
+                connectToServer();
+            }, delay);
+        }
+
+        function sendMessage(message) {
+            if (!websocket || websocket.readyState !== WebSocket.OPEN) {
+                log('❌ Cannot send message - not connected to server');
+                return false;
+            }
+            
+            try {
+                const messageStr = JSON.stringify(message);
+                websocket.send(messageStr);
+                log(`📤 Sent: ${messageStr}`);
+                return true;
+            } catch (error) {
+                log(`❌ Error sending message: ${error.message}`);
+                return false;
+            }
+        }
+
+        function handleServerMessage(message) {
+            try {
+                switch (message.type) {
+                    case 'welcome':
+                        log('🎉 Received welcome from MCP server');
+                        updateStatus('Connected and welcomed by server', 'success');
+                        break;
+                        
+                    case 'ping':
+                        // Respond to ping
+                        sendMessage({
+                            type: 'pong',
+                            timestamp: Date.now()
+                        });
+                        break;
+                        
+                    case 'pong':
+                        log('🏓 Received pong from server');
+                        break;
+                        
+                    case 'plugin_info_received':
+                        log('✅ Plugin info acknowledged by server');
+                        updateStatus('Plugin registered with server', 'success');
+                        break;
+                        
+                    case 'get_document_info':
+                        // Request document info from plugin
+                        parent.postMessage({ 
+                            pluginMessage: { 
+                                type: 'get_document_info',
+                                request_id: message.request_id
+                            } 
+                        }, '*');
+                        break;
+                        
+                    case 'execute_code':
+                        // Forward code execution to plugin
+                        log(`📤 Forwarding execute_code to plugin: ${JSON.stringify({
+                            type: 'execute_code',
+                            code: message.code || message.params?.code || '',
+                            request_id: message.request_id
+                        })}`);
+                        parent.postMessage({ 
+                            pluginMessage: { 
+                                type: 'execute_code',
+                                code: message.code || message.params?.code || '',
+                                request_id: message.request_id
+                            } 
+                        }, '*');
+                        break;
+                        
+                    case 'error':
+                        log(`❌ Server error: ${message.message || 'Unknown error'}`);
+                        updateStatus('Server error received', 'error');
+                        break;
+                        
+                    default:
+                        log(`📋 Unhandled message type from server: ${message.type}`);
+                }
+            } catch (error) {
+                log(`❌ Error handling server message: ${error.message}`);
+            }
+        }
+
+        function testConnection() {
+            if (!websocket || websocket.readyState !== WebSocket.OPEN) {
+                updateStatus('Not connected to server', 'error');
+                log('❌ Cannot test connection - not connected to server');
+                return;
+            }
+            
+            updateStatus('Testing connection to MCP server...', 'info');
+            log('🔧 Testing connection with ping...');
+            
+            const success = sendMessage({
+                type: 'ping',
+                timestamp: Date.now()
+            });
+            
+            if (success) {
+                parent.postMessage({ 
+                    pluginMessage: { 
+                        type: 'connection_test_result',
+                        data: {
+                            status: 'Ping sent successfully',
+                            connected: true,
+                            url: websocket.url
+                        }
+                    } 
+                }, '*');
+            }
+        }
+
+        // Plugin communication functions
+        function testPluginCommunication() {
+            updateStatus('Testing plugin communication...', 'info');
+            parent.postMessage({ pluginMessage: { type: 'ping' } }, '*');
+        }
+
+        function getDocumentInfo() {
+            updateStatus('Getting document info...', 'info');
+            parent.postMessage({ pluginMessage: { type: 'get_document_info' } }, '*');
+        }
+
+        function testCodeExecution() {
+            updateStatus('Testing code execution...', 'info');
+            parent.postMessage({ pluginMessage: { type: 'test_code_execution' } }, '*');
+        }
+
+        function closePlugin() {
+            if (websocket) {
+                disconnectFromServer();
+            }
+            parent.postMessage({ pluginMessage: { type: 'close-plugin' } }, '*');
+        }
+
+        // Handle messages from the plugin
+        window.addEventListener('message', (event) => {
+            const message = event.data.pluginMessage;
+            if (message) {
+                switch (message.type) {
+                    case 'pong':
+                        updateStatus('Plugin communication test successful!', 'success');
+                        log('Pong received - plugin communication working');
+                        break;
+
+                    case 'document_info':
+                        updateStatus('Document info received', 'success');
+                        log('Document info: ' + JSON.stringify(message.data, null, 2));
+                        
+                        // Forward to server if connected
+                        if (websocket && websocket.readyState === WebSocket.OPEN) {
+                            sendMessage({
+                                type: 'document_info_response',
+                                request_id: message.request_id,
+                                document_info: message.data
+                            });
+                        }
+                        break;
+
+                    case 'code_execution_result':
+                        updateStatus('Code execution completed', 'success');
+                        log('Code execution result: ' + JSON.stringify(message.data, null, 2));
+                        
+                        // Forward to server if connected
+                        if (websocket && websocket.readyState === WebSocket.OPEN) {
+                            sendMessage({
+                                type: 'code_execution_response',
+                                request_id: message.request_id,
+                                result: message.data
+                            });
+                        }
+                        break;
+
+                    case 'error':
+                        updateStatus('Error occurred', 'error');
+                        log('Plugin Error: ' + message.message);
+                        break;
+
+                    case 'websocket_connected':
+                        updateStatus('WebSocket connection confirmed by plugin', 'success');
+                        log('✅ Plugin confirmed WebSocket connection');
+                        break;
+
+                    case 'websocket_disconnected':
+                        updateStatus('WebSocket disconnection confirmed by plugin', 'warning');
+                        log('⚠️ Plugin confirmed WebSocket disconnection');
+                        break;
+
+                    case 'connection_test_result':
+                        updateStatus('Connection test completed', 'success');
+                        log('🔧 Connection test result: ' + JSON.stringify(message.data, null, 2));
+                        break;
+
+                    case 'plugin_status':
+                        updateStatus('Plugin status received', 'info');
+                        log('📋 Plugin status: ' + JSON.stringify(message.data, null, 2));
+                        break;
+
+                    default:
+                        log('Unknown plugin message: ' + JSON.stringify(message));
+                }
+            }
+        });
+
+        // Initialize UI
+        updateConnectionButtons();
+        log('UI initialized - WebSocket client ready to connect to MCP server');
+        log('💡 Real WebSocket client implementation loaded');
+        log('🔧 Use the Connect button to establish WebSocket connection');
+        
+        // Auto-connect on load (optional)
+        // setTimeout(() => connectToServer(), 1000);
+    </script>
+</body>
+</html>

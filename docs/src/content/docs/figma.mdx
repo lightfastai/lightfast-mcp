@@ -1,0 +1,297 @@
+---
+title: Figma
+description: How to use Lightfast MCP with Figma
+---
+
+# Setting Up Lightfast MCP for Figma
+
+This guide will walk you through setting up Lightfast MCP to work with Figma, allowing you to control Figma using Claude and execute JavaScript code directly in your design files.
+
+## Installation
+
+### Install Lightfast MCP
+
+First, clone the repository and install the package:
+
+```bash
+# Clone the repository
+git clone https://github.com/lightfastai/lightfast-mcp.git
+cd lightfast-mcp
+
+# Install with uv (recommended)
+uv pip install -e .
+
+# Or with regular pip
+pip install -e .
+```
+
+## Figma Plugin Setup
+
+### Build and Install the Figma Plugin
+
+1. Navigate to the Figma plugin directory:
+   ```bash
+   cd addons/figma
+   ```
+
+2. Install dependencies and build the plugin:
+   ```bash
+   npm install
+   # or if you have pnpm
+   pnpm install
+   
+   # Build the TypeScript code
+   npx tsc
+   ```
+
+3. In Figma, go to **Plugins → Development → Import plugin from manifest...**
+
+4. Select the `manifest.json` file from the `addons/figma` directory
+
+5. The plugin will now appear in your **Plugins → Development** menu
+
+![Figma plugin installation](/images/figma-plugin-install.png)
+
+### Launch the Lightfast Plugin
+
+1. Open any Figma design file
+2. Go to **Plugins → Development → lightfast-mcp-figma-plugin**
+3. The plugin interface will open on the right side
+4. The plugin is now ready to connect to the MCP server
+
+![Lightfast plugin in Figma](/images/figma-plugin-interface.png)
+
+## Claude Desktop Configuration
+
+### Configure Claude Desktop
+
+To use Claude with Lightfast MCP for Figma, you need to configure Claude Desktop:
+
+1. Open or create the file at `~/Library/Application Support/Claude/claude_desktop_config.json` (on macOS) or the equivalent path on your operating system.
+
+2. Add the following configuration:
+
+```json
+{
+  "mcpServers": {
+    "lightfast-figma": {
+      "command": "/path/to/your/python",
+      "args": [
+        "-m",
+        "lightfast_mcp.servers.figma_mcp_server"
+      ]
+    }
+  }
+}
+```
+
+3. Replace `/path/to/your/python` with the path to your Python interpreter (typically the one in your virtual environment where Lightfast MCP is installed).
+
+For example:
+
+```json
+{
+  "mcpServers": {
+    "lightfast-figma": {
+      "command": "/Users/username/Code/lightfast-mcp/.venv/bin/python",
+      "args": [
+        "-m",
+        "lightfast_mcp.servers.figma_mcp_server"
+      ]
+    }
+  }
+}
+```
+
+4. Restart Claude Desktop and select the "lightfast-figma" MCP server from the Claude settings.
+
+## Testing the Connection
+
+### Start the MCP Server and Connect
+
+1. **Start Claude Desktop** and select the "lightfast-figma" MCP server
+   - The MCP server will automatically start a WebSocket server on `localhost:9003`
+
+2. **Open the Figma plugin** and connect to the server:
+   - Click the **Connect** button in the plugin interface
+   - The default server URL `ws://localhost:9003` should work automatically
+   - The connection status will show "Connected" when successful
+
+3. **Test the connection** by asking Claude to interact with Figma:
+
+Try asking Claude: *"Get the current state of my Figma document"*
+
+Or: *"Create a blue rectangle in Figma with the following code: `const rect = figma.createRectangle(); rect.resize(200, 100); rect.fills = [{type: 'SOLID', color: {r: 0.2, g: 0.6, b: 1.0}}]; figma.currentPage.appendChild(rect);`"*
+
+## Available Features
+
+### Document State Information
+
+Claude can retrieve comprehensive information about your Figma document:
+- Current document and page details
+- Selection information
+- Viewport state (center, zoom)
+- Connected plugin status
+
+### JavaScript Code Execution
+
+Claude can execute arbitrary JavaScript code in Figma with full access to the Figma API:
+
+**Examples:**
+- **Create shapes**: `const rect = figma.createRectangle(); rect.resize(100, 100); figma.currentPage.appendChild(rect);`
+- **Modify selection**: `figma.currentPage.selection.forEach(node => node.name = 'AI Modified');`
+- **Work with colors**: `const node = figma.currentPage.selection[0]; node.fills = [{type: 'SOLID', color: {r: 1, g: 0, b: 0}}];`
+- **Complex operations**: Create components, apply styles, manipulate text, and more
+
+### Real-time Design Automation
+
+- Execute design commands through natural language
+- Automate repetitive design tasks
+- Generate design variations and iterations
+- Create design systems and components programmatically
+
+## Usage Examples
+
+### Basic Shape Creation
+
+Ask Claude: *"Create a red circle in the center of the page"*
+
+Claude will execute:
+```javascript
+const circle = figma.createEllipse();
+circle.resize(100, 100);
+circle.x = figma.viewport.center.x - 50;
+circle.y = figma.viewport.center.y - 50;
+circle.fills = [{type: 'SOLID', color: {r: 1, g: 0, b: 0}}];
+figma.currentPage.appendChild(circle);
+```
+
+### Text Manipulation
+
+Ask Claude: *"Create a title that says 'Welcome' in 48pt size"*
+
+Claude will execute:
+```javascript
+const text = figma.createText();
+text.characters = 'Welcome';
+text.fontSize = 48;
+text.x = figma.viewport.center.x;
+text.y = figma.viewport.center.y;
+figma.currentPage.appendChild(text);
+```
+
+### Batch Operations
+
+Ask Claude: *"Make all selected elements blue and increase their size by 20%"*
+
+Claude will execute:
+```javascript
+figma.currentPage.selection.forEach(node => {
+  // Change color to blue
+  node.fills = [{type: 'SOLID', color: {r: 0, g: 0, b: 1}}];
+  
+  // Increase size by 20%
+  if ('resize' in node) {
+    node.resize(node.width * 1.2, node.height * 1.2);
+  }
+});
+```
+
+## Configuration Options
+
+### Custom WebSocket Port
+
+You can configure a custom port in your MCP server configuration:
+
+```json
+{
+  "mcpServers": {
+    "lightfast-figma": {
+      "command": "/path/to/your/python",
+      "args": [
+        "-m",
+        "lightfast_mcp.servers.figma_mcp_server"
+      ],
+      "env": {
+        "FIGMA_PORT": "9004"
+      }
+    }
+  }
+}
+```
+
+Then update the plugin connection URL to match: `ws://localhost:9004`
+
+## Troubleshooting
+
+If you encounter issues:
+
+### Connection Problems
+- **Plugin won't connect**: Ensure Claude Desktop is running with the MCP server active
+- **WebSocket errors**: Check that no other application is using port 9003
+- **Connection refused**: Verify the MCP server is running by checking Claude Desktop's server status
+
+### Plugin Issues
+- **Plugin not appearing**: Make sure the TypeScript code was compiled (`npx tsc`) and the manifest.json was imported correctly
+- **Plugin crashes**: Check the Figma console (Developer → Console) for error messages
+- **Commands not executing**: Verify the plugin shows "Connected" status
+
+### Code Execution Problems
+- **JavaScript errors**: The Figma API has specific requirements - check the [Figma Plugin API documentation](https://www.figma.com/plugin-docs/)
+- **Permission errors**: Some operations require user interaction - ensure your code doesn't violate Figma's security model
+- **Async operations**: Use synchronous Figma API calls - async/await patterns may not work as expected
+
+### General Debugging
+1. Check the Figma plugin console for error messages
+2. Verify Claude Desktop shows the MCP server as "Connected"
+3. Test the WebSocket connection using the plugin's built-in test buttons
+4. Restart both Figma and Claude Desktop if necessary
+
+For more detailed troubleshooting, check the console outputs in both Figma and Claude Desktop.
+
+## Advanced Usage
+
+### Working with Components
+
+Create reusable components:
+```javascript
+// Create a button component
+const frame = figma.createFrame();
+frame.name = "Button";
+frame.resize(120, 40);
+frame.cornerRadius = 8;
+frame.fills = [{type: 'SOLID', color: {r: 0.2, g: 0.6, b: 1.0}}];
+
+const text = figma.createText();
+text.characters = "Click Me";
+text.fontSize = 16;
+text.textAlignHorizontal = "CENTER";
+text.textAlignVertical = "CENTER";
+frame.appendChild(text);
+
+const component = figma.createComponent();
+component.appendChild(frame);
+figma.currentPage.appendChild(component);
+```
+
+### Design System Automation
+
+Generate color swatches:
+```javascript
+const colors = [
+  {name: "Primary", color: {r: 0.2, g: 0.6, b: 1.0}},
+  {name: "Secondary", color: {r: 0.9, g: 0.4, b: 0.1}},
+  {name: "Success", color: {r: 0.2, g: 0.8, b: 0.2}},
+];
+
+colors.forEach((colorInfo, index) => {
+  const rect = figma.createRectangle();
+  rect.name = colorInfo.name;
+  rect.resize(100, 100);
+  rect.x = index * 120;
+  rect.fills = [{type: 'SOLID', color: colorInfo.color}];
+  figma.currentPage.appendChild(rect);
+});
+```
+
+This powerful combination of Lightfast MCP and Figma enables AI-driven design workflows, automated design system creation, and rapid prototyping through natural language commands.
