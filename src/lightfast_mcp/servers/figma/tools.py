@@ -109,32 +109,28 @@ async def get_state(ctx: Context) -> str:
             },
         }
 
-        return json.dumps(result, indent=2)
+        return json.dumps(result)
 
     except FigmaMCPError as e:
         logger.error(f"FigmaMCPError in get_state: {e}")
-        return json.dumps(
-            {
-                "error": f"Figma Interaction Error: {str(e)}",
-                "type": type(e).__name__,
-                "server_name": _current_server.config.name
-                if _current_server
-                else "FigmaMCP",
-            },
-            indent=2,
-        )
+        error_result = {
+            "error": f"Figma Interaction Error: {str(e)}",
+            "type": type(e).__name__,
+            "server_name": _current_server.config.name
+            if _current_server
+            else "FigmaMCP",
+        }
+        return json.dumps(error_result)
     except Exception as e:
         logger.error(f"Unexpected error in get_state: {e}")
-        return json.dumps(
-            {
-                "error": f"Unexpected server error: {str(e)}",
-                "type": type(e).__name__,
-                "server_name": _current_server.config.name
-                if _current_server
-                else "FigmaMCP",
-            },
-            indent=2,
-        )
+        error_result = {
+            "error": f"Unexpected server error: {str(e)}",
+            "type": type(e).__name__,
+            "server_name": _current_server.config.name
+            if _current_server
+            else "FigmaMCP",
+        }
+        return json.dumps(error_result)
 
 
 async def execute_code(ctx: Context, code_to_execute: str) -> str:
@@ -190,29 +186,76 @@ async def execute_code(ctx: Context, code_to_execute: str) -> str:
             },
         }
 
-        return json.dumps(result, indent=2)
+        return json.dumps(result)
 
     except FigmaMCPError as e:
         logger.error(f"FigmaMCPError in execute_code: {e}")
-        return json.dumps(
-            {
-                "error": f"Figma Code Execution Error: {str(e)}",
-                "type": type(e).__name__,
-                "server_name": _current_server.config.name
-                if _current_server
-                else "FigmaMCP",
-            },
-            indent=2,
-        )
+        error_result = {
+            "error": f"Figma Code Execution Error: {str(e)}",
+            "type": type(e).__name__,
+            "server_name": _current_server.config.name
+            if _current_server
+            else "FigmaMCP",
+        }
+        return json.dumps(error_result)
     except Exception as e:
         logger.error(f"Unexpected error in execute_code: {e}")
-        return json.dumps(
-            {
-                "error": f"Unexpected server error during code execution: {str(e)}",
-                "type": type(e).__name__,
-                "server_name": _current_server.config.name
-                if _current_server
-                else "FigmaMCP",
+        error_result = {
+            "error": f"Unexpected server error during code execution: {str(e)}",
+            "type": type(e).__name__,
+            "server_name": _current_server.config.name
+            if _current_server
+            else "FigmaMCP",
+        }
+        return json.dumps(error_result)
+
+
+async def get_figma_server_status(ctx: Context) -> str:
+    """
+    Get detailed status information about the Figma WebSocket server.
+
+    Returns information about:
+    - Server running status
+    - Connected clients/plugins
+    - Server statistics
+    - Configuration details
+    """
+    logger.info("Getting Figma server status")
+
+    try:
+        if not _current_server or not hasattr(_current_server, "websocket_server"):
+            raise FigmaConnectionError("Figma WebSocket server not available")
+
+        ws_server = _current_server.websocket_server
+        server_info = ws_server.get_server_info()
+
+        result = {
+            "server_status": "running" if ws_server.is_running else "stopped",
+            "figma_websocket_server": server_info,
+            "mcp_server": {
+                "mcp_server_name": _current_server.config.name,
+                "type": "figma",
+                "version": getattr(_current_server, "SERVER_VERSION", "1.0.0"),
+                "is_running": _current_server.info.is_running,
             },
-            indent=2,
-        )
+            "timestamp": time.time(),
+        }
+
+        return json.dumps(result)
+
+    except FigmaMCPError as e:
+        logger.error(f"FigmaMCPError in get_figma_server_status: {e}")
+        error_result = {
+            "error": f"Figma Server Status Error: {str(e)}",
+            "type": type(e).__name__,
+            "server_status": "error",
+        }
+        return json.dumps(error_result)
+    except Exception as e:
+        logger.error(f"Unexpected error in get_figma_server_status: {e}")
+        error_result = {
+            "error": f"Unexpected server error: {str(e)}",
+            "type": type(e).__name__,
+            "server_status": "error",
+        }
+        return json.dumps(error_result)

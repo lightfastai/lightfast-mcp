@@ -57,7 +57,10 @@ class FigmaMCPServer(BaseServer):
         self.mcp.tool()(tools.execute_code)
 
         # Update the server info with available tools
-        self.info.tools = ["get_state", "execute_code"]
+        self.info.tools = [
+            "get_state",
+            "execute_code",
+        ]
         logger.info(f"Registered {len(self.info.tools)} tools: {self.info.tools}")
 
     async def _check_application(self, app: str) -> bool:
