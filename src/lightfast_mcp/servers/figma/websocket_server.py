@@ -396,7 +396,6 @@ class FigmaWebSocketServer:
     ) -> Optional[Dict[str, Any]]:
         """Handle document info response from Figma plugin."""
         document_info = data.get("document_info", {})
-        request_id = data.get("request_id")
 
         logger.info(f"📄 Document info response from client {client.id}")
 
@@ -443,7 +442,6 @@ class FigmaWebSocketServer:
     ) -> Optional[Dict[str, Any]]:
         """Handle code execution response from Figma plugin."""
         result = data.get("result", {})
-        request_id = data.get("request_id")
 
         logger.info(f"🎨 Code execution response from client {client.id}")
 

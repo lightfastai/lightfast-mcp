@@ -207,7 +207,7 @@ class TestFigmaMCPServer:
         """Test WebSocket server startup with retry logic."""
         with patch.object(FigmaMCPServer, "_register_signal_handlers"):
             with patch("threading.Thread") as mock_thread:
-                server = FigmaMCPServer(sample_figma_config)
+                _server = FigmaMCPServer(sample_figma_config)
 
                 # Verify thread was started
                 mock_thread.assert_called_once()
@@ -218,7 +218,7 @@ class TestFigmaMCPServer:
         """Test signal handler registration."""
         with patch.object(FigmaMCPServer, "_start_websocket_server_background"):
             with patch("signal.signal") as mock_signal:
-                server = FigmaMCPServer(sample_figma_config)
+                _server = FigmaMCPServer(sample_figma_config)
 
                 # Verify signal handlers were registered
                 assert mock_signal.call_count >= 2  # SIGTERM and SIGINT
