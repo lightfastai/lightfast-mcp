@@ -92,11 +92,13 @@ class FigmaWebSocketServer:
                 "pong": self._handle_pong,
                 "get_document_info": self._handle_get_document_info,
                 "execute_code": self._handle_execute_code,
+                "execute_design_command": self._handle_execute_design_command,
                 "get_server_status": self._handle_get_server_status,
                 "plugin_info": self._handle_plugin_info,
                 "document_update": self._handle_document_update,
                 "document_info_response": self._handle_document_info_response,
                 "code_execution_response": self._handle_code_execution_response,
+                "design_command_response": self._handle_design_command_response,
             }
         )
 
@@ -454,6 +456,44 @@ class FigmaWebSocketServer:
 
         # No response needed - this is a response to our request
         return None
+
+    async def _handle_execute_design_command(
+        self, client: FigmaClient, data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Stub handler for execute_design_command (removed functionality)."""
+        command = data.get("command", "")
+        request_id = data.get("request_id", str(uuid.uuid4()))
+
+        logger.warning(
+            f"🚫 execute_design_command is no longer supported. Use execute_code instead. Command: {command}"
+        )
+
+        # Return a helpful error message
+        return {
+            "type": "error",
+            "error": "execute_design_command has been removed. Use execute_code with JavaScript instead.",
+            "alternative": f"Use execute_code with JavaScript: {command}",
+            "client_id": client.id,
+            "command": command,
+            "request_id": request_id,
+            "timestamp": time.time(),
+        }
+
+    async def _handle_design_command_response(
+        self, client: FigmaClient, data: Dict[str, Any]
+    ) -> Optional[Dict[str, Any]]:
+        """Stub handler for design_command_response (removed functionality)."""
+        logger.warning(
+            f"🚫 design_command_response is no longer supported from client {client.id}"
+        )
+
+        # Just acknowledge the response but don't process it
+        return {
+            "type": "warning",
+            "message": "design_command_response is no longer processed. Use code_execution_response instead.",
+            "client_id": client.id,
+            "timestamp": time.time(),
+        }
 
     async def send_command_to_plugin(
         self, client_id: str, command_type: str, params: Dict[str, Any] = None

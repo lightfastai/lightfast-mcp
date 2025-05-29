@@ -85,7 +85,7 @@ class TestFigmaMCPServer:
                 assert isinstance(tools_list, list)
                 assert len(tools_list) == 2
 
-                expected_tools = ["get_state", "execute_command"]
+                expected_tools = ["get_state", "execute_code"]
                 for tool in expected_tools:
                     assert tool in tools_list
 
@@ -535,7 +535,7 @@ class TestFigmaServerIntegration:
                 # Verify server has correct tools registered
                 server_tools = server.get_tools()
                 assert "get_state" in server_tools
-                assert "execute_command" in server_tools
+                assert "execute_code" in server_tools
                 assert len(server_tools) == 2
 
     @pytest.mark.slow
