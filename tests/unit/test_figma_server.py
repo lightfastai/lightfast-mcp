@@ -308,20 +308,19 @@ class TestFigmaServerTools:
         assert result_data["type"] == "FigmaConnectionError"
 
     @pytest.mark.asyncio
-    async def test_execute_command_no_server(self):
-        """Test execute_command when no server is available."""
+    async def test_execute_code_no_server(self):
+        """Test execute_code when no server is available."""
         tools.set_current_server(None)
 
-        result = await tools.execute_command(None, "create rectangle")
+        result = await tools.execute_code(None, "const rect = figma.createRectangle()")
         result_data = json.loads(result)
 
-        assert "Figma Command Execution Error" in result_data["error"]
+        assert "Figma Code Execution Error" in result_data["error"]
         assert result_data["type"] == "FigmaConnectionError"
-        assert result_data["command"] == "create rectangle"
 
     @pytest.mark.asyncio
-    async def test_execute_command_server_not_running(self):
-        """Test execute_command when WebSocket server is not running."""
+    async def test_execute_code_server_not_running(self):
+        """Test execute_code when WebSocket server is not running."""
         mock_server = MagicMock()
         mock_ws_server = MagicMock()
         mock_ws_server.is_running = False
@@ -331,15 +330,15 @@ class TestFigmaServerTools:
 
         tools.set_current_server(mock_server)
 
-        result = await tools.execute_command(None, "create circle")
+        result = await tools.execute_code(None, "figma.currentPage.selection = []")
         result_data = json.loads(result)
 
-        assert "Figma Command Execution Error" in result_data["error"]
+        assert "Figma Code Execution Error" in result_data["error"]
         assert result_data["type"] == "FigmaConnectionError"
 
     @pytest.mark.asyncio
-    async def test_execute_command_success(self):
-        """Test successful execute_command."""
+    async def test_execute_code_success(self):
+        """Test successful execute_code."""
         mock_server = MagicMock()
         mock_ws_server = MagicMock()
         mock_ws_server.is_running = True
@@ -355,19 +354,20 @@ class TestFigmaServerTools:
 
         tools.set_current_server(mock_server)
 
-        result = await tools.execute_command(None, "create rectangle")
+        code = "const rect = figma.createRectangle(); rect.resize(100, 100);"
+        result = await tools.execute_code(None, code)
         result_data = json.loads(result)
 
-        assert result_data["status"] == "command_sent"
-        assert result_data["command"] == "create rectangle"
+        assert result_data["status"] == "code_sent"
+        assert result_data["code"] == code
         assert result_data["plugin_id"] == "test-plugin"
         mock_ws_server.send_command_to_plugin.assert_called_once_with(
-            "test-plugin", "execute_design_command", {"command": "create rectangle"}
+            "test-plugin", "execute_code", {"code": code}
         )
 
     @pytest.mark.asyncio
-    async def test_execute_command_send_failure(self):
-        """Test execute_command when sending command fails."""
+    async def test_execute_code_send_failure(self):
+        """Test execute_code when sending code fails."""
         mock_server = MagicMock()
         mock_ws_server = MagicMock()
         mock_ws_server.is_running = True
@@ -383,12 +383,12 @@ class TestFigmaServerTools:
 
         tools.set_current_server(mock_server)
 
-        result = await tools.execute_command(None, "create text")
+        code = "figma.currentPage.appendChild(figma.createText())"
+        result = await tools.execute_code(None, code)
         result_data = json.loads(result)
 
-        assert "Figma Command Execution Error" in result_data["error"]
+        assert "Figma Code Execution Error" in result_data["error"]
         assert result_data["type"] == "FigmaCommandError"
-        assert result_data["command"] == "create text"
 
 
 class TestFigmaWebSocketServer:
