@@ -11,8 +11,12 @@ from lightfast_mcp.exceptions import (
 from lightfast_mcp.exceptions import (
     BlenderMCPError as PhotoshopMCPError,
 )
+from lightfast_mcp.exceptions import (
+    BlenderTimeoutError as PhotoshopTimeoutError,
+)
 from lightfast_mcp.servers import photoshop_mcp_server
 from lightfast_mcp.servers.photoshop_mcp_server import (
+    _process_incoming_messages_for_client,
     check_photoshop_connected,
     execute_photoshop_code,
     get_document_info,
@@ -137,7 +141,6 @@ async def test_send_to_photoshop_no_clients():
 
 
 @async_tests
-@pytest.mark.skip(reason="TODO: Fix issue with TimeoutError mocking")
 async def test_send_to_photoshop_timeout():
     """Test send_to_photoshop handles timeouts properly."""
     # Create a mock client
@@ -145,101 +148,176 @@ async def test_send_to_photoshop_timeout():
     mock_ws.send = AsyncMock()
     mock_ws.remote_address = ("127.0.0.1", 54321)
 
-    # Create a real exception instance
-    timeout_error = TimeoutError()
-
-    # Mock wait_for to raise the TimeoutError
-    # Also mock the PhotoshopTimeoutError and logger so we can test cleanly
     with (
         patch.object(photoshop_mcp_server, "connected_clients", {mock_ws}),
-        patch("asyncio.wait_for", side_effect=timeout_error),
-        patch("lightfast_mcp.servers.photoshop_mcp_server.logger"),
-        patch("lightfast_mcp.servers.photoshop_mcp_server.PhotoshopTimeoutError") as mock_timeout_exc,
+        patch("asyncio.wait_for", side_effect=asyncio.TimeoutError("Timeout")),
+        patch("lightfast_mcp.servers.photoshop_mcp_server.logger") as mock_logger,
     ):
-        # Configure the mock exception to be raised directly
-        mock_instance = mock_timeout_exc.return_value
-
-        # The test will now just expect an exception of type mock_timeout_exc
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(PhotoshopTimeoutError) as excinfo:
             await send_to_photoshop("test_command", {})
 
-        # Verify the mock was called with the right message
-        mock_timeout_exc.assert_called_once()
-        assert "Timeout waiting for Photoshop response" in mock_timeout_exc.call_args[0][0]
+        assert "Timeout waiting for Photoshop response" in str(excinfo.value)
+        mock_logger.error.assert_called()
 
 
 @async_tests
-@pytest.mark.skip(reason="TODO: Fix issue with ConnectionClosedError initialization")
 async def test_send_to_photoshop_connection_closed():
     """Test send_to_photoshop handles connection closure properly."""
     # Create a mock client
     mock_ws = MagicMock()
     mock_ws.remote_address = ("127.0.0.1", 54321)
 
-    # Use a real ConnectionClosed exception
+    # Create a real ConnectionClosed exception
     conn_closed = websockets.exceptions.ConnectionClosedError(1000, "Connection closed")
-
-    # Set up the mock to raise the exception
     mock_ws.send = AsyncMock(side_effect=conn_closed)
 
-    # Setup patching for various dependencies
     with (
         patch.object(photoshop_mcp_server, "connected_clients", {mock_ws}),
-        patch("lightfast_mcp.servers.photoshop_mcp_server.logger"),
-        patch("lightfast_mcp.servers.photoshop_mcp_server.PhotoshopConnectionError") as mock_conn_exc,
+        patch("lightfast_mcp.servers.photoshop_mcp_server.logger") as mock_logger,
     ):
-        # Configure the mock exception to be raised directly
-        mock_instance = mock_conn_exc.return_value
-
-        # The test will now just expect an exception of type mock_conn_exc
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(PhotoshopConnectionError) as excinfo:
             await send_to_photoshop("test_command", {})
 
-        # Verify the mock was called with the right message
-        mock_conn_exc.assert_called_once()
-        assert "Connection to Photoshop lost" in mock_conn_exc.call_args[0][0]
+        assert "Connection to Photoshop lost" in str(excinfo.value)
+        mock_logger.error.assert_called()
 
 
 @async_tests
-@pytest.mark.skip(reason="TODO: Fix issue with await mock_handler_task not raising CancelledError")
+async def test_send_to_photoshop_multiple_clients():
+    """Test send_to_photoshop works with multiple connected clients."""
+    # Create multiple mock clients
+    mock_ws1 = MagicMock()
+    mock_ws1.send = AsyncMock()
+    mock_ws1.remote_address = ("127.0.0.1", 54321)
+
+    mock_ws2 = MagicMock()
+    mock_ws2.send = AsyncMock()
+    mock_ws2.remote_address = ("127.0.0.1", 54322)
+
+    mock_response = {"status": "success", "data": {"message": "Command executed"}}
+
+    with (
+        patch.object(photoshop_mcp_server, "connected_clients", {mock_ws1, mock_ws2}),
+        patch("asyncio.wait_for", return_value=mock_response),
+        patch("lightfast_mcp.servers.photoshop_mcp_server.logger"),
+    ):
+        result = await send_to_photoshop("test_command", {"param": "value"})
+
+        # Should use the first client in the set
+        assert mock_ws1.send.called or mock_ws2.send.called
+        assert result == mock_response
+
+
+@async_tests
 async def test_handle_photoshop_client_successful_connection():
     """Test handle_photoshop_client handles a successful connection."""
-    # Create mock objects
     mock_ws = MagicMock()
     mock_ws.remote_address = ("127.0.0.1", 54321)
 
-    # Create a real task for the _process_incoming_messages_for_client function
-    mock_handler_task = MagicMock()
-    mock_handler_task.done.return_value = False
-
-    # Create a mock coroutine for message_handler_task.wait()
-    async def mock_wait():
-        # This will be awaited by handle_photoshop_client
-        # Raising CancelledError here will simulate cancellation
-        raise asyncio.CancelledError()
-
-    # Attach the mock coroutine to the task
-    mock_handler_task.__await__ = mock_wait().__await__
-
-    # Set up successful ping response
+    # Mock the ping response
     ping_result = {"status": "success", "message": "pong"}
 
-    # Empty set for connected_clients that we can modify
+    # Create a mock task that will be cancelled
+    mock_task = MagicMock()
+
+    # Mock the task creation and cancellation
+    async def mock_create_task(coro):
+        """Mock create_task that returns a cancellable task."""
+        task = MagicMock()
+        task.cancel = MagicMock()
+        task.done.return_value = False
+        # Simulate waiting on the task and then cancelling
+        await asyncio.sleep(0)  # Allow other coroutines to run
+        task.cancel()
+        raise asyncio.CancelledError()
+
     connected_clients_set = set()
 
     with (
         patch.object(photoshop_mcp_server, "connected_clients", connected_clients_set),
         patch("lightfast_mcp.servers.photoshop_mcp_server.send_to_photoshop", return_value=ping_result),
         patch("lightfast_mcp.servers.photoshop_mcp_server.logger"),
-        patch("asyncio.create_task", return_value=mock_handler_task),
+        patch("asyncio.create_task", side_effect=mock_create_task),
     ):
-        # The function should add mock_ws to the connected_clients set
-        # Then it will await mock_handler_task, which will raise CancelledError
-        with pytest.raises(asyncio.CancelledError):
+        try:
             await handle_photoshop_client(mock_ws)
+        except asyncio.CancelledError:
+            pass  # Expected when task is cancelled
 
         # Verify the client was added to connected_clients
         assert mock_ws in connected_clients_set
+
+
+@async_tests
+async def test_handle_photoshop_client_ping_failure():
+    """Test handle_photoshop_client handles ping failure."""
+    mock_ws = MagicMock()
+    mock_ws.remote_address = ("127.0.0.1", 54321)
+    mock_ws.close = AsyncMock()
+
+    # Mock ping to raise an exception
+    ping_error = PhotoshopConnectionError("Ping failed")
+
+    connected_clients_set = set()
+
+    with (
+        patch.object(photoshop_mcp_server, "connected_clients", connected_clients_set),
+        patch("lightfast_mcp.servers.photoshop_mcp_server.send_to_photoshop", side_effect=ping_error),
+        patch("lightfast_mcp.servers.photoshop_mcp_server.logger") as mock_logger,
+    ):
+        await handle_photoshop_client(mock_ws)
+
+        # Verify the client was removed from connected_clients
+        assert mock_ws not in connected_clients_set
+        mock_ws.close.assert_called_once()
+        mock_logger.error.assert_called()
+
+
+@async_tests
+async def test_process_incoming_messages_for_client():
+    """Test _process_incoming_messages_for_client processes messages correctly."""
+    mock_ws = MagicMock()
+    mock_ws.remote_address = ("127.0.0.1", 54321)
+
+    # Mock receiving a response message
+    response_message = {"command_id": "cmd_1", "status": "success", "data": {"result": "test"}}
+
+    # Set up recv to return the message once, then raise ConnectionClosed
+    mock_ws.recv = AsyncMock(
+        side_effect=[json.dumps(response_message), websockets.exceptions.ConnectionClosedOK(1000, "Normal closure")]
+    )
+
+    # Create a future for the response
+    future = asyncio.Future()
+    responses = {"cmd_1": future}
+
+    with (
+        patch.dict(photoshop_mcp_server.responses, responses),
+        patch("lightfast_mcp.servers.photoshop_mcp_server.logger") as mock_logger,
+    ):
+        await _process_incoming_messages_for_client(mock_ws, "127.0.0.1:54321")
+
+        # Verify the future was resolved with the response
+        assert future.done()
+        assert future.result() == response_message
+
+
+@async_tests
+async def test_process_incoming_messages_invalid_json():
+    """Test _process_incoming_messages_for_client handles invalid JSON."""
+    mock_ws = MagicMock()
+    mock_ws.remote_address = ("127.0.0.1", 54321)
+
+    # Mock receiving invalid JSON
+    mock_ws.recv = AsyncMock(
+        side_effect=["invalid json {", websockets.exceptions.ConnectionClosedOK(1000, "Normal closure")]
+    )
+
+    with patch("lightfast_mcp.servers.photoshop_mcp_server.logger") as mock_logger:
+        await _process_incoming_messages_for_client(mock_ws, "127.0.0.1:54321")
+
+        # Verify error was logged
+        mock_logger.error.assert_called()
 
 
 @async_tests
@@ -454,3 +532,84 @@ async def test_execute_jsx_execution_error(setup_connected_clients):
         # The error_type in the response is the class name, not the alias
         assert result["error_type"] == "BlenderMCPError"
         mock_logger.error.assert_called_with("Error executing JSX code: JSX execution error")
+
+
+# Additional comprehensive tests for better coverage
+
+
+@async_tests
+async def test_send_to_photoshop_with_empty_params():
+    """Test send_to_photoshop works with empty or None parameters."""
+    mock_ws = MagicMock()
+    mock_ws.send = AsyncMock()
+    mock_ws.remote_address = ("127.0.0.1", 54321)
+
+    mock_response = {"status": "success"}
+
+    with (
+        patch.object(photoshop_mcp_server, "connected_clients", {mock_ws}),
+        patch("asyncio.wait_for", return_value=mock_response),
+        patch("lightfast_mcp.servers.photoshop_mcp_server.logger"),
+    ):
+        # Test with None params
+        result = await send_to_photoshop("test_command", None)
+        assert result == mock_response
+
+        # Test with empty dict params
+        result = await send_to_photoshop("test_command", {})
+        assert result == mock_response
+
+
+@async_tests
+async def test_command_id_counter_increment():
+    """Test that command_id_counter increments properly."""
+    mock_ws = MagicMock()
+    mock_ws.send = AsyncMock()
+    mock_ws.remote_address = ("127.0.0.1", 54321)
+
+    original_counter = photoshop_mcp_server.command_id_counter
+
+    with (
+        patch.object(photoshop_mcp_server, "connected_clients", {mock_ws}),
+        patch("asyncio.wait_for", return_value={"status": "success"}),
+        patch("lightfast_mcp.servers.photoshop_mcp_server.logger"),
+    ):
+        # Send multiple commands
+        await send_to_photoshop("command1", {})
+        await send_to_photoshop("command2", {})
+
+        # Verify counter incremented
+        assert photoshop_mcp_server.command_id_counter > original_counter
+
+
+@async_tests
+async def test_execute_photoshop_code_with_complex_js():
+    """Test execute_photoshop_code with complex JavaScript code."""
+    complex_js = """
+    const doc = app.activeDocument;
+    const layers = doc.layers;
+    const result = {
+        layerCount: layers.length,
+        documentName: doc.name,
+        width: doc.width.value,
+        height: doc.height.value
+    };
+    return result;
+    """
+
+    mock_response = {
+        "status": "success",
+        "data": {"layerCount": 10, "documentName": "test.psd", "width": 1920, "height": 1080},
+    }
+
+    with (
+        patch("lightfast_mcp.servers.photoshop_mcp_server.send_to_photoshop", return_value=mock_response),
+        patch("lightfast_mcp.servers.photoshop_mcp_server.check_photoshop_connected", return_value=True),
+    ):
+        ctx_mock = MagicMock()
+        result_str = await execute_photoshop_code(ctx=ctx_mock, uxp_javascript_code=complex_js)
+        result = json.loads(result_str)
+
+        assert result == mock_response
+        assert result["data"]["layerCount"] == 10
+        assert result["data"]["documentName"] == "test.psd"
