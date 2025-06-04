@@ -26,3 +26,33 @@ servers:
   transport: streamable-http
   type: mock
   version: 1.0.0
+- config:
+    type: figma
+    figma_host: localhost
+    figma_port: 9003
+  dependencies: []
+  description: Figma MCP Server for design automation and collaborative design workflows
+  host: localhost
+  name: figma-server
+  path: /mcp
+  port: 8003
+  required_apps:
+  - Figma
+  transport: streamable-http
+  type: figma
+  version: 1.0.0
+- config:
+    type: websocket_mock
+    websocket_host: localhost
+    websocket_port: 9004
+  dependencies: []
+  description: WebSocket Mock MCP Server for testing WebSocket communications
+  host: localhost
+  name: websocket-mock-server
+  path: /mcp
+  port: 8004
+  required_apps: []
+  transport: streamable-http
+  type: websocket_mock
+  version: 1.0.0
+

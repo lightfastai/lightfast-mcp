@@ -1,0 +1,20 @@
+{
+  "name": "lightfast-mcp-figma-plugin",
+  "id": "1509155185436575957",
+  "api": "1.0.0",
+  "main": "dist/code.js",
+  "capabilities": [],
+  "enableProposedApi": false,
+  "documentAccess": "dynamic-page",
+  "editorType": [
+    "figma"
+  ],
+  "networkAccess": {
+    "allowedDomains": [
+      "ws://localhost:9003",
+      "ws://localhost:8003"
+    ],
+    "reasoning": "Plugin needs to connect as WebSocket client to local MCP server for real-time design automation"
+  },
+  "ui": "ui.html"
+}
