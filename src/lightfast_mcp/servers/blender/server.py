@@ -162,9 +162,16 @@ class BlenderMCPServer(BaseServer):
         # Register tools
         self.mcp.tool()(self.get_state)
         self.mcp.tool()(self.execute_command)
+        self.mcp.tool()(self.import_obj_file)
+        self.mcp.tool()(self.export_obj_file)
 
         # Update available tools list
-        self.info.tools = ["get_state", "execute_command"]
+        self.info.tools = [
+            "get_state",
+            "execute_command",
+            "import_obj_file",
+            "export_obj_file",
+        ]
         logger.info(f"Registered {len(self.info.tools)} tools: {self.info.tools}")
 
     async def _check_application(self, app: str) -> bool:
@@ -283,33 +290,26 @@ class BlenderMCPServer(BaseServer):
                 indent=2,
             )
 
-    async def execute_command(self, ctx: Context, code_to_execute: str) -> str:
+    async def execute_command(self, ctx: Context, code: str) -> str:
         """
         Execute arbitrary Python code in Blender.
         This corresponds to the 'execute_code' command in the Blender addon.
 
-        Parameters:
-        - code_to_execute: The Python code string to execute in Blender's context.
+        Args:
+            code: Python code to execute in Blender context
         """
         loop = asyncio.get_event_loop()
 
         try:
-            logger.info(f"Executing command with code: {code_to_execute[:100]}...")
+            logger.info("Executing custom code command.")
 
-            # Run the Blender command in executor
+            # Run the Blender command in executor to avoid blocking
             result = await loop.run_in_executor(
                 None,
                 self.blender_connection.send_command,
                 "execute_code",
-                {"code": code_to_execute},
+                {"code": code},
             )
-
-            # Add server info to result
-            result["_server_info"] = {
-                "server_name": self.config.name,
-                "server_type": self.SERVER_TYPE,
-                "execution_time": time.time(),
-            }
 
             return json.dumps(result, indent=2)
 
@@ -317,7 +317,7 @@ class BlenderMCPServer(BaseServer):
             logger.error(f"BlenderMCPError in execute_command: {e}")
             return json.dumps(
                 {
-                    "error": f"Blender Command Execution Error: {str(e)}",
+                    "error": f"Blender Code Execution Error: {str(e)}",
                     "type": type(e).__name__,
                     "server_name": self.config.name,
                 },
@@ -327,7 +327,107 @@ class BlenderMCPServer(BaseServer):
             logger.error(f"Unexpected error in execute_command: {e}")
             return json.dumps(
                 {
-                    "error": f"Unexpected server error during command execution: {str(e)}",
+                    "error": f"Unexpected server error: {str(e)}",
+                    "type": type(e).__name__,
+                    "server_name": self.config.name,
+                },
+                indent=2,
+            )
+
+    async def import_obj_file(
+        self, ctx: Context, obj_content: str, object_name: str = "ImportedObject"
+    ) -> str:
+        """
+        Import an OBJ file into Blender from string content.
+
+        Args:
+            obj_content: The OBJ file content as a string
+            object_name: Name for the imported object in Blender
+        """
+        loop = asyncio.get_event_loop()
+
+        try:
+            logger.info(f"Importing OBJ content as object: {object_name}")
+
+            # Validate OBJ content
+            if not obj_content.strip():
+                raise ValueError("OBJ content cannot be empty")
+
+            # Basic OBJ format validation
+            if not any(
+                line.startswith(("v ", "f ", "vn ", "vt "))
+                for line in obj_content.split("\n")
+            ):
+                raise ValueError("Invalid OBJ format: no vertices or faces found")
+
+            # Send to Blender addon
+            result = await loop.run_in_executor(
+                None,
+                self.blender_connection.send_command,
+                "import_obj",
+                {"obj_content": obj_content, "object_name": object_name},
+            )
+
+            return json.dumps(result, indent=2)
+
+        except BlenderMCPError as e:
+            logger.error(f"BlenderMCPError in import_obj_file: {e}")
+            return json.dumps(
+                {
+                    "error": f"Blender OBJ Import Error: {str(e)}",
+                    "type": type(e).__name__,
+                    "server_name": self.config.name,
+                },
+                indent=2,
+            )
+        except Exception as e:
+            logger.error(f"Unexpected error in import_obj_file: {e}")
+            return json.dumps(
+                {
+                    "error": f"Unexpected server error: {str(e)}",
+                    "type": type(e).__name__,
+                    "server_name": self.config.name,
+                },
+                indent=2,
+            )
+
+    async def export_obj_file(self, ctx: Context, object_name: str = None) -> str:
+        """
+        Export an object from Blender as OBJ file content.
+
+        Args:
+            object_name: Name of the object to export. If None, exports selected objects.
+        """
+        loop = asyncio.get_event_loop()
+
+        try:
+            logger.info(f"Exporting object as OBJ: {object_name or 'selected objects'}")
+
+            # Send to Blender addon
+            result = await loop.run_in_executor(
+                None,
+                self.blender_connection.send_command,
+                "export_obj",
+                {"object_name": object_name},
+            )
+
+            return json.dumps(result, indent=2)
+
+        except BlenderMCPError as e:
+            logger.error(f"BlenderMCPError in export_obj_file: {e}")
+            return json.dumps(
+                {
+                    "error": f"Blender OBJ Export Error: {str(e)}",
+                    "type": type(e).__name__,
+                    "server_name": self.config.name,
+                },
+                indent=2,
+            )
+        except Exception as e:
+            logger.error(f"Unexpected error in export_obj_file: {e}")
+            return json.dumps(
+                {
+                    "error": f"Unexpected server error: {str(e)}",
                     "type": type(e).__name__,
                     "server_name": self.config.name,
                 },
